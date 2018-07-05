@@ -10,8 +10,9 @@ from tensorflow.python.keras import backend as K            #tensorflow backend
 
 from deepcell import get_image_sizes                #io_utils, returns shape of first image inside data_location
 from deepcell import make_training_data             #data_utils, reads images in training directories and saves as npz file
-from deepcell import bn_feature_net_61x61           #model_zoo
-from deepcell import dilated_bn_feature_net_61x61
+from deepcell import bn_feature_net_21x21           #model_zoo
+from deepcell import dilated_bn_feature_net_21x21
+
 from deepcell import bn_dense_feature_net
 from deepcell import rate_scheduler                 #train_utils,
 from deepcell import train_model_disc, train_model_conv, train_model_sample     #training.py, probably use sample
@@ -32,7 +33,7 @@ NPZ_DIR = '/data/npz_data'
 RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/samir'
-DATA_FILE = 'mibi_samir_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+DATA_FILE = 'HI_mibi_21x21_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -44,7 +45,7 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
     num_of_features = 2 # Specify the number of feature masks that are present
-    window_size = (30, 30) # Size of window around pixel
+    window_size = (10, 10) # Size of window around pixel				#changed from 30,30
     training_direcs = ['set1', 'set2']
     channel_names = ['dsDNA']
     raw_image_direc = 'raw'
@@ -87,7 +88,7 @@ def train_model_on_training_data():
     X, y = training_data['X'], training_data['y']
     print('X.shape: {}\ny.shape: {}'.format(X.shape, y.shape))
 
-    n_epoch = 20
+    n_epoch = 10
     batch_size = 32 if DATA_OUTPUT_MODE == 'sample' else 1
     optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
@@ -105,7 +106,7 @@ def train_model_on_training_data():
 
     if DATA_OUTPUT_MODE == 'sample':
         train_model = train_model_sample
-        the_model = bn_feature_net_61x61
+        the_model = bn_feature_net_21x21				#changed to 21x21
         model_args['n_channels'] = 1
 
     elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
@@ -143,7 +144,8 @@ def run_model_on_dir():
     channel_names = ['dsDNA']
     image_size_x, image_size_y = get_image_sizes(data_location, channel_names)
 
-    model_name = '2018-06-26_mibi_samir_{}_{}__0.h5'.format(
+    model_name = '2018-06-28_HI_mibi_21x21_{}_{}__0.h5'.format(
+#    model_name = '21x21__0.h5'.format(
         K.image_data_format(), DATA_OUTPUT_MODE)
 
     weights = os.path.join(MODEL_DIR, PREFIX, model_name)
@@ -152,7 +154,7 @@ def run_model_on_dir():
     window_size = (30, 30)
 
     if DATA_OUTPUT_MODE == 'sample':
-        model_fn = dilated_bn_feature_net_61x61
+        model_fn = dilated_bn_feature_net_21x21					#changed to 21x21
     elif DATA_OUTPUT_MODE == 'conv':
         model_fn = bn_dense_feature_net
     else:
@@ -189,7 +191,7 @@ def export():
     channel_axis = 1 if data_format == 'channels_first' else 3
 
     if DATA_OUTPUT_MODE == 'sample':
-        the_model = dilated_bn_feature_net_61x61
+        the_model = dilated_bn_feature_net_21x21
         if K.image_data_format() == 'channels_first':
             model_args['input_shape'] = (1, 1080, 1280)
         else:
@@ -207,7 +209,7 @@ def export():
 
     model = the_model(**model_args)
 
-    model_name = '2018-06-26_mibi_samir_{}_{}__0.h5'.format(
+    model_name = '2018-06-27_mibi_21x21_{}_{}__0.h5'.format(
         K.image_data_format(), DATA_OUTPUT_MODE)
 
     weights_path = os.path.join(MODEL_DIR, PREFIX, model_name)
