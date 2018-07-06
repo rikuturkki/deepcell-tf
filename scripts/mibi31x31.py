@@ -25,6 +25,7 @@ DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
 RESHAPE_SIZE = 512
+N_EPOCHS = 10
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -46,7 +47,7 @@ def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
     num_of_features = 2 # Specify the number of feature masks that are present
     window_size = (15, 15) # Size of window around pixel				#changed from 30,30
-    training_direcs = ['set1', 'set2']
+    training_direcs = ['set0','set1', 'set2','set3','set4','set5','set6','set7']
     channel_names = ['dsDNA']
     raw_image_direc = 'raw'
     annotation_direc = 'annotated'
@@ -81,7 +82,7 @@ def train_model_on_training_data():
     X, y = training_data['X'], training_data['y']
     print('X.shape: {}\ny.shape: {}'.format(X.shape, y.shape))
 
-    n_epoch = 32
+    n_epoch = N_EPOCHS
     batch_size = 32 if DATA_OUTPUT_MODE == 'sample' else 1
     optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
@@ -132,7 +133,7 @@ def train_model_on_training_data():
 
 def run_model_on_dir():
     raw_dir = 'raw'
-    data_location = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
+    data_location = os.path.join(DATA_DIR, PREFIX, 'set3', raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
     channel_names = ['dsDNA']
     image_size_x, image_size_y = get_image_sizes(data_location, channel_names)

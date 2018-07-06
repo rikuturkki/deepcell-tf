@@ -23,8 +23,10 @@ from deepcell import export_model
 DATA_OUTPUT_MODE = 'conv'
 #DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
-RESIZE = False                                                              #was True
+RESIZE = True                                                              #was True
 RESHAPE_SIZE = 512
+WINDOW_SIZE = 0
+N_EPOCHS = 50
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -45,8 +47,8 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
     num_of_features = 1 # Specify the number of feature masks that are present
-    window_size = (30, 30) # Size of window around pixel				#changed from 30,30
-    training_direcs = ['set1', 'set2']
+    window_size = (WINDOW_SIZE, WINDOW_SIZE) # Size of window around pixel				#changed from 30,30
+    training_direcs = ['set0','set1', 'set2','set3','set4','set5','set6','set7']
     channel_names = ['dsDNA']
     raw_image_direc = 'raw'
     annotation_direc = 'annotated'
@@ -81,7 +83,7 @@ def train_model_on_training_data():
     X, y = training_data['X'], training_data['y']
     print('X.shape: {}\ny.shape: {}'.format(X.shape, y.shape))
 
-    n_epoch = 2
+    n_epoch = N_EPOCHS
     batch_size = 32 if DATA_OUTPUT_MODE == 'sample' else 1
     optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
@@ -138,18 +140,18 @@ def train_model_on_training_data():
 
 def run_model_on_dir():
     raw_dir = 'raw'
-    data_location = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
+    data_location = os.path.join(DATA_DIR, PREFIX, 'set3', raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
     channel_names = ['dsDNA']
     image_size_x, image_size_y = get_image_sizes(data_location, channel_names)
 
-    model_name = '2018-06-28_mibi_31x31_{}_{}__0.h5'.format(
+    model_name = '2018-07-06_mibi_31x31_{}_{}__0.h5'.format(
         K.image_data_format(), DATA_OUTPUT_MODE)
 
     weights = os.path.join(MODEL_DIR, PREFIX, model_name)
 
     n_features = 4
-    window_size = (30, 30)
+    window_size = (WINDOW_SIZE, WINDOW_SIZE)
 
     if DATA_OUTPUT_MODE == 'sample':
         model_fn = dilated_bn_feature_net_31x31					#changed to 21x21
@@ -170,7 +172,7 @@ def run_model_on_dir():
         image_size_y=image_size_y,
         win_x=window_size[0],
         win_y=window_size[1],
-        split=False)
+        split=True)
 
 def export():
     model_args = {
