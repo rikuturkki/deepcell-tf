@@ -1,30 +1,29 @@
 ## Generate training data
-import os                   #operating system interface
-import errno                #error symbols
-import argparse             #command line input parsing
+import os
+import errno
+import argparse
 
-import numpy as np          #scientific computing (aka matlab)
-import tifffile as tiff     #read/write TIFF files (aka our images)
-from tensorflow.python.keras.optimizers import SGD    #optimizer
-from tensorflow.python.keras import backend as K            #tensorflow backend
+import numpy as np
+import tifffile as tiff
+from tensorflow.python.keras.optimizers import SGD
+from tensorflow.python.keras import backend as K
 
-from deepcell import get_image_sizes                #io_utils, returns shape of first image inside data_location
-from deepcell import make_training_data             #data_utils, reads images in training directories and saves as npz file
-from deepcell import bn_feature_net_31x31           #model_zoo
+from deepcell import get_image_sizes
+from deepcell import make_training_data
+from deepcell import bn_feature_net_31x31
 from deepcell import dilated_bn_feature_net_31x31
 from deepcell import train_model_watershed
-
 from deepcell import bn_dense_feature_net
-from deepcell import rate_scheduler                 #train_utils,
-from deepcell import train_model_disc, train_model_conv, train_model_sample     #training.py, probably use sample
+from deepcell import rate_scheduler
+from deepcell import train_model_disc, train_model_conv, train_model_sample
 from deepcell import run_models_on_directory
 from deepcell import export_model
 
 # data options
-#DATA_OUTPUT_MODE = 'conv'
-DATA_OUTPUT_MODE = 'sample'
+DATA_OUTPUT_MODE = 'conv'
+#DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
-RESIZE = True
+RESIZE = False                                                              #was True
 RESHAPE_SIZE = 512
 
 # filepath constants
@@ -45,8 +44,8 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
-    num_of_features = 2 # Specify the number of feature masks that are present
-    window_size = (15, 15) # Size of window around pixel				#changed from 30,30
+    num_of_features = 1 # Specify the number of feature masks that are present
+    window_size = (30, 30) # Size of window around pixel				#changed from 30,30
     training_direcs = ['set1', 'set2']
     channel_names = ['dsDNA']
     raw_image_direc = 'raw'
@@ -56,7 +55,7 @@ def generate_training_data():
     make_training_data(
         direc_name=os.path.join(DATA_DIR, PREFIX),
         dimensionality=2,
-        max_training_examples=1e7, # Define maximum number of training examples
+        max_training_examples=1e6, # Define maximum number of training examples
         window_size_x=window_size[0],
         window_size_y=window_size[1],
         border_mode=BORDER_MODE,
@@ -78,11 +77,11 @@ def train_model_on_training_data():
     direc_data = os.path.join(NPZ_DIR, PREFIX)
     training_data = np.load(os.path.join(direc_data, DATA_FILE + '.npz'))
 
-    class_weights = training_data['class_weights']
+    #class_weights = training_data['class_weights']
     X, y = training_data['X'], training_data['y']
     print('X.shape: {}\ny.shape: {}'.format(X.shape, y.shape))
 
-    n_epoch = 32
+    n_epoch = 2
     batch_size = 32 if DATA_OUTPUT_MODE == 'sample' else 1
     optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
@@ -100,21 +99,24 @@ def train_model_on_training_data():
     col_axis = 3 if data_format == 'channels_first' else 2
     channel_axis = 1 if data_format == 'channels_first' else 3
 
-    if DATA_OUTPUT_MODE == 'sample':
-        train_model = train_model_watershed
-        the_model = bn_feature_net_31x31				#changed to 21x21
-#        model_args['n_channels'] = 1
+    size = (RESHAPE_SIZE, RESHAPE_SIZE) if RESIZE else X.shape[row_axis:col_axis + 1]  #added
 
+    if DATA_OUTPUT_MODE == 'sample':
+        the_model = bn_feature_net_31x31
+        train_model = train_model_watershed   #changed
+#        model_args['n_channels'] = 1
     elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
-        train_model = train_model_watershed
         the_model = bn_dense_feature_net
+        train_model = train_model_watershed
+        model_args['permute'] = False           #added
         model_args['location'] = False
 
-        size = (RESHAPE_SIZE, RESHAPE_SIZE) if RESIZE else X.shape[row_axis:col_axis + 1]
         if data_format == 'channels_first':
             model_args['input_shape'] = (X.shape[channel_axis], size[0], size[1])
         else:
             model_args['input_shape'] = (size[0], size[1], X.shape[channel_axis])
+    else:
+        raise ValueError('Unknown DATA_OUTPUT_MODE "{}"'.format(DATA_OUTPUT_MODE))
 
     model = the_model(**model_args)
 
@@ -127,10 +129,11 @@ def train_model_on_training_data():
         direc_save=direc_save,
         direc_data=direc_data,
         lr_sched=lr_sched,
-        class_weight=class_weights,
+        distance_bins=distance_bins,
+        class_weight=training_data['class_weights'],
         rotation_range=180,
         flip=True,
-        shear=True)
+        shear=False)
 
 
 def run_model_on_dir():
@@ -145,7 +148,7 @@ def run_model_on_dir():
 
     weights = os.path.join(MODEL_DIR, PREFIX, model_name)
 
-    n_features = 3
+    n_features = 4
     window_size = (30, 30)
 
     if DATA_OUTPUT_MODE == 'sample':
