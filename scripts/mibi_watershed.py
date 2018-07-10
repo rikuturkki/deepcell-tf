@@ -174,6 +174,22 @@ def run_model_on_dir():
         win_y=window_size[1],
         split=True)
 
+
+
+#    import pdb; pdb.set_trace()
+
+    for i in range(predictions.shape[0]):
+        max_img = np.argmax(predictions[i], axis=-1)
+        max_img = max_img.astype(np.int16)
+        cnnout_name = 'argmax_frame_{}.tif'.format(str(i).zfill(3))
+
+        out_file_path = os.path.join(output_location, cnnout_name)
+
+        tiff.imsave(out_file_path, max_img)
+
+
+
+
 def export():
     model_args = {
         'norm_method': 'median',
