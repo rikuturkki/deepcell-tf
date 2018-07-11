@@ -33,8 +33,14 @@ MODEL_DIR = '/data/models'
 NPZ_DIR = '/data/npz_data'
 RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
-PREFIX = 'tissues/mibi/samir'
-DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
+DATA_FILE = '31x31_full__{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+MODEL_NAME = '2018-06-28_mibi_31x31_{}_{}__0.h5'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+
+SET_MIN = 1
+SET_MAX = 44
+SET_RANGE = range(SET_MIN, SET_MAX + 1)
+WINDOW_SIZE = (15, 15)
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -46,8 +52,11 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
     num_of_features = 2 # Specify the number of feature masks that are present
-    window_size = (15, 15) # Size of window around pixel				#changed from 30,30
-    training_direcs = ['set0','set1', 'set2','set3','set4','set5','set6','set7']
+    window_size = WINDOW_SIZE # Size of window around pixel				#changed from 30,30
+    training_direcs = []
+    for set_num in SET_RANGE:
+        training_direcs.append('set' + str(set_num))
+
     channel_names = ['dsDNA']
     raw_image_direc = 'raw'
     annotation_direc = 'annotated'
@@ -56,7 +65,7 @@ def generate_training_data():
     make_training_data(
         direc_name=os.path.join(DATA_DIR, PREFIX),
         dimensionality=2,
-        max_training_examples=1e7, # Define maximum number of training examples
+        max_training_examples=1e8, # Define maximum number of training examples
         window_size_x=window_size[0],
         window_size_y=window_size[1],
         border_mode=BORDER_MODE,
@@ -133,23 +142,20 @@ def train_model_on_training_data():
 
 def run_model_on_dir():
     raw_dir = 'raw'
-    data_location = os.path.join(DATA_DIR, PREFIX, 'set3', raw_dir)
+    data_location = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
     channel_names = ['dsDNA']
     image_size_x, image_size_y = get_image_sizes(data_location, channel_names)
-
-    model_name = '2018-06-28_mibi_31x31_{}_{}__0.h5'.format(
-        K.image_data_format(), DATA_OUTPUT_MODE)
-
+    model_name = MODEL_NAME
     weights = os.path.join(MODEL_DIR, PREFIX, model_name)
-
     n_features = 3
-    window_size = (30, 30)
 
     if DATA_OUTPUT_MODE == 'sample':
         model_fn = dilated_bn_feature_net_31x31					#changed to 21x21
+        window_size = WINDOW__SIZE
     elif DATA_OUTPUT_MODE == 'conv':
         model_fn = bn_dense_feature_net
+        window_size = 0
     else:
         raise ValueError('{} is not a valid training mode for 2D images (yet).'.format(
             DATA_OUTPUT_MODE))
@@ -201,9 +207,7 @@ def export():
             model_args['input_shape'] = (size[0], size[1], X.shape[channel_axis])
 
     model = the_model(**model_args)
-
-    model_name = '2018-06-27_mibi_samir_{}_{}__0.h5'.format(
-        K.image_data_format(), DATA_OUTPUT_MODE)
+    model_name = MODEL_NAME
 
     weights_path = os.path.join(MODEL_DIR, PREFIX, model_name)
     export_path = os.path.join(EXPORT_DIR, PREFIX)
