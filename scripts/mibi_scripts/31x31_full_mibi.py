@@ -24,12 +24,14 @@ from deepcell import export_model
 DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
-RESHAPE_SIZE = 256 
+RESHAPE_SIZE = 512 
 N_EPOCHS = 10
 SHEAR = False
-BATCH_SIZE = 32 if DATA_OUTPUT_MODE == 'sample' else 1
+BATCH_SIZE = 1 if DATA_OUTPUT_MODE == 'sample' else 1
 SET_RANGE = range(1, 41+1)
 WINDOW_SIZE = (15,15)
+MAX_TRAIN = 1e6
+
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -64,7 +66,7 @@ def generate_training_data():
     make_training_data(
         direc_name=os.path.join(DATA_DIR, PREFIX),
         dimensionality=2,
-        max_training_examples=1e6, # Define maximum number of training examples
+        max_training_examples=MAX_TRAIN, # Define maximum number of training examples
         window_size_x=window_size[0],
         window_size_y=window_size[1],
         border_mode=BORDER_MODE,

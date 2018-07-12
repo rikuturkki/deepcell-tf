@@ -57,6 +57,11 @@ def get_data(file_name, mode='sample', test_size=.1, seed=None):
         pixels_x = training_data['pixels_x']
         pixels_y = training_data['pixels_y']
 
+ 
+        print(X.dtype)
+
+        #import pdb; pdb.set_trace()
+
         if CHANNELS_FIRST:
             X_sample = np.zeros((len(batch), X.shape[1], 2 * win_x + 1, 2 * win_y + 1))
         else:
@@ -123,6 +128,10 @@ def sample_label_matrix(y, edge_feature, window_size_x=30, window_size_y=30,
     data set. If output_mode is 'sample', then this will be set to the number
     of edge pixels. If not, it will be set to np.Inf, i.e. sampling everything.
     """
+
+    print('max_training_examples is:', max_training_examples)
+
+
     if CHANNELS_FIRST:
         num_dirs, num_features, image_size_x, image_size_y = y.shape
     else:
@@ -167,10 +176,13 @@ def sample_label_matrix(y, edge_feature, window_size_x=30, window_size_y=30,
 
     # Randomize
     non_rand_ind = np.arange(len(feature_rows), dtype='int32')
-    if max_training_examples:
+    if not max_training_examples:
         max_training_examples = non_rand_ind.size
 
-    limit = min(non_rand_ind.size, max_training_examples)
+    max_train = int(max_training_examples)
+
+    limit = min(non_rand_ind.size, max_train)
+
     rand_ind = np.random.choice(non_rand_ind, size=limit, replace=False)
 
     feature_rows = np.array(feature_rows, dtype='int32')[rand_ind]
