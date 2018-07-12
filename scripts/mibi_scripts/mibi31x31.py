@@ -47,7 +47,7 @@ def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
     num_of_features = 2 # Specify the number of feature masks that are present
     window_size = (15, 15) # Size of window around pixel				#changed from 30,30
-    training_direcs = ['set0','set1', 'set2','set3','set4','set5','set6','set7']
+    training_direcs = ['set1', 'set2']
     channel_names = ['dsDNA']
     raw_image_direc = 'raw'
     annotation_direc = 'annotated'
@@ -56,7 +56,7 @@ def generate_training_data():
     make_training_data(
         direc_name=os.path.join(DATA_DIR, PREFIX),
         dimensionality=2,
-        max_training_examples=1e7, # Define maximum number of training examples
+        max_training_examples=1e5, # Define maximum number of training examples
         window_size_x=window_size[0],
         window_size_y=window_size[1],
         border_mode=BORDER_MODE,

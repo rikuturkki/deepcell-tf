@@ -24,8 +24,12 @@ from deepcell import export_model
 DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
-RESHAPE_SIZE = 512
+RESHAPE_SIZE = 256 
 N_EPOCHS = 10
+SHEAR = False
+BATCH_SIZE = 32 if DATA_OUTPUT_MODE == 'sample' else 1
+SET_RANGE = range(1, 41+1)
+WINDOW_SIZE = (15,15)
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -36,11 +40,6 @@ EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
 DATA_FILE = '31x31_full__{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 MODEL_NAME = '2018-06-28_mibi_31x31_{}_{}__0.h5'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-
-SET_MIN = 1
-SET_MAX = 44
-SET_RANGE = range(SET_MIN, SET_MAX + 1)
-WINDOW_SIZE = (15, 15)
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -65,7 +64,7 @@ def generate_training_data():
     make_training_data(
         direc_name=os.path.join(DATA_DIR, PREFIX),
         dimensionality=2,
-        max_training_examples=1e8, # Define maximum number of training examples
+        max_training_examples=1e6, # Define maximum number of training examples
         window_size_x=window_size[0],
         window_size_y=window_size[1],
         border_mode=BORDER_MODE,
@@ -92,7 +91,7 @@ def train_model_on_training_data():
     print('X.shape: {}\ny.shape: {}'.format(X.shape, y.shape))
 
     n_epoch = N_EPOCHS
-    batch_size = 32 if DATA_OUTPUT_MODE == 'sample' else 1
+    batch_size = BATCH_SIZE
     optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
 
@@ -137,7 +136,7 @@ def train_model_on_training_data():
         class_weight=class_weights,
         rotation_range=180,
         flip=True,
-        shear=True)
+        shear=SHEAR)
 
 
 def run_model_on_dir():
