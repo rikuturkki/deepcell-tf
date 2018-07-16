@@ -27,7 +27,8 @@ DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
 RESHAPE_SIZE = 512
-N_EPOCHS = 10
+N_EPOCHS = 20
+WINDOW_SIZE = (15,15)
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -35,9 +36,11 @@ MODEL_DIR = '/data/models'
 NPZ_DIR = '/data/npz_data'
 RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
-PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
+PREFIX = 'tissues/mibi/samir'
+#PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
 DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-MAX_TRAIN = 1e5
+MAX_TRAIN = 1e7
+CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -48,10 +51,9 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
-    num_of_features = 2 # Specify the number of feature masks that are present
-    window_size = (15, 15) # Size of window around pixel				#changed from 30,30
+    num_of_features = 2 # Specify the number of feature masks that are present   
     training_direcs = ['set1', 'set2']
-    channel_names = ['dsDNA']
+    channel_names = CHANNEL_NAMES
     raw_image_direc = 'raw'
     annotation_direc = 'annotated'
 
@@ -60,8 +62,8 @@ def generate_training_data():
         direc_name=os.path.join(DATA_DIR, PREFIX),
         dimensionality=2,
         max_training_examples=MAX_TRAIN, # Define maximum number of training examples
-        window_size_x=window_size[0],
-        window_size_y=window_size[1],
+        window_size_x=WINDOW_SIZE[0],
+        window_size_y=WINDOW_SIZE[1],
         border_mode=BORDER_MODE,
         file_name_save=file_name_save,
         training_direcs=training_direcs,
@@ -93,7 +95,8 @@ def train_model_on_training_data():
     model_args = {
         'norm_method': 'median',
         'reg': 1e-5,
-        'n_features': 3
+        'n_features': 3,
+        'n_channels' : len(CHANNEL_NAMES)
     }
 
     data_format = K.image_data_format()
@@ -104,7 +107,7 @@ def train_model_on_training_data():
     if DATA_OUTPUT_MODE == 'sample':
         train_model = train_model_sample
         the_model = bn_feature_net_31x31				#changed to 21x21
-        model_args['n_channels'] = 1
+        model_args['n_channels'] = len(CHANNEL_NAMES)
 
     elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
         train_model = train_model_conv
@@ -136,12 +139,13 @@ def train_model_on_training_data():
 
 def run_model_on_dir():
     raw_dir = 'raw'
-    data_location = os.path.join(DATA_DIR, PREFIX, 'set3', raw_dir)
+#    data_location = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
+    test_images = os.path.join(DATA_DIR, 'tissues/mibi/mibi_full/TNBCShareData', 'set1', raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
-    channel_names = ['dsDNA']
-    image_size_x, image_size_y = get_image_sizes(data_location, channel_names)
+    channel_names = CHANNEL_NAMES
+    image_size_x, image_size_y = get_image_sizes(test_images, channel_names)
 
-    model_name = '2018-06-28_mibi_31x31_{}_{}__0.h5'.format(
+    model_name = '2018-07-13_mibi_31x31_{}_{}__0.h5'.format(
         K.image_data_format(), DATA_OUTPUT_MODE)
 
     weights = os.path.join(MODEL_DIR, PREFIX, model_name)
@@ -158,7 +162,7 @@ def run_model_on_dir():
             DATA_OUTPUT_MODE))
 
     predictions = run_models_on_directory(
-        data_location=data_location,
+        data_location=test_images,
         channel_names=channel_names,
         output_location=output_location,
         n_features=n_features,
