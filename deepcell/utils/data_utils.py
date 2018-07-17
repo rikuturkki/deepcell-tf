@@ -57,7 +57,7 @@ def get_data(file_name, mode='sample', test_size=.1, seed=None):
         pixels_x = training_data['pixels_x']
         pixels_y = training_data['pixels_y']
 
- 
+
         print(X.dtype)
 
         #import pdb; pdb.set_trace()
@@ -776,6 +776,477 @@ def make_training_data_3d(direc_name, file_name_save, channel_names,
 
     return None
 
+
+
+
+def load_training_images_2d_mibi(direc_name, training_direcs, channel_names, image_size,
+                            raw_image_direc):
+    """
+    Iterate over every image in the training directories and load
+    each into a numpy array.
+    """
+    # Unpack size tuples
+    image_size_x, image_size_y = image_size
+
+    # Initialize training data array
+    if CHANNELS_FIRST:
+        X_shape = (len(training_direcs), len(channel_names), image_size_x, image_size_y)
+    else:
+        X_shape = (len(training_direcs), image_size_x, image_size_y, len(channel_names))
+
+    X = np.zeros(X_shape, dtype=K.floatx())
+
+    # Load training images
+    for b, direc in enumerate(training_direcs):
+        # e.g. "/data/ecoli/kc", "set1", "RawImages",
+        imglist = os.listdir(os.path.join(direc_name, direc, raw_image_direc))
+
+        for c, channel in enumerate(channel_names):
+            for img in imglist:
+                # if channel string is NOT in image file name, skip it.
+                if not fnmatch(img, '*{}*'.format(channel)):
+                    continue
+
+                image_file = os.path.join(direc_name, direc, raw_image_direc, img)
+                image_data = np.asarray(get_image(image_file), dtype=K.floatx())
+
+                if CHANNELS_FIRST:
+                    X[b, c, :, :] = image_data
+                else:
+                    X[b, :, :, c] = image_data
+
+    return X
+
+def load_annotated_images_2d_mibi(direc_name, training_direcs, image_size, edge_feature,
+                             dilation_radius, annotation_direc):
+    """
+    Iterate over every annotated image in the training directories and load
+    each into a numpy array.
+    """
+    # Unpack size tuple
+    image_size_x, image_size_y = image_size
+
+    # Initialize feature mask array
+    if CHANNELS_FIRST:
+        y_shape = (len(training_direcs), len(edge_feature), image_size_x, image_size_y)
+    else:
+        y_shape = (len(training_direcs), image_size_x, image_size_y, len(edge_feature))
+
+    y = np.zeros(y_shape)
+
+    for b, direc in enumerate(training_direcs):
+        imglist = os.listdir(os.path.join(direc_name, direc, annotation_direc))
+
+        for l, edge in enumerate(edge_feature):
+            for img in imglist:
+                # if feature string is NOT in image file name, skip it.
+                if not fnmatch(img, '*feature_{}*'.format(l)):
+                    continue
+
+                image_data = get_image(os.path.join(direc_name, direc, annotation_direc, img))
+
+                if np.sum(image_data) > 0:
+                    image_data /= np.amax(image_data)
+
+                if edge == 1 and dilation_radius is not None:
+                    # thicken cell edges to be more pronounced
+                    image_data = binary_dilation(image_data, selem=disk(dilation_radius))
+
+                if CHANNELS_FIRST:
+                    y[b, l, :, :] = image_data
+                else:
+                    y[b, :, :, l] = image_data
+
+        # Thin the augmented edges by subtracting the interior features.
+        for l, edge in enumerate(edge_feature):
+            if edge != 1:
+                continue
+
+            for k, non_edge in enumerate(edge_feature):
+                if non_edge == 0:
+                    if CHANNELS_FIRST:
+                        y[b, l, :, :] -= y[b, k, :, :]
+                    else:
+                        y[b, :, :, l] -= y[b, :, :, k]
+
+            if CHANNELS_FIRST:
+                y[b, l, :, :] = y[b, l, :, :] > 0
+            else:
+                y[b, :, :, l] = y[b, :, :, l] > 0
+
+        # Compute the mask for the background
+        if CHANNELS_FIRST:
+            y[b, len(edge_feature) - 1, :, :] = 1 - np.sum(y[b], axis=0)
+        else:
+            y[b, :, :, len(edge_feature) - 1] = 1 - np.sum(y[b], axis=2)
+
+    return y
+
+def make_training_data_2d_mibi(direc_name, file_name_save, channel_names,
+                          raw_image_direc='raw',
+                          annotation_direc='annotated',
+                          training_direcs=None,
+                          max_training_examples=1e7,
+                          distance_transform=False,
+                          distance_bins=4,
+                          window_size_x=30,
+                          window_size_y=30,
+                          edge_feature=[1, 0, 0],
+                          dilation_radius=1,
+                          display=False,
+                          max_plotted=5,
+                          verbose=False,
+                          reshape_size=None,
+                          border_mode='valid',
+                          output_mode='sample'):
+    """
+    Read all images in training directories and save as npz file
+    # Arguments
+        direc_name: directory containing folders of training data
+        file_name_save: full filepath for npz file where the data will be saved
+        training_direcs: directories of images located inside direc_name.
+                         If not provided, all directories in direc_name are used.
+        channel_names: List of particular channel name of images to find.
+                       channel_name should be in the filename (e.g. 'DAPI')
+                       If not provided, all images in the training directories
+                       without 'feature' in their name are used.
+        edge_feature: List which determines the cell edge feature (usually [1, 0, 0])
+                      There can be a single 1 in the list, indicating the index of the feature.
+        max_training_examples: max number of samples to be given to model
+        window_size_x: number of pixels to +/- x direction to be sampled in sample mode
+        window_size_y: number of pixels to +/- y direction to be sampled in sample mode
+        dilation_radius: radius for dilating cell edges
+        display: whether or not to plot the training data
+        max_plotted: how many points to plot if display is True
+        verbose:  print more output to screen, similar to DEBUG mode
+        reshape_size: If provided, will reshape the images to the given size
+        border_mode:  'valid' or 'same'
+        output_mode:  'sample', 'conv', or 'disc'
+    """
+    # Load one file to get image sizes (all images same size as they are from same microscope)
+    image_path = os.path.join(direc_name, random.choice(training_direcs), raw_image_direc)
+    image_size = get_image_sizes(image_path, channel_names)
+
+    X = load_training_images_2d_mibi(direc_name, training_direcs, channel_names,
+                                image_size=image_size,
+                                raw_image_direc=raw_image_direc)
+
+    y = load_annotated_images_2d_mibi(direc_name, training_direcs,
+                                 image_size=image_size,
+                                 edge_feature=edge_feature,
+                                 annotation_direc=annotation_direc,
+                                 dilation_radius=dilation_radius)
+
+    if reshape_size is not None:
+        X, y = reshape_matrix(X, y, reshape_size=reshape_size)
+
+    if distance_transform:
+        if K.image_data_format() == 'channels_first':
+            channel_axis = 1
+            new_y = np.zeros((y.shape[0], 1, y.shape[2], y.shape[3]))
+        else:
+            new_y = np.zeros((y.shape[0], y.shape[1], y.shape[2], 1))
+            channel_axis = -1
+        for b in range(y.shape[0]):
+            if K.image_data_format() == 'channels_first':
+                d = np.expand_dims(y[b, 1, :, :], axis=channel_axis)
+            else:
+                d = np.expand_dims(y[b, :, :, 1], axis=channel_axis)
+            new_y[b] = distance_transform_2d(d, bins=distance_bins)
+        y = to_categorical(new_y)
+        # not really edge_feature anymore, but there will be the fewest
+        # "center" pixels, so lets call that the edge_feature for now
+        edge_feature = [0] * y.shape[channel_axis]
+        edge_feature[-1] = 1
+
+    # Create mask of sampled pixels
+    feature_rows, feature_cols, feature_batch, feature_label = sample_label_matrix(
+        y, edge_feature, output_mode=output_mode, border_mode=border_mode,
+        window_size_x=window_size_x, window_size_y=window_size_y,
+        max_training_examples=max_training_examples)
+
+    weights = compute_class_weight('balanced', y=feature_label, classes=np.unique(feature_label))
+
+    # Sample pixels from the label matrix
+    if output_mode == 'sample':
+
+        # Save training data in npz format
+        np.savez(file_name_save, class_weights=weights, X=X, y=feature_label,
+                 batch=feature_batch, pixels_x=feature_rows, pixels_y=feature_cols,
+                 win_x=window_size_x, win_y=window_size_y)
+
+    elif output_mode == 'conv':
+        y_sample = np.zeros(y.shape, dtype='int32')
+        for b, r, c, l in zip(feature_batch, feature_rows, feature_cols, feature_label):
+            if CHANNELS_FIRST:
+                y_sample[b, l, r, c] = 1
+            else:
+                y_sample[b, r, c, l] = 1
+
+        # Trim the feature mask so that each window does not overlap with the border of the image
+        if border_mode == 'valid':
+            y = trim_padding(y, window_size_x, window_size_y)
+
+        # Save training data in npz format
+        np.savez(file_name_save, class_weights=weights, X=X, y=y,
+                 y_sample=y_sample, win_x=window_size_x, win_y=window_size_y)
+
+    elif output_mode == 'disc':
+        if y.shape[1 if CHANNELS_FIRST else -1] > 3:
+            raise ValueError('Only one interior feature is allowed for disc output mode')
+
+        # Create mask with labeled cells
+        if CHANNELS_FIRST:
+            y_label = np.zeros((y.shape[0], 1, y.shape[2], y.shape[3]), dtype='int32')
+        else:
+            y_label = np.zeros((y.shape[0], y.shape[1], y.shape[2], 1), dtype='int32')
+
+        for b in range(y.shape[0]):
+            if CHANNELS_FIRST:
+                interior_mask = y[b, 1, :, :]
+                y_label[b, 0, :, :] = label(interior_mask)
+            else:
+                interior_mask = y[b, :, :, 1]
+                y_label[b, :, :, 0] = label(interior_mask)
+
+        max_cells = np.amax(y_label) + 1
+        if CHANNELS_FIRST:
+            y_binary = np.zeros((y.shape[0], max_cells, y.shape[2], y.shape[3]), dtype='int32')
+        else:
+            y_binary = np.zeros((y.shape[0], y.shape[1], y.shape[2], max_cells), dtype='int32')
+
+        for b in range(y.shape[0]):
+            label_mask = y_label[b]
+            for l in range(max_cells):
+                if CHANNELS_FIRST:
+                    y_binary[b, l, :, :] = label_mask == l
+                else:
+                    y_binary[b, :, :, l] = label_mask == l
+
+        # Trim the sides of the mask to ensure a sliding window does not slide
+        # past before or after the boundary of y_label or y_binary
+        if border_mode == 'valid':
+            y_label = trim_padding(y_label, window_size_x, window_size_y)
+            y_binary = trim_padding(y_binary, window_size_x, window_size_y)
+
+        # Save training data in npz format
+        np.savez(file_name_save, class_weights=weights, X=X, y=y_binary,
+                 win_x=window_size_x, win_y=window_size_y)
+
+    if verbose:
+        print('Number of features: {}'.format(y.shape[1 if CHANNELS_FIRST else -1]))
+        print('Number of training data points: {}'.format(len(feature_label)))
+        print('Class weights: {}'.format(weights))
+
+    if display:
+        if output_mode == 'conv':
+            display_mask = y_sample
+        elif output_mode == 'disc':
+            display_mask = y_label
+        else:
+            display_mask = y
+        plot_training_data_2d(X, display_mask, max_plotted=max_plotted)
+
+
+
+
+def load_training_images_3d_mibi(direc_name, training_direcs, channel_names, raw_image_direc,
+                            image_size, num_frames, montage_mode=False):
+    """
+    Iterate over every image in the training directories and load
+    each into a numpy array.
+    """
+    image_size_x, image_size_y = image_size
+
+    # flatten list of lists
+    X_dirs = [os.path.join(direc_name, t, raw_image_direc) for t in training_direcs]
+    if montage_mode:
+        X_dirs = [os.path.join(t, p) for t in X_dirs for p in os.listdir(t)]
+        X_dirs = sorted_nicely(X_dirs)
+
+    # Initialize training data array
+    if CHANNELS_FIRST:
+        X_shape = (len(X_dirs), len(channel_names), num_frames, image_size_x, image_size_y)
+    else:
+        X_shape = (len(X_dirs), num_frames, image_size_x, image_size_y, len(channel_names))
+
+    X = np.zeros(X_shape, dtype=K.floatx())
+
+    # Load 3D training images
+    for b, direc in enumerate(X_dirs):
+
+        for c, channel in enumerate(channel_names):
+            print('Loading {} channel data from training dir {}: {}'.format(
+                channel, b + 1, direc))
+
+            imglist = nikon_getfiles(direc, channel)
+
+            for i, img in enumerate(imglist):
+                if i >= num_frames:
+                    print('Skipping final {} frames, as num_frames is {} but '
+                          'there are {} total frames'.format(
+                              len(imglist) - num_frames, num_frames, len(imglist)))
+                    break
+
+                image_data = np.asarray(get_image(os.path.join(direc, img)))
+
+                if CHANNELS_FIRST:
+                    X[b, c, i, :, :] = image_data
+                else:
+                    X[b, i, :, :, c] = image_data
+
+    return X
+
+def load_annotated_images_3d_mibi(direc_name, training_direcs, annotation_direc, annotation_name,
+                             num_frames, image_size, montage_mode=False):
+    """
+    Iterate over every annotated image in the training directories and load
+    each into a numpy array.
+    """
+    image_size_x, image_size_y = image_size
+
+    # wrapping single annotation name in list for consistency
+    if not isinstance(annotation_name, list):
+        annotation_name = [annotation_name]
+
+    y_dirs = [os.path.join(direc_name, t, annotation_direc) for t in training_direcs]
+    if montage_mode:
+        y_dirs = [os.path.join(t, p) for t in y_dirs for p in os.listdir(t)]
+        y_dirs = sorted_nicely(y_dirs)
+
+    if CHANNELS_FIRST:
+        y_shape = (len(y_dirs), len(annotation_name), num_frames, image_size_x, image_size_y)
+    else:
+        y_shape = (len(y_dirs), num_frames, image_size_x, image_size_y, len(annotation_name))
+
+    y = np.zeros(y_shape)
+
+    for b, direc in enumerate(y_dirs):
+        for c, name in enumerate(annotation_name):
+            imglist = nikon_getfiles(direc, name)
+
+            for z, img_file in enumerate(imglist):
+                if z >= num_frames:
+                    print('Skipping final {} frames, as num_frames is {} but '
+                          'there are {} total frames'.format(
+                              len(imglist) - num_frames, num_frames, len(imglist)))
+                    break
+
+                annotation_img = get_image(os.path.join(direc, img_file))
+                if CHANNELS_FIRST:
+                    y[b, c, z, :, :] = annotation_img
+                else:
+                    y[b, z, :, :, c] = annotation_img
+
+    return y
+
+def make_training_data_3d_mibi(direc_name, file_name_save, channel_names,
+                          training_direcs=None,
+                          annotation_name='corrected',
+                          raw_image_direc='raw',
+                          annotation_direc='annotated',
+                          window_size_x=30,
+                          window_size_y=30,
+                          border_mode='same',
+                          output_mode='disc',
+                          reshape_size=None,
+                          num_frames=50,
+                          display=True,
+                          num_of_frames_to_display=5,
+                          montage_mode=True,
+                          verbose=True):
+    """
+    Read all images in training directories and save as npz file.
+    3D image sets are "stacks" of images.  For annotation purposes, these images
+    have been sliced into "montages", where a section of each stack has been sliced
+    so they can be efficiently annotated by human users. In this case, the raw_image_direc
+    should be a specific montage (e.g. montage_0_0) and the annotation is the corresponding
+    annotated montage.  Each montage must maintain the full stack, but can be processed
+    independently.
+    # Arguments
+        direc_name: directory containing folders of training data
+        file_name_save: full filepath for npz file where the data will be saved
+        training_direcs: directories of images located inside direc_name
+                         If not provided, all directories in direc_name are used.
+        channel_names: List of particular channel name of images to find.
+                       channel_name should be in the filename (e.g. 'DAPI')
+        annotation_direc: name of folder with annotated images
+        raw_image_direc:  name of folder with raw images
+        window_size_x: number of pixels to +/- x direction to be sampled in sample mode
+        window_size_y: number of pixels to +/- y direction to be sampled in sample mode
+        border_mode:  'valid' or 'same'
+        output_mode:  'sample', 'conv', or 'disc'
+        reshape_size: If provided, will reshape the images to the given size.
+        num_of_features: number of classes (e.g. cell interior, cell edge, background)
+        edge_feature: List which determines the cell edge feature (usually [1, 0, 0])
+                   There can be a single 1 in the list, indicating the index of the feature.
+        max_training_examples: max number of samples to be given to model
+        dilation_radius:
+        verbose:  print more output to screen, similar to DEBUG mode.
+        num_frames:
+        sub_sample: whether or not to subsamble the training data
+        display: whether or not to plot the training data
+        num_of_frames_to_display:
+        montage_mode: data is broken into several "montage"
+                      sub-directories for easier annoation
+    """
+
+    # Load one file to get image sizes
+    rand_train_dir = os.path.join(direc_name, random.choice(training_direcs), raw_image_direc)
+    if montage_mode:
+        rand_train_dir = os.path.join(rand_train_dir, random.choice(os.listdir(rand_train_dir)))
+
+    image_size = get_image_sizes(rand_train_dir, channel_names)
+
+    X = load_training_images_3d_mibi(direc_name, training_direcs, channel_names, raw_image_direc,
+                                image_size, num_frames=num_frames, montage_mode=montage_mode)
+
+    y = load_annotated_images_3d_mibi(direc_name, training_direcs, annotation_direc,
+                                 annotation_name, num_frames, image_size,
+                                 montage_mode=montage_mode)
+
+    # Trim annotation images
+    if border_mode == 'valid':
+        if CHANNELS_FIRST:
+            y = y[:, :, : window_size_x:-window_size_x, window_size_y:-window_size_y]
+        else:
+            y = y[:, :, window_size_x:-window_size_x, window_size_y:-window_size_y, :]
+
+    # Reshape X and y
+    if reshape_size is not None:
+        X, y = reshape_movie(X, y, reshape_size=reshape_size)
+
+    # Convert training data to format compatible with discriminative loss function
+    if output_mode == 'disc':
+        max_cells = np.int(np.amax(y))
+        if CHANNELS_FIRST:
+            binary_mask_shape = (y.shape[0], max_cells + 1, y.shape[1], y.shape[2], y.shape[3])
+        else:
+            binary_mask_shape = (y.shape[0], y.shape[1], y.shape[2], y.shape[3], max_cells + 1)
+        y_binary = np.zeros(binary_mask_shape, dtype='int32')
+        for b in range(y.shape[0]):
+            label_mask = y[b]
+            for l in range(max_cells + 1):
+                if CHANNELS_FIRST:
+                    y_binary[b, l, :, :, :] = label_mask == l
+                else:
+                    y_binary[b, :, :, :, l] = label_mask == l
+
+        y = y_binary
+
+        if verbose:
+            print('Number of cells: {}'.format(max_cells))
+
+    # Save training data in npz format
+    np.savez(file_name_save, X=X, y=y, win_x=window_size_x, win_y=window_size_y)
+
+    if display:
+        plot_training_data_3d(X, y, len(training_direcs), num_of_frames_to_display)
+
+    return None
+
+
+
 def make_training_data(direc_name, file_name_save, channel_names, dimensionality,
                        training_direcs=None,
                        window_size_x=30,
@@ -851,6 +1322,42 @@ def make_training_data(direc_name, file_name_save, channel_names, dimensionality
                               montage_mode=kwargs.get('montage_mode', False),
                               num_frames=kwargs.get('num_frames', 50),
                               num_of_frames_to_display=kwargs.get('num_of_frames_to_display', 5))
+
+    if dimensionality == 4:
+        make_training_data_2d_mibi(direc_name, file_name_save, channel_names,
+                              training_direcs=training_direcs,
+                              window_size_x=window_size_x,
+                              window_size_y=window_size_y,
+                              edge_feature=edge_feature,
+                              distance_transform=kwargs.get('distance_transform', False),
+                              distance_bins=kwargs.get('distance_bins', 4),
+                              display=display,
+                              verbose=verbose,
+                              reshape_size=reshape_size,
+                              border_mode=border_mode,
+                              output_mode=output_mode,
+                              raw_image_direc=raw_image_direc,
+                              annotation_direc=annotation_direc,
+                              dilation_radius=kwargs.get('dilation_radius', 1),
+                              max_plotted=kwargs.get('max_plotted', 5),
+                              max_training_examples=kwargs.get('max_training_examples', 1e7))
+
+    elif dimensionality == 5:
+        make_training_data_3d_mibi(direc_name, file_name_save, channel_names,
+                              training_direcs=training_direcs,
+                              annotation_name=kwargs.get('annotation_name', 'corrected'),
+                              raw_image_direc=raw_image_direc,
+                              annotation_direc=annotation_direc,
+                              window_size_x=window_size_x,
+                              window_size_y=window_size_y,
+                              border_mode=border_mode,
+                              output_mode=output_mode,
+                              reshape_size=reshape_size,
+                              verbose=verbose,
+                              display=display,
+                              montage_mode=False,
+                              num_frames=1,
+                              num_of_frames_to_display=1)
 
     else:
         raise NotImplementedError('make_training_data is not implemented for '
