@@ -45,8 +45,8 @@ def export_model(keras_model, export_path, model_version = 0, weights_path = Non
     legacy_init_op = tf.group(tf.tables_initializer(), name='legacy_init_op')
 
     #Initialize global variables and the model
-    init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
-    sess.run(init_op)
+#    init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+#    sess.run(init_op)
 
     # Add the meta_graph and the variables to the builder
     builder.add_meta_graph_and_variables(

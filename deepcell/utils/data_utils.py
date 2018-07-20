@@ -833,54 +833,60 @@ def load_annotated_images_2d_mibi(direc_name, training_direcs, image_size, edge_
         y_shape = (len(training_direcs), image_size_x, image_size_y, len(edge_feature))
 
     y = np.zeros(y_shape)
-
+    
+    # Load training images
     for b, direc in enumerate(training_direcs):
-        imglist = os.listdir(os.path.join(direc_name, direc, annotation_direc))
+        # e.g. "/data/ecoli/kc", "set1", "RawImages",
+        imglist = os.listdir(os.path.join(direc_name, direc, 'celltype'))
 
-        for l, edge in enumerate(edge_feature):
-            for img in imglist:
-                # if feature string is NOT in image file name, skip it.
-                if not fnmatch(img, '*feature_{}*'.format(l)):
-                    continue
-
-                image_data = get_image(os.path.join(direc_name, direc, annotation_direc, img))
-
-                if np.sum(image_data) > 0:
-                    image_data /= np.amax(image_data)
-
-                if edge == 1 and dilation_radius is not None:
-                    # thicken cell edges to be more pronounced
-                    image_data = binary_dilation(image_data, selem=disk(dilation_radius))
-
-                if CHANNELS_FIRST:
-                    y[b, l, :, :] = image_data
-                else:
-                    y[b, :, :, l] = image_data
-
-        # Thin the augmented edges by subtracting the interior features.
-        for l, edge in enumerate(edge_feature):
-            if edge != 1:
+        for img in imglist:
+            # if channel string is NOT in image file name, skip it.
+            if not fnmatch(img, '*{}*'.format('feature_0')):
                 continue
 
-            for k, non_edge in enumerate(edge_feature):
-                if non_edge == 0:
-                    if CHANNELS_FIRST:
-                        y[b, l, :, :] -= y[b, k, :, :]
-                    else:
-                        y[b, :, :, l] -= y[b, :, :, k]
+            image_file = os.path.join(direc_name, direc, 'celltype', img)
+            image_data = np.asarray(get_image(image_file), dtype=K.floatx())
 
             if CHANNELS_FIRST:
-                y[b, l, :, :] = y[b, l, :, :] > 0
+                y[b, 0, :, :] = image_data
             else:
-                y[b, :, :, l] = y[b, :, :, l] > 0
+                y[b, :, :, 0] = image_data
 
-        # Compute the mask for the background
-        if CHANNELS_FIRST:
-            y[b, len(edge_feature) - 1, :, :] = 1 - np.sum(y[b], axis=0)
-        else:
-            y[b, :, :, len(edge_feature) - 1] = 1 - np.sum(y[b], axis=2)
+    y_binary = to_categorical(y)
+    print('y_tocat shape is:', y_binary.shape)
+    print('y shape is:', y.shape)
+
+
+    return y_binary
+
+
+
+
+'''
+    # Load training images
+    for b, direc in enumerate(training_direcs):
+        # e.g. "/data/ecoli/kc", "set1", "RawImages",
+        imglist = os.listdir(os.path.join(direc_name, direc, annotation_direc))
+
+        for c, channel in enumerate(channel_names):
+            for img in imglist:
+                # if channel string is NOT in image file name, skip it.
+                if not fnmatch(img, '*{}*'.format(channel)):
+                    continue
+
+                image_file = os.path.join(direc_name, direc, annotation_direc, img)
+                image_data = np.asarray(get_image(image_file), dtype=K.floatx())
+
+                if CHANNELS_FIRST:
+                    y[b, c, :, :] = image_data
+                else:
+                    y[b, :, :, c] = image_data
 
     return y
+'''
+
+
+
 
 def make_training_data_2d_mibi(direc_name, file_name_save, channel_names,
                           raw_image_direc='raw',
@@ -1206,11 +1212,15 @@ def make_training_data_3d_mibi(direc_name, file_name_save, channel_names,
                                  montage_mode=montage_mode)
 
     # Trim annotation images
-    if border_mode == 'valid':
-        if CHANNELS_FIRST:
-            y = y[:, :, : window_size_x:-window_size_x, window_size_y:-window_size_y]
-        else:
-            y = y[:, :, window_size_x:-window_size_x, window_size_y:-window_size_y, :]
+    #if border_mode == 'valid':
+    #    if CHANNELS_FIRST:
+    #        y = y[:, :, : window_size_x:-window_size_x, window_size_y:-window_size_y]
+    #    else:
+    #        y = y[:, :, window_size_x:-window_size_x, window_size_y:-window_size_y, :]
+
+
+    #if reshape_size is not None:
+    #    X, y = reshape_matrix(X, y, reshape_size=reshape_size)
 
     # Reshape X and y
     if reshape_size is not None:
@@ -1323,7 +1333,7 @@ def make_training_data(direc_name, file_name_save, channel_names, dimensionality
                               num_frames=kwargs.get('num_frames', 50),
                               num_of_frames_to_display=kwargs.get('num_of_frames_to_display', 5))
 
-    if dimensionality == 4:
+    elif dimensionality == 4:
         make_training_data_2d_mibi(direc_name, file_name_save, channel_names,
                               training_direcs=training_direcs,
                               window_size_x=window_size_x,

@@ -138,8 +138,10 @@ def run_model_on_dir():
     channel_names = ['dsDNA']
     image_size_x, image_size_y = get_image_sizes(data_location, channel_names)
 
-    model_name = '2018-06-28_mibi_61x61_{}_{}__0.h5'.format(
-        K.image_data_format(), DATA_OUTPUT_MODE)
+#    model_name = '2018-06-28_mibi_61x61_{}_{}__0.h5'.format(
+#        K.image_data_format(), DATA_OUTPUT_MODE)
+
+    model_name = '2018-07-20_mibi_conv_channels_last_conv__0.h5'
 
     weights = os.path.join(MODEL_DIR, PREFIX, model_name)
 
@@ -163,9 +165,9 @@ def run_model_on_dir():
         list_of_weights=[weights],
         image_size_x=image_size_x,
         image_size_y=image_size_y,
-        win_x=window_size[0],
-        win_y=window_size[1],
-        split=False)
+        win_x=(0),
+        win_y=(0),
+        split=True)
 
 def export():
     model_args = {

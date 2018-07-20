@@ -98,7 +98,7 @@ def run_model_on_directory(data_location, channel_names, output_location, model,
 
 def run_models_on_directory(data_location, channel_names, output_location, model_fn,
                             list_of_weights, n_features=3, win_x=30, win_y=30,
-                            image_size_x=1080, image_size_y=1280, save=True, split=True):
+                            image_size_x=1080, image_size_y=1280, save=True, split=True, weightfmt=False):
     if split:
         input_shape = (len(channel_names), image_size_x // 2 + win_x, image_size_y // 2 + win_y)
     else:
@@ -111,6 +111,9 @@ def run_models_on_directory(data_location, channel_names, output_location, model
         batch_shape = (1, input_shape[0], input_shape[1], input_shape[2])
 
     model = model_fn(input_shape=input_shape, n_features=n_features)
+
+    if weightfmt == True:
+        model = model_fn(input_shape=input_shape, n_features=n_features, )
 
     for layer in model.layers:
         print(layer.name)
@@ -140,3 +143,52 @@ def run_models_on_directory(data_location, channel_names, output_location, model
                 tiff.imsave(os.path.join(output_location, cnnout_name), feature)
 
     return model_output
+
+def run_mibi_model_on_dir(data_location, channel_names, output_location, model_fn,
+                            list_of_weights, n_features=3, win_x=30, win_y=30,
+                            image_size_x=1080, image_size_y=1280, save=True, split=True, weightfmt=False):
+    if split:
+        input_shape = (len(channel_names), image_size_x // 2 + win_x, image_size_y // 2 + win_y)
+    else:
+        input_shape = (len(channel_names), image_size_x, image_size_y)
+
+    if CHANNELS_LAST:
+        input_shape = (input_shape[1], input_shape[2], input_shape[0])
+        batch_shape = (1, input_shape[1], input_shape[2], input_shape[0])
+    else:
+        batch_shape = (1, input_shape[0], input_shape[1], input_shape[2])
+
+    model = model_fn(input_shape=input_shape, n_features=n_features, )
+
+    if weightfmt == True:
+        model = model_fn(input_shape=input_shape, n_features=n_features, weights_path=list_of_weights[0])
+
+    for layer in model.layers:
+        print(layer.name)
+
+    channel_axis = 1 if CHANNELS_FIRST else -1
+    n_features = model.layers[-1].output_shape[channel_axis]
+
+    model_outputs = []
+    for weights_path in list_of_weights:
+        #model.load_weights(weights_path)
+        processed_image_list = run_model_on_directory(
+            data_location, channel_names, output_location, model,
+            win_x=win_x, win_y=win_y, save=False, split=split)
+
+        model_outputs.append(np.stack(processed_image_list, axis=0))
+
+    # Average all images
+    model_output = np.stack(model_outputs, axis=0)
+    model_output = np.mean(model_output, axis=0)
+
+    # Save images
+    if save:
+        for i in range(model_output.shape[0]):
+            for f in range(n_features):
+                feature = model_output[i, f, :, :] if CHANNELS_FIRST else model_output[i, :, :, f]
+                cnnout_name = 'feature_{}_frame_{}.tif'.format(f, i)
+                tiff.imsave(os.path.join(output_location, cnnout_name), feature)
+
+    return model_output
+

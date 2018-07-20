@@ -67,6 +67,8 @@ def train_model_sample(model=None, dataset=None, optimizer=None,
     y_test = to_categorical(y_test, n_classes)
 
     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    #model.compile(loss='sparse_categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+
 
     print('Using real-time data augmentation.')
 

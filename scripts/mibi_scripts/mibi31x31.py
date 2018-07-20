@@ -30,6 +30,12 @@ RESHAPE_SIZE = 512
 N_EPOCHS = 20
 WINDOW_SIZE = (15,15)
 
+# channels 
+IS_CHANNELS_FIRST = K.image_data_format() == 'channels_first'
+ROW_AXIS = 2 if IS_CHANNELS_FIRST else 1
+COL_AXIS = 3 if IS_CHANNELS_FIRST else 2
+CHANNEL_AXIS = 1 if IS_CHANNELS_FIRST else -1
+
 # filepath constants
 DATA_DIR = '/data/data'
 MODEL_DIR = '/data/models'
@@ -39,8 +45,14 @@ EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/samir'
 #PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
 DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-MAX_TRAIN = 1e7
-CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
+#MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
+MODEL_NAME = '2018-07-06_mibi_31x31_channels_last_sample__0.h5'
+
+
+MAX_TRAIN = 1e5
+#CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
+CHANNEL_NAMES = ['dsDNA']
+
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -145,9 +157,11 @@ def run_model_on_dir():
     channel_names = CHANNEL_NAMES
     image_size_x, image_size_y = get_image_sizes(test_images, channel_names)
 
-    model_name = '2018-07-13_mibi_31x31_{}_{}__0.h5'.format(
-        K.image_data_format(), DATA_OUTPUT_MODE)
+#    model_name = '2018-07-13_mibi_31x31_{}_{}__0.h5'.format(
+#        K.image_data_format(), DATA_OUTPUT_MODE)
 
+    model_name = MODEL_NAME 
+ 
     weights = os.path.join(MODEL_DIR, PREFIX, model_name)
 
     n_features = 3
@@ -174,6 +188,15 @@ def run_model_on_dir():
         win_y=window_size[1],
         split=False)
 
+    for i in range(predictions.shape[0]):
+        max_img = np.argmax(predictions[i], axis=-1)
+        max_img = max_img.astype(np.int16)
+        cnnout_name = 'argmax_frame_{}.tif'.format(str(i).zfill(3))
+
+        out_file_path = os.path.join(output_location, cnnout_name)
+
+        tiff.imsave(out_file_path, max_img)
+
 def export():
     model_args = {
         'norm_method': 'median',
@@ -181,9 +204,9 @@ def export():
         'n_features': 3
     }
 
-    direc_data = os.path.join(NPZ_DIR, PREFIX)
-    training_data = np.load(os.path.join(direc_data, DATA_FILE + '.npz'))
-    X, y = training_data['X'], training_data['y']
+#    direc_data = os.path.join(NPZ_DIR, PREFIX)
+#    training_data = np.load(os.path.join(direc_data, DATA_FILE + '.npz'))
+#    X, y = training_data['X'], training_data['y']
 
     data_format = K.image_data_format()
     row_axis = 2 if data_format == 'channels_first' else 1
@@ -193,28 +216,39 @@ def export():
     if DATA_OUTPUT_MODE == 'sample':
         the_model = dilated_bn_feature_net_31x31
         if K.image_data_format() == 'channels_first':
-            model_args['input_shape'] = (1, 1080, 1280)
+            model_args['input_shape'] = (len(CHANNEL_NAMES), 2048, 2048)
         else:
-            model_args['input_shape'] = (1080, 1280, 1)
+            model_args['input_shape'] = (2048, 2048, len(CHANNEL_NAMES))
 
-    elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
-        the_model = bn_dense_feature_net
-        model_args['location'] = False
 
-        size = (RESHAPE_SIZE, RESHAPE_SIZE) if RESIZE else X.shape[row_axis:col_axis + 1]
-        if data_format == 'channels_first':
-            model_args['input_shape'] = (X.shape[channel_axis], size[0], size[1])
-        else:
-            model_args['input_shape'] = (size[0], size[1], X.shape[channel_axis])
+
+
+#    elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
+#        the_model = bn_dense_feature_net
+#        model_args['location'] = False
+
+#        size = (RESHAPE_SIZE, RESHAPE_SIZE) if RESIZE else X.shape[row_axis:col_axis + 1]
+#        if data_format == 'channels_first':
+#            model_args['input_shape'] = (X.shape[channel_axis], size[0], size[1])
+#        else:
+#            model_args['input_shape'] = (size[0], size[1], X.shape[channel_axis])
 
     model = the_model(**model_args)
 
-    model_name = '2018-06-27_mibi_samir_{}_{}__0.h5'.format(
-        K.image_data_format(), DATA_OUTPUT_MODE)
+#    model_name = '2018-06-27_mibi_samir_{}_{}__0.h5'.format(
+#        K.image_data_format(), DATA_OUTPUT_MODE)
 
-    weights_path = os.path.join(MODEL_DIR, PREFIX, model_name)
+    model_name = MODEL_NAME
+
+    weights_path = os.path.join(MODEL_DIR, PREFIX, MODEL_NAME)
     export_path = os.path.join(EXPORT_DIR, PREFIX)
-    export_model(model, export_path, model_version=0, weights_path=weights_path)
+    export_model(model, export_path, model_version=6, weights_path=weights_path)
+
+    print('weights path is:', weights_path)
+    print('model name is:', model_name)
+    print('lchanns is:', len(CHANNEL_NAMES))
+    print('input shape is:', model_args['input_shape'])
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
