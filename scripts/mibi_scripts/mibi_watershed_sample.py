@@ -253,12 +253,12 @@ def run_model_on_dir():
     model_fn = dilated_bn_feature_net_31x31
 
     # model names
-    watershed_weights_file = '2018-07-19_mibi_samp_watershed_channels_last_sample_watershed_0.h5'
+    watershed_weights_file = '2018-07-20_mibi_watershed_channels_last_sample_watershed_0.h5'
     watershed_weights_file = os.path.join(MODEL_DIR, PREFIX, watershed_weights_file)
 
     # weights directories
    # fgbg_weights_file = '2018-07-13_mibi_watershedFB_channels_last_sample_fgbg_0.h5'
-    fgbg_weights_file = '2018-07-18_mibi_samp_watershedFB_channels_last_sample_fgbg_0.h5'
+    fgbg_weights_file = '2018-07-20_mibi_watershedFB_channels_last_sample_fgbg_0.h5'
     fgbg_weights_file = os.path.join(MODEL_DIR, PREFIX, fgbg_weights_file)
 
     # variables

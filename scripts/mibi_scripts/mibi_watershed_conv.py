@@ -1,3 +1,5 @@
+#watershed fully convolutional
+
 ## Generate training data
 import os
 import errno
@@ -34,8 +36,11 @@ MODEL_DIR = '/data/models'
 NPZ_DIR = '/data/npz_data'
 RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
-PREFIX = 'tissues/mibi/samir'
+PREFIX = 'tissues/mibi/samir/'
 DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+
+MODEL_NAME = 'watershed_fully_conv.h5'
+RUN_DIR = 'set2'
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -140,15 +145,15 @@ def train_model_on_training_data():
 
 def run_model_on_dir():
     raw_dir = 'raw'
-    data_location = os.path.join(DATA_DIR, PREFIX, 'set3', raw_dir)
+    data_location = os.path.join(DATA_DIR, PREFIX, RUN_DIR, raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
     channel_names = ['dsDNA']
     image_size_x, image_size_y = get_image_sizes(data_location, channel_names)
 
-    model_name = '2018-07-06_mibi_31x31_{}_{}__0.h5'.format(
-        K.image_data_format(), DATA_OUTPUT_MODE)
+#    model_name = '2018-07-06_mibi_31x31_{}_{}__0.h5'.format(
+#        K.image_data_format(), DATA_OUTPUT_MODE)
 
-    weights = os.path.join(MODEL_DIR, PREFIX, model_name)
+    weights = os.path.join(MODEL_DIR, PREFIX, MODEL_NAME)
 
     n_features = 4
     window_size = (WINDOW_SIZE, WINDOW_SIZE)
