@@ -19,7 +19,8 @@ from tensorflow.python.saved_model import signature_def_utils
 from tensorflow.python.saved_model import signature_def_utils_impl
 from tensorflow.python.saved_model.builder import SavedModelBuilder
 
-def export_model(keras_model, export_path, model_version = 0, weights_path = None):
+
+def export_model(keras_model, export_path, model_version=0, weights_path=None):
 
     # Start the tensorflow session
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8, allow_growth=False)
@@ -36,7 +37,7 @@ def export_model(keras_model, export_path, model_version = 0, weights_path = Non
     # Define prediction signature
     prediction_signature = tf.saved_model.signature_def_utils.predict_signature_def(
         {'image': keras_model.input},
-        {'prediction':keras_model.output}
+        {'prediction': keras_model.output}
     )
 
     # Create export path if it doesn't exist
