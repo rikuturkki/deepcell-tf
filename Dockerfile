@@ -16,7 +16,7 @@ RUN git clone https://www.github.com/vanvalenlab/keras-retinanet /deepcell-tf/li
     cd /deepcell-tf
 
 # Install Mask R-CNN
-RUN git clone https://www.github.com/vanvalenlab/Mask_RCNN /deepcell-tf/lib/Mask_RCNN && \
+RUN git clone https://www.github.com/matterport/Mask_RCNN /deepcell-tf/lib/Mask_RCNN && \
     cd /deepcell-tf/lib/Mask_RCNN && \
     pip install -r requirements.txt && \
     python setup.py install && \
@@ -40,6 +40,8 @@ RUN echo "backend : Agg" > /usr/local/lib/python3.5/dist-packages/matplotlib/mpl
 # Change keras configuration file so that channels are first
 # RUN mkdir $HOME/.keras && \
 #     echo '{"image_data_format": "channels_first", "epsilon": 1e-07, "floatx": "float32", "backend": "tensorflow"}' > $HOME/.keras/keras.json
+
+RUN apt-get install -y libsm6
 
 # Make port 80 available to the world outside this container
 EXPOSE 80

@@ -6,7 +6,7 @@ import errno                #error symbols
 import argparse             #command line input parsing
 
 import numpy as np          #scientific computing (aka matlab)
-import tifffile as tiff     #read/write TIFF files (aka our images)
+import skimage.external.tifffile as tiff     #read/write TIFF files (aka our images)
 from tensorflow.python.keras.optimizers import SGD    #optimizer
 from tensorflow.python.keras import backend as K            #tensorflow backend
 
@@ -26,9 +26,10 @@ from deepcell import export_model
 DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
-RESHAPE_SIZE = 512
+RESHAPE_SIZE = 256
 N_EPOCHS = 20
 WINDOW_SIZE = (15,15)
+BATCH_SIZE = 64 if DATA_OUTPUT_MODE == 'sample' else 1
 
 # channels 
 IS_CHANNELS_FIRST = K.image_data_format() == 'channels_first'
@@ -45,14 +46,15 @@ EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/samir'
 #PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
 DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-#MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
-MODEL_NAME = '2018-07-06_mibi_31x31_channels_last_sample__0.h5'
+MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
+#MODEL_NAME = '2018-07-06_mibi_31x31_channels_last_sample__0.h5'
 
 
 MAX_TRAIN = 1e5
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
-CHANNEL_NAMES = ['dsDNA']
+#CHANNEL_NAMES = ['dsDNA']
 
+CHANNEL_NAMES = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.', 'watershed']
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -100,7 +102,7 @@ def train_model_on_training_data():
     print('X.shape: {}\ny.shape: {}'.format(X.shape, y.shape))
 
     n_epoch = N_EPOCHS
-    batch_size = 32 if DATA_OUTPUT_MODE == 'sample' else 1
+    #batch_size = 32 if DATA_OUTPUT_MODE == 'sample' else 1
     optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
 
@@ -138,7 +140,7 @@ def train_model_on_training_data():
         model=model,
         dataset=DATA_FILE,
         optimizer=optimizer,
-        batch_size=batch_size,
+        batch_size=BATCH_SIZE,
         n_epoch=n_epoch,
         direc_save=direc_save,
         direc_data=direc_data,
