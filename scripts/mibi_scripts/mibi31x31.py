@@ -26,10 +26,10 @@ from deepcell import export_model
 DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
-RESHAPE_SIZE = 256
-N_EPOCHS = 20
+RESHAPE_SIZE = None 
+N_EPOCHS = 50
 WINDOW_SIZE = (15,15)
-BATCH_SIZE = 64 if DATA_OUTPUT_MODE == 'sample' else 1
+BATCH_SIZE = 32 if DATA_OUTPUT_MODE == 'sample' else 1
 
 # channels 
 IS_CHANNELS_FIRST = K.image_data_format() == 'channels_first'
@@ -46,15 +46,22 @@ EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/samir'
 #PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
 DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
-#MODEL_NAME = '2018-07-06_mibi_31x31_channels_last_sample__0.h5'
+#MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
+MODEL_NAME = '2018-07-26_mibi_31x31_channels_last_sample__0.h5'
 
 
-MAX_TRAIN = 1e5
+MAX_TRAIN = 2e6
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
 #CHANNEL_NAMES = ['dsDNA']
 
-CHANNEL_NAMES = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.', 'watershed']
+
+#Segmentation channel names, others: Au, Si
+#CHANNEL_NAMES = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.', 'watershed']
+
+#CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta', 'H3K9ac', 'watershed', 'P.', 'Na.']
+
+CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'watershed', 'P.']
+
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -154,7 +161,7 @@ def train_model_on_training_data():
 def run_model_on_dir():
     raw_dir = 'raw'
 #    data_location = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
-    test_images = os.path.join(DATA_DIR, 'tissues/mibi/mibi_full/TNBCShareData', 'set1', raw_dir)
+    test_images = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
     channel_names = CHANNEL_NAMES
     image_size_x, image_size_y = get_image_sizes(test_images, channel_names)
