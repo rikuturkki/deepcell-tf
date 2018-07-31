@@ -30,9 +30,84 @@ from .plot_utils import plot_training_data_2d
 from .plot_utils import plot_training_data_3d
 from .transform_utils import distance_transform_2d
 
-
 CHANNELS_FIRST = K.image_data_format() == 'channels_first'
 
+
+def get_data(file_name, mode='sample', test_size=.1, seed=None):
+    """Load data from NPZ file and split into train and test sets
+    # Arguments
+        file_name: path to NPZ file to load
+        mode: if 'sample', will return datapoints for each pixel,
+              otherwise, returns the same data that was loaded
+        test_size: percent of data to leave as testing holdout
+        seed: seed number for random train/test split repeatability
+    # Returns
+        dict of training data, and a tuple of testing data:
+        train_dict, (X_test, y_test)
+    """
+    training_data = np.load(file_name)
+    X = training_data['X']
+    y = training_data['y']
+    win_x = training_data['win_x']
+    win_y = training_data['win_y']
+    win_z = None
+
+    class_weights = training_data['class_weights'] if 'class_weights' in training_data else None
+
+    if mode == 'sample' and X.ndim == 4:
+        batch = training_data['batch']
+        pixels_x = training_data['pixels_x']
+        pixels_y = training_data['pixels_y']
+
+        batch_train, batch_test, y_train, y_test, px_train, px_test, py_train, py_test= train_test_split(batch, y, pixels_x, pixels_y,
+                                                 test_size=test_size, random_state=seed)
+
+
+    elif mode == 'sample' and X.ndim == 5:
+         print('ndims is 5, should be 4')
+
+#        batch = training_data['batch']
+#        pixels_x = training_data['pixels_x']
+#        pixels_y = training_data['pixels_y']
+#        pixels_z = training_data['pixels_z']
+#        win_z = training_data['win_z']
+
+#        batch_train, batch_test, y_train, y_test, px_train, px_test, py_train, py_test, pz_train, pz_test = train_test_split(batch, y, pixels_x, pixels_y, pixels_z,
+                                                 test_size=test_size, random_state=seed)
+
+    train_dict = {
+        'X':X,
+        'y':y_train,
+        'batch':batch_train,
+        'pixels_x':px_train,
+        'pixels_y':py_train,
+        'win_x': win_x,
+        'win_y': win_y,
+        'class_weights': class_weights
+    }
+
+    test_dict = {
+        'X':X,
+        'y':y_test,
+        'batch':batch_test,
+        'pixels_x':px_test,
+        'pixels_y':py_test,
+        'win_x': win_x,
+        'win_y': win_y,
+        'class_weights': class_weights
+    }
+
+#    if X.ndim == 5:
+#        train_dict['pixels_z'] = pz_train
+#        test_dict['pixels_z'] = pz_test
+#        train_dict['win_z'] = win_z
+#        test_dict['win_z'] = win_z
+
+    return train_dict, test_dict
+
+
+
+'''
 
 def get_data(file_name, mode='sample', test_size=.1, seed=None):
     """Load data from NPZ file and split into train and test sets
@@ -94,7 +169,7 @@ def get_data(file_name, mode='sample', test_size=.1, seed=None):
     }
 
     return train_dict, (X_test, y_test)
-
+'''
 
 def get_max_sample_num_list(y, edge_feature, output_mode='sample', border_mode='valid',
                             window_size_x=30, window_size_y=30, classfication=False):
