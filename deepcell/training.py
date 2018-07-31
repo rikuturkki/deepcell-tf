@@ -77,13 +77,13 @@ def train_model_sample(model=None, dataset=None, optimizer=None,
     print('Using real-time data augmentation.')
 
     # this will do preprocessing and realtime data augmentation
-    datagen = SampleDataGenerator(
+    datagen = FlySamplingDataGenerator(
         rotation_range=rotation_range,  # randomly rotate images by 0 to rotation_range degrees
         shear_range=shear,  # randomly shear images in the range (radians , -shear_range to shear_range)
         horizontal_flip=flip,  # randomly flip images
         vertical_flip=flip)  # randomly flip images
 
-    datagen_val = SampleDataGenerator(
+    datagen_val = FlySamplingDataGenerator(
         rotation_range=0,  # randomly rotate images by 0 to rotation_range degrees
         shear_range=0,  # randomly shear images in the range (radians , -shear_range to shear_range)
         horizontal_flip=0,  # randomly flip images
