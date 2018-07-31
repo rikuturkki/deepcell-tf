@@ -29,8 +29,9 @@ from tensorflow.python.keras.preprocessing.image import ImageDataGenerator
 
 from .utils.transform_utils import transform_matrix_offset_center
 from .utils.transform_utils import distance_transform_2d
+from keras.utils import to_categorical
 
-
+CHANNELS_FIRST = K.image_data_format() == 'channels_first'
 
 #from tensorflow.python.keras.preprocessing.image import Iterator
 #from deepcell import MovieDataGenerator
@@ -55,13 +56,13 @@ class FlySamplingArrayIterator(Iterator):
         if data_format is None:
             data_format = K.image_data_format()
 
-        if self.x.ndim != 4:
-            raise ValueError('Input data in `FlySamplingArrayIterator` should'
-                             'have rank 4. Got array with shape', self.x.shape)
-
         self.channel_axis = 3 if data_format == 'channels_last' else 1
         self.x = np.asarray(train_dict['X'], dtype=K.floatx())
         self.y = np.asarray(train_dict['y'], dtype=np.int32)
+
+        if self.x.ndim != 4:
+            raise ValueError('Input data in `FlySamplingArrayIterator` should'
+                             'have rank 4. Got array with shape', self.x.shape)
 
         self.batch = train_dict['batch']
         self.pixels_x = train_dict['pixels_x']
@@ -158,7 +159,7 @@ class FlySamplingArrayIterator(Iterator):
         if CHANNELS_FIRST:
             sample_shape = (self.x.shape[1], 2 * win_x + 1, 2 * win_y + 1)
         else:
-            sample_shape = (2 * win_x + 1, 2 * win_y + 1, self.x.shape[4])
+            sample_shape = (2 * win_x + 1, 2 * win_y + 1, self.x.shape[3])
 
         X_sample = np.zeros(sample_shape, dtype=K.floatx())
 

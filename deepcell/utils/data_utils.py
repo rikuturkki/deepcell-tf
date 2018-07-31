@@ -73,7 +73,7 @@ def get_data(file_name, mode='sample', test_size=.1, seed=None):
 #        win_z = training_data['win_z']
 
 #        batch_train, batch_test, y_train, y_test, px_train, px_test, py_train, py_test, pz_train, pz_test = train_test_split(batch, y, pixels_x, pixels_y, pixels_z,
-                                                 test_size=test_size, random_state=seed)
+#                                                 test_size=test_size, random_state=seed)
 
     train_dict = {
         'X':X,

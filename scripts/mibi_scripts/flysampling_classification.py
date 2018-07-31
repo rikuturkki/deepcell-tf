@@ -6,7 +6,7 @@ import errno                #error symbols
 import argparse             #command line input parsing
 
 import numpy as np          #scientific computing (aka matlab)
-import tifffile as tiff     #read/write TIFF files (aka our images)
+import skimage.external.tifffile as tiff     #read/write TIFF files (aka our images)
 from tensorflow.python.keras.optimizers import SGD    #optimizer
 from tensorflow.python.keras import backend as K            #tensorflow backend
 
