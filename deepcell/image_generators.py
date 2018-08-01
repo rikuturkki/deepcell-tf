@@ -68,6 +68,9 @@ class FlySamplingArrayIterator(Iterator):
         self.pixels_x = train_dict['pixels_x']
         self.pixels_y = train_dict['pixels_y']
 
+
+        print('batch in iterator is: ', self.batch.shape)
+
         self.win_x = train_dict['win_x']
         self.win_y = train_dict['win_y']
 
@@ -78,10 +81,11 @@ class FlySamplingArrayIterator(Iterator):
         self.save_format = save_format
 
         # Balance the classes
-        self._class_balance()
+     #   self._class_balance()
+        print('batch in iterator after class balance is: ', self.batch.shape)
 
         # Convert to categorical
-        self.y = to_categorical(self.y)
+     #   self.y = to_categorical(self.y)
 
         super(FlySamplingArrayIterator, self).__init__(
             len(self.y), batch_size, shuffle, seed)
@@ -156,10 +160,15 @@ class FlySamplingArrayIterator(Iterator):
         win_x = self.win_x
         win_y = self.win_y
 
+     #   print('self.x shape is: ', self.x.shape)
+     #   print('batch in _sample_image is: ', b)
+
         if CHANNELS_FIRST:
             sample_shape = (self.x.shape[1], 2 * win_x + 1, 2 * win_y + 1)
         else:
             sample_shape = (2 * win_x + 1, 2 * win_y + 1, self.x.shape[3])
+
+     #   print('sample_shape is:', sample_shape)
 
         X_sample = np.zeros(sample_shape, dtype=K.floatx())
 
@@ -174,27 +183,36 @@ class FlySamplingArrayIterator(Iterator):
         if self.channel_axis == 1:
             batch_x = np.zeros((len(index_array),
                                 self.x.shape[self.channel_axis],
-
                                 2 * self.win_x + 1,
                                 2 * self.win_y + 1))
         else:
             batch_x = np.zeros((len(index_array),
-
                                 2 * self.win_x + 1,
                                 2 * self.win_y + 1,
                                 self.x.shape[self.channel_axis]))
 
+
+        #print('batch in get_batches is: ', self.batch)
+        #print('shape of batch is: ', self.batch.shape)
+  
+      #  print('index_array is: ', index_array)
+      #  print('shape of index_array is: ', index_array.shape)
+
         for i, j in enumerate(index_array):
+
+      #      print('i is: ', i, ' and j is: ', j)
+            #print('batch[j][0] in _get_batches is: ', self.batch[j][0])
 
             b, px, py = self.batch[j], self.pixels_x[j], self.pixels_y[j]
             x = self._sample_image(b, px, py)
-            x = self.movie_data_generator.random_transform(x.astype(K.floatx()))
-            x = self.movie_data_generator.standardize(x)
+            x = self.image_data_generator.random_transform(x.astype(K.floatx()))
+            x = self.image_data_generator.standardize(x)
 
             batch_x[i] = x
 
         if self.save_to_dir:
             for i, j in enumerate(index_array):
+
                 img = array_to_img(batch_x[i], self.data_format, scale=True)
                 fname = '{prefix}_{index}_{hash}.{format}'.format(
                     prefix=self.save_prefix,

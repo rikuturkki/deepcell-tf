@@ -55,6 +55,9 @@ def get_data(file_name, mode='sample', test_size=.1, seed=None):
     class_weights = training_data['class_weights'] if 'class_weights' in training_data else None
 
     if mode == 'sample' and X.ndim == 4:
+
+        print('batch in get_data is: ', training_data['batch'])
+
         batch = training_data['batch']
         pixels_x = training_data['pixels_x']
         pixels_y = training_data['pixels_y']
@@ -102,6 +105,9 @@ def get_data(file_name, mode='sample', test_size=.1, seed=None):
 #        test_dict['pixels_z'] = pz_test
 #        train_dict['win_z'] = win_z
 #        test_dict['win_z'] = win_z
+
+    print('get_data batch_train is: ', train_dict['batch'])
+    print('get_data batch_test is: ', test_dict['batch'])
 
     return train_dict, test_dict
 
@@ -326,6 +332,8 @@ def sample_label_matrix(y, edge_feature, window_size_x=30, window_size_y=30,
     feature_cols = np.array(feature_cols, dtype='int32')[rand_ind]
     feature_batch = np.array(feature_batch, dtype='int32')[rand_ind]
     feature_label = np.array(feature_label, dtype='int32')[rand_ind]
+
+    print('sample_label_matrix batch is: ', feature_batch)
 
     return feature_rows, feature_cols, feature_batch, feature_label
 

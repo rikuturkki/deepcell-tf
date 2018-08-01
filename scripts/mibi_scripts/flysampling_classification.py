@@ -29,7 +29,7 @@ RESIZE = True
 RESHAPE_SIZE = 2048
 N_EPOCHS = 5
 WINDOW_SIZE = (15,15)
-BATCH_SIZE = 32
+BATCH_SIZE = 128 
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -42,21 +42,22 @@ PREFIX = 'tissues/mibi/mibi_full'
 DATA_FILE = 'mibi_flysampling_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 MODEL_NAME = ''
 RUN_DIR = 'set1'
-
-MAX_TRAIN = 4e5
+TRAIN_SET_RANGE = range(1, 20+1)
+MAX_TRAIN = 1e9
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'P']  #Add P?
 #CHANNEL_NAMES = ['dsDNA']
 
 # removed channels: CSF-1R, CD-163, B7H3
-'''CHANNEL_NAMES = ['Au', 'catenin', 'Ca', 'CD11b', 'CD11c', 'CD138', 'CD16', 'CD209', 'CD20', 'CD31',
-                 'CD3', 'CD45RO', 'CD45', 'CD4', 'CD56', 'CD63.', 'CD68.', 'CD8.', 'C.', 'dsDNA.',
-                 'EGFR.', 'Fe.', 'FoxP3.', 'H3K27me3.', 'H3K9ac.', 'HLA_Class_1.', 'HLA-DR.', 'IDO.',
-                 'Keratin17.', 'Keratin6.', 'Ki67.', 'Lag3.', 'MPO.', 'Na.', 'OX40.', 'p53.', 'Pan-Keratin.',
-                 'PD1.', 'PD-L1.', 'phospho-S6.', 'P.', 'Si.', 'SMA.', 'Ta.', 'Vimentin.', ]'''
+#CHANNEL_NAMES = ['Au', 'catenin', 'Ca', 'CD11b', 'CD11c', 'CD138', 'CD16', 'CD209', 'CD20', 'CD31',
+#                 'CD3', 'CD45RO', 'CD45', 'CD4', 'CD56', 'CD63.', 'CD68.', 'CD8.', 'C.', 'dsDNA.',
+#                 'EGFR.', 'Fe.', 'FoxP3.', 'H3K27me3.', 'H3K9ac.', 'HLA_Class_1.', 'HLA-DR.', 'IDO.',
+#                 'Keratin17.', 'Keratin6.', 'Ki67.', 'Lag3.', 'MPO.', 'Na.', 'OX40.', 'p53.', 'Pan-Keratin.',
+#                 'PD1.', 'PD-L1.', 'phospho-S6.', 'P.', 'Si.', 'SMA.', 'Ta.', 'Vimentin.']
 
 CHANNEL_NAMES = ['dsDNA.', 'H3K27me3.', 'Ta.', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
                  'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
                  'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
 NUM_FEATURES = 17
 
 
@@ -70,10 +71,13 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
     num_of_features = 17 # Specify the number of feature masks that are present
-    training_direcs = ['set1', 'set2']
     channel_names = CHANNEL_NAMES
     raw_image_direc = 'raw'
     annotation_direc = 'celltype'
+
+    training_direcs = []
+    for set_num in TRAIN_SET_RANGE:
+        training_direcs.append('set' + str(set_num))
 
    # Create the training data
     make_training_data(
