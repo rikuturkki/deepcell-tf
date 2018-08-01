@@ -29,7 +29,7 @@ RESIZE = True
 RESHAPE_SIZE = 2048
 N_EPOCHS = 5
 WINDOW_SIZE = (15,15)
-BATCH_SIZE = 128 
+BATCH_SIZE = 32 
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -42,7 +42,7 @@ PREFIX = 'tissues/mibi/mibi_full'
 DATA_FILE = 'mibi_flysampling_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 MODEL_NAME = ''
 RUN_DIR = 'set1'
-TRAIN_SET_RANGE = range(1, 20+1)
+TRAIN_SET_RANGE = range(1, 1+1)
 MAX_TRAIN = 1e9
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'P']  #Add P?
 #CHANNEL_NAMES = ['dsDNA']
