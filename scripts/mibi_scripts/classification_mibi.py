@@ -6,7 +6,7 @@ import errno                #error symbols
 import argparse             #command line input parsing
 
 import numpy as np          #scientific computing (aka matlab)
-import tifffile as tiff     #read/write TIFF files (aka our images)
+import skimage.external.tifffile as tiff     #read/write TIFF files (aka our images)
 from tensorflow.python.keras.optimizers import SGD    #optimizer
 from tensorflow.python.keras import backend as K            #tensorflow backend
 
@@ -26,7 +26,7 @@ from deepcell import export_model
 DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
-RESHAPE_SIZE = 512
+RESHAPE_SIZE = 2048 
 N_EPOCHS = 40 
 WINDOW_SIZE = (15,15)
 BATCH_SIZE = 64 
@@ -37,11 +37,15 @@ MODEL_DIR = '/data/models'
 NPZ_DIR = '/data/npz_data'
 RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
-PREFIX = 'tissues/mibi/samir'
-#PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
-DATA_FILE = 'mibi_long_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-MODEL_NAME = '2018-07-22_mibi_class_channels_last_sample__0.h5'
+#PREFIX = 'tissues/mibi/samir'
+PREFIX = 'tissues/mibi/mibi_full'
+DATA_FILE = 'mibi_medov4_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+MODEL_NAME = '2018-08-01_mibi_medov4_class_channels_last_sample__0.h5'
+
 RUN_DIR = 'set1'
+
+TRAIN_SET_RANGE = range(1, 4+1) 
+
 
 MAX_TRAIN = 4e5
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'P']  #Add P?
@@ -70,10 +74,13 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
     num_of_features = 17 # Specify the number of feature masks that are present   
-    training_direcs = ['set1', 'set2']
     channel_names = CHANNEL_NAMES
     raw_image_direc = 'raw'
     annotation_direc = 'celltype'
+
+    training_direcs = []
+    for set_num in TRAIN_SET_RANGE:
+        training_direcs.append('set' + str(set_num))
 
    # Create the training data
     make_training_data(

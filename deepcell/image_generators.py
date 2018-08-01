@@ -82,7 +82,14 @@ class ImageSampleArrayIterator(Iterator):
                                 2 * self.win_y + 1,
                                 self.x.shape[self.channel_axis]))
 
+#        print('index_array is: ', index_array)
+#        print('shape of index_array is: ', index_array.shape)
+
+
         for i, j in enumerate(index_array):
+
+#            print('i is: ', i, ' and j is: ', j)
+
             x = self.x[j]
             x = self.image_data_generator.random_transform(x.astype(K.floatx()))
             x = self.image_data_generator.standardize(x)
