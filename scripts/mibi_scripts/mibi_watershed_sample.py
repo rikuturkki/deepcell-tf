@@ -6,7 +6,7 @@ import errno
 import argparse
 
 import numpy as np
-import tifffile as tiff
+import skimage.external.tifffile as tiff
 from tensorflow.python.keras.optimizers import SGD
 from tensorflow.python.keras import backend as K
 
@@ -30,10 +30,10 @@ BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True                                                              #was True
 RESHAPE_SIZE = 512
 WINDOW_SIZE = (15,15)
-N_EPOCHS = 20 
+N_EPOCHS = 32
 BINS = 4
 MAX_TRAIN = 1e7
-CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'P.']
+CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']
 
 # Check for channels_first or channels_last
 IS_CHANNELS_FIRST = K.image_data_format() == 'channels_first'
@@ -51,8 +51,14 @@ PREFIX = 'tissues/mibi/samir'
 FG_BG_DATA_FILE = 'mibi_watershedFB_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 WATERSHED_DATA_FILE = 'mibi_watershed_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 CONV_DATA_FILE = 'mibi_watershedconv_{}_{}'.format(K.image_data_format(), 'conv')
-RUN_DIR = 'set2'
+RUN_DIR = 'set1'
 
+#MODEL_FGBG_OLD '2018-07-20_mibi_watershedFB_channels_last_sample_fgbg_0.h5'
+#MODEL_WSHED_OLD = '2018-07-20_mibi_watershed_channels_last_sample_watershed_0.h5'
+#CHANNEL_NAMES_OLD = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'P.']
+
+MODEL_FGBG = '2018-08-02_mibi_watershedFB_channels_last_sample_fgbg_0.h5'
+MODEL_WSHED = '2018-08-03_mibi_watershed_channels_last_sample_watershed_0.h5'
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -114,30 +120,7 @@ def generate_training_data():
         output_mode=DATA_OUTPUT_MODE,
         display=False,
         verbose=True)
-'''
-    # Make conv training data for mask generation 
-    make_training_data(
-        direc_name=os.path.join(DATA_DIR, PREFIX),
-        dimensionality=2,
-        max_training_examples=MAX_TRAIN,
-        window_size_x=WINDOW_SIZE[0],
-        window_size_y=WINDOW_SIZE[1],
-        border_mode=BORDER_MODE,
-        file_name_save=os.path.join(NPZ_DIR, PREFIX, CONV_DATA_FILE),
-        training_direcs=['set2'],
-        distance_transform=False,  # not needed for conv mode
-        distance_bins=BINS,  # not needed for conv mode
-        channel_names=CHANNEL_NAMES,
-        num_of_features=BINS,
-        raw_image_direc='raw',
-        annotation_direc='annotated',
-        reshape_size=None,
-        edge_feature=[1, 0, 0],
-        dilation_radius=1,
-        output_mode='conv',
-        display=False,
-        verbose=True)
-'''
+
 def train_model_on_training_data():
     direc_save = os.path.join(MODEL_DIR, PREFIX)
     direc_data = os.path.join(NPZ_DIR, PREFIX)
@@ -181,7 +164,7 @@ def train_model_on_training_data():
         dataset=FG_BG_DATA_FILE,
         optimizer=optimizer,
         batch_size=batch_size,
-        n_epoch=n_epoch,
+        n_epoch=N_EPOCHS,
         direc_save=os.path.join(MODEL_DIR, PREFIX),
         direc_data=os.path.join(NPZ_DIR, PREFIX),
         expt='fgbg',
@@ -211,60 +194,59 @@ def train_model_on_training_data():
         flip=True,
         shear=False)
 
-def run_model_on_dir():
+def run_model_on_dir(generate_conv):
     raw_dir = 'raw'
     dat_location = os.path.join(DATA_DIR, PREFIX, RUN_DIR, raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
     channel_names = CHANNEL_NAMES
     image_size_x, image_size_y = get_image_sizes(dat_location, channel_names)
 
+    print('image_size_x is: ', image_size_x, ' image_size_y is: ', image_size_y, ' length of channels is: ', len(channel_names))
    
-
-    # Make conv training data for mask generation 
-    make_training_data(
-        direc_name=os.path.join(DATA_DIR, PREFIX),
-        dimensionality=2,
-        max_training_examples=MAX_TRAIN,
-        window_size_x=WINDOW_SIZE[0],
-        window_size_y=WINDOW_SIZE[1],
-        border_mode=BORDER_MODE,
-        file_name_save=os.path.join(NPZ_DIR, PREFIX, CONV_DATA_FILE),
-        training_direcs=['set2'],
-        distance_transform=False,  # not needed for conv mode
-        distance_bins=BINS,  # not needed for conv mode
-        channel_names=CHANNEL_NAMES,
-        num_of_features=BINS,
-        raw_image_direc='raw',
-        annotation_direc='annotated',
-        reshape_size=None,
-        edge_feature=[1, 0, 0],
-        dilation_radius=1,
-        output_mode='conv',
-        display=False,
-        verbose=True)
-
-
-
-    print('image_size_x is:', image_size_x)
-    print('image_size_y is:', image_size_y)
-   
-
     # define model type
     model_fn = dilated_bn_feature_net_31x31
 
     # model names
-    watershed_weights_file = '2018-07-20_mibi_watershed_channels_last_sample_watershed_0.h5'
+    watershed_weights_file = MODEL_WSHED
     watershed_weights_file = os.path.join(MODEL_DIR, PREFIX, watershed_weights_file)
 
     # weights directories
-   # fgbg_weights_file = '2018-07-13_mibi_watershedFB_channels_last_sample_fgbg_0.h5'
-    fgbg_weights_file = '2018-07-20_mibi_watershedFB_channels_last_sample_fgbg_0.h5'
+    fgbg_weights_file = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'                       # best mibi31x31 5 chan
+#    fgbg_weights_file = MODEL_FGBG
     fgbg_weights_file = os.path.join(MODEL_DIR, PREFIX, fgbg_weights_file)
 
     # variables
     n_features = 4
     window_size = WINDOW_SIZE
-    
+   
+    if generate_conv:
+
+        # Make conv training data for mask generation 
+        make_training_data(
+            direc_name=os.path.join(DATA_DIR, PREFIX),
+            dimensionality=2,
+            max_training_examples=MAX_TRAIN,
+            window_size_x=WINDOW_SIZE[0],
+            window_size_y=WINDOW_SIZE[1],
+            border_mode=BORDER_MODE,
+            file_name_save=os.path.join(NPZ_DIR, PREFIX, CONV_DATA_FILE),
+            training_direcs=['set1'],
+            distance_transform=False,  # not needed for conv mode
+            distance_bins=BINS,  # not needed for conv mode
+            channel_names=CHANNEL_NAMES,
+            num_of_features=BINS,
+            raw_image_direc='raw',
+            annotation_direc='annotated',
+            reshape_size=None,
+            edge_feature=[1, 0, 0],
+            dilation_radius=1,
+            output_mode='conv',
+            display=False,
+            verbose=True)
+
+
+
+ 
     # Load the training data from NPZ into a numpy array
     testing_data = np.load(os.path.join(NPZ_DIR, PREFIX, CONV_DATA_FILE + '.npz'))
 
@@ -301,6 +283,8 @@ def run_model_on_dir():
 
     print('watershed transform shape:', test_images.shape)
     print('segmentation mask shape:', test_images_fgbg.shape)
+ 
+    print('max of test_edge is: ', test_images_fgbg[:, :, :, 0])   
 
     argmax_images = []
     for i in range(test_images.shape[0]):
@@ -312,10 +296,14 @@ def run_model_on_dir():
     
     # threshold the foreground/background
     # and remove back ground from watershed transform
-    if IS_CHANNELS_FIRST:
-        fg_thresh = test_images_fgbg[:, 1, :, :] > 0.8
-    else:
-        fg_thresh = test_images_fgbg[:, :, :, 1] > 0.8
+    #fg_thresh = (test_images_fgbg[:, :, :, 0] + test_images_fgbg[:, :, :, 1] ) > 0.4
+    fg_thresh = test_images_fgbg[:, :, :, 1] > 0.3
+
+
+#    if IS_CHANNELS_FIRST:
+#        fg_thresh = test_images_fgbg[:, 1, :, :] > 0.8
+#    else:
+#        fg_thresh = test_images_fgbg[:, :, :, 1] > 0.35
 
     fg_thresh = np.expand_dims(fg_thresh, axis=CHANNEL_AXIS)
     argmax_images_post_fgbg = argmax_images * fg_thresh
@@ -348,8 +336,9 @@ def run_model_on_dir():
     index = 0
 
     tiff.imsave(os.path.join(output_location, 'source.tif'), X_test[index, :, :, 0])
-    tiff.imsave(os.path.join(output_location, 'seg_prediction.tif'), test_images_fgbg[index, :, :, 1])
-#    tiff.imsave(os.path.join(output_location, 'thresholded_seg.tif'), fg_thresh[index, :, :, 0])
+    tiff.imsave(os.path.join(output_location, 'int_prediction.tif'), test_images_fgbg[:, :, :, 1])
+    tiff.imsave(os.path.join(output_location, 'edge_prediction.tif'), test_images_fgbg[:, :, :, 0])
+#    tiff.imsave(os.path.join(output_location, 'thresholded_seg.tif'), fg_thresh[index, iii:, ])]
 #    tiff.imsave(os.path.join(output_location, 'watershed_transform.tif'), argmax_images[index, :, :, 0])
 #    tiff.imsave(os.path.join(output_location, 'watershed_transform_no_backg.tif'), argmax_images_post_fgbg[index, :, :, 0])
     tiff.imsave(os.path.join(output_location, 'Watershed_Segmentation.tif'), watershed_images[index, :, :, 0])
@@ -447,4 +436,15 @@ if __name__ == '__main__':
         train_model_on_training_data()
 
     elif args.command == 'run':
-        run_model_on_dir()
+
+        generate_conv = False
+
+        if args.overwrite:
+            generate_conv = True
+
+        run_model_on_dir(generate_conv)
+
+
+
+
+
