@@ -37,4 +37,3 @@ RUN pip install /opt/deepcell-tf
 RUN echo "backend : Agg" > /usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/matplotlibrc
 
 RUN apt-get install -y libsm6
-
