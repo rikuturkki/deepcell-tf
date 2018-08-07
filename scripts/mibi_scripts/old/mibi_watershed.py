@@ -1,35 +1,32 @@
-#flysampling classification
-
 ## Generate training data
-import os                   #operating system interface
-import errno                #error symbols
-import argparse             #command line input parsing
+import os
+import errno
+import argparse
 
-import numpy as np          #scientific computing (aka matlab)
-import skimage.external.tifffile as tiff     #read/write TIFF files (aka our images)
-from tensorflow.python.keras.optimizers import SGD    #optimizer
-from tensorflow.python.keras import backend as K            #tensorflow backend
+import numpy as np
+import tifffile as tiff
+from tensorflow.python.keras.optimizers import SGD
+from tensorflow.python.keras import backend as K
 
-from deepcell import get_image_sizes                #io_utils, returns shape of first image inside data_location
-from deepcell import make_training_data             #data_utils, reads images in training directories and saves as npz file
-from deepcell import bn_feature_net_31x31           #model_zoo
+from deepcell import get_image_sizes
+from deepcell import make_training_data
+from deepcell import bn_feature_net_31x31
 from deepcell import dilated_bn_feature_net_31x31
-
+from deepcell import train_model_watershed
 from deepcell import bn_dense_feature_net
-from deepcell import rate_scheduler                 #train_utils,
-from deepcell import train_model_disc, train_model_conv, train_model_sample     #training.py, probably use sample
+from deepcell import rate_scheduler
+from deepcell import train_model_disc, train_model_conv, train_model_sample
 from deepcell import run_models_on_directory
 from deepcell import export_model
 
 # data options
-#DATA_OUTPUT_MODE = 'conv'
-DATA_OUTPUT_MODE = 'sample'
+DATA_OUTPUT_MODE = 'conv'
+#DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
-RESIZE = True
-RESHAPE_SIZE = 2048
-N_EPOCHS = 64
-WINDOW_SIZE = (15,15)
-BATCH_SIZE = 32
+RESIZE = True                                                              #was True
+RESHAPE_SIZE = 512
+WINDOW_SIZE = 0
+N_EPOCHS = 50
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -37,41 +34,8 @@ MODEL_DIR = '/data/models'
 NPZ_DIR = '/data/npz_data'
 RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
-PREFIX = 'tissues/mibi/mibi_full'
-#PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
-DATA_FILE = 'mibi_flysampling_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-MODEL_NAME = '2018-08-03_mibi_flysampling_class_channels_last_sample__0.h5'
-RUN_DIR = 'set1'
-TRAIN_SET_RANGE = range(1, 39+1)
-
-
-
-MAX_TRAIN = 1e10
-#CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'P']  #Add P?
-#CHANNEL_NAMES = ['dsDNA']
-
-# removed channels: CSF-1R, CD-163, B7H3
-#CHANNEL_NAMES = ['Au', 'catenin', 'Ca', 'CD11b', 'CD11c', 'CD138', 'CD16', 'CD209', 'CD20', 'CD31',
-#                 'CD3', 'CD45RO', 'CD45', 'CD4', 'CD56', 'CD63.', 'CD68.', 'CD8.', 'C.', 'dsDNA.',
-#                 'EGFR.', 'Fe.', 'FoxP3.', 'H3K27me3.', 'H3K9ac.', 'HLA_Class_1.', 'HLA-DR.', 'IDO.',
-#                 'Keratin17.', 'Keratin6.', 'Ki67.', 'Lag3.', 'MPO.', 'Na.', 'OX40.', 'p53.', 'Pan-Keratin.',
-#                 'PD1.', 'PD-L1.', 'phospho-S6.', 'P.', 'Si.', 'SMA.', 'Ta.', 'Vimentin.']
-
-CHANNEL_NAMES = ['catenin', 'Ca', 'CD11b', 'CD11c', 'CD138', 'CD16', 'CD209', 'CD20', 'CD31',
-                 'CD3', 'CD45', 'CD4', 'CD56', 'CD68.', 'CD8.', 'dsDNA.',
-                 'EGFR.', 'FoxP3.', 'H3K27me3.', 'H3K9ac.', 'HLA_Class_1.', 'HLA-DR.', 'IDO.',
-                 'Keratin17.', 'Keratin6.', 'Ki67.', 'Lag3.', 'MPO.', 'OX40.', 'p53.', 'Pan-Keratin.',
-                 'PD1.', 'PD-L1.', 'SMA.', 'Ta.', 'Vimentin.']
-
-
-
-#CHANNEL_NAMES = ['Ca', 'dsDNA.', 'H3K27me3.', 'H3K9ac', 'HLA_Class_1', 'IDO', 'Ki67', 'Lag3','OX40.', 
-#                 'PD1.', 'PD-L1.', 'Ta.', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
-#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
-#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
-
-NUM_FEATURES = 17
-
+PREFIX = 'tissues/mibi/samir'
+DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -82,33 +46,29 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
-    num_of_features = 17 # Specify the number of feature masks that are present
-    channel_names = CHANNEL_NAMES
+    num_of_features = 1 # Specify the number of feature masks that are present
+    window_size = (WINDOW_SIZE, WINDOW_SIZE) # Size of window around pixel				#changed from 30,30
+    training_direcs = ['set0','set1', 'set2','set3','set4','set5','set6','set7']
+    channel_names = ['dsDNA']
     raw_image_direc = 'raw'
-    annotation_direc = 'celltype'
+    annotation_direc = 'annotated'
 
-    training_direcs = []
-    for set_num in TRAIN_SET_RANGE:
-        training_direcs.append('set' + str(set_num))
-
-    if 'set30' in training_direcs: training_direcs.remove('set30')
-
-   # Create the training data
+    # Create the training data
     make_training_data(
         direc_name=os.path.join(DATA_DIR, PREFIX),
-        dimensionality=4,
-        max_training_examples=MAX_TRAIN, # Define maximum number of training examples
-        window_size_x=WINDOW_SIZE[0],
-        window_size_y=WINDOW_SIZE[1],
+        dimensionality=2,
+        max_training_examples=1e6, # Define maximum number of training examples
+        window_size_x=window_size[0],
+        window_size_y=window_size[1],
         border_mode=BORDER_MODE,
         file_name_save=file_name_save,
         training_direcs=training_direcs,
-        channel_names=CHANNEL_NAMES,
+        channel_names=channel_names,
         num_of_features=num_of_features,
         raw_image_direc=raw_image_direc,
         annotation_direc=annotation_direc,
         reshape_size=RESHAPE_SIZE if RESIZE else None,
-        edge_feature=[1], # Specify which feature is the edge feature,
+        edge_feature=[1, 0, 0], # Specify which feature is the edge feature,
         dilation_radius=1,
         output_mode=DATA_OUTPUT_MODE,
         display=False,
@@ -119,19 +79,21 @@ def train_model_on_training_data():
     direc_data = os.path.join(NPZ_DIR, PREFIX)
     training_data = np.load(os.path.join(direc_data, DATA_FILE + '.npz'))
 
-    class_weights = training_data['class_weights']
+    #class_weights = training_data['class_weights']
     X, y = training_data['X'], training_data['y']
     print('X.shape: {}\ny.shape: {}'.format(X.shape, y.shape))
 
     n_epoch = N_EPOCHS
-    batch_size = BATCH_SIZE if DATA_OUTPUT_MODE == 'sample' else 1
+    batch_size = 32 if DATA_OUTPUT_MODE == 'sample' else 1
     optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
 
+    distance_bins = 4
+
     model_args = {
-        'norm_method': None,
+        'norm_method': 'max',
         'reg': 1e-5,
-        'n_features': 17,
+        'n_features': distance_bins
     }
 
     data_format = K.image_data_format()
@@ -139,21 +101,24 @@ def train_model_on_training_data():
     col_axis = 3 if data_format == 'channels_first' else 2
     channel_axis = 1 if data_format == 'channels_first' else 3
 
-    if DATA_OUTPUT_MODE == 'sample':
-        train_model = train_model_sample
-        the_model = bn_feature_net_31x31				#changed to 21x21
-        model_args['n_channels'] = len(CHANNEL_NAMES)
+    size = (RESHAPE_SIZE, RESHAPE_SIZE) if RESIZE else X.shape[row_axis:col_axis + 1]  #added
 
+    if DATA_OUTPUT_MODE == 'sample':
+        the_model = bn_feature_net_31x31
+        train_model = train_model_watershed   #changed
+#        model_args['n_channels'] = 1
     elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
-        train_model = train_model_conv
         the_model = bn_dense_feature_net
+        train_model = train_model_watershed
+        model_args['permute'] = False           #added
         model_args['location'] = False
 
-        size = (RESHAPE_SIZE, RESHAPE_SIZE) if RESIZE else X.shape[row_axis:col_axis + 1]
         if data_format == 'channels_first':
             model_args['input_shape'] = (X.shape[channel_axis], size[0], size[1])
         else:
             model_args['input_shape'] = (size[0], size[1], X.shape[channel_axis])
+    else:
+        raise ValueError('Unknown DATA_OUTPUT_MODE "{}"'.format(DATA_OUTPUT_MODE))
 
     model = the_model(**model_args)
 
@@ -166,29 +131,27 @@ def train_model_on_training_data():
         direc_save=direc_save,
         direc_data=direc_data,
         lr_sched=lr_sched,
-        class_weight=class_weights,
-        rotation_range=None,
+        distance_bins=distance_bins,
+        class_weight=training_data['class_weights'],
+        rotation_range=180,
         flip=True,
         shear=False)
 
 
 def run_model_on_dir():
     raw_dir = 'raw'
-    data_location = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
-#    test_images = os.path.join(DATA_DIR, 'tissues/mibi/mibi_full/TNBCShareData', 'set1', raw_dir)
+    data_location = os.path.join(DATA_DIR, PREFIX, 'set3', raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
-    image_size_x, image_size_y = get_image_sizes(data_location, CHANNEL_NAMES)
+    channel_names = ['dsDNA']
+    image_size_x, image_size_y = get_image_sizes(data_location, channel_names)
 
+    model_name = '2018-07-06_mibi_31x31_{}_{}__0.h5'.format(
+        K.image_data_format(), DATA_OUTPUT_MODE)
 
-    print('image_size_x is:', image_size_x)
-    print('image_size_y is:', image_size_y)
+    weights = os.path.join(MODEL_DIR, PREFIX, model_name)
 
-#    model_name = '2018-07-13_mibi_31x31_{}_{}__0.h5'.format(
-#        K.image_data_format(), DATA_OUTPUT_MODE)
-
-    weights = os.path.join(MODEL_DIR, PREFIX, MODEL_NAME)
-
-    n_features = 17
+    n_features = 4
+    window_size = (WINDOW_SIZE, WINDOW_SIZE)
 
     if DATA_OUTPUT_MODE == 'sample':
         model_fn = dilated_bn_feature_net_31x31					#changed to 21x21
@@ -200,16 +163,20 @@ def run_model_on_dir():
 
     predictions = run_models_on_directory(
         data_location=data_location,
-        channel_names=CHANNEL_NAMES,
+        channel_names=channel_names,
         output_location=output_location,
         n_features=n_features,
         model_fn=model_fn,
         list_of_weights=[weights],
         image_size_x=image_size_x,
         image_size_y=image_size_y,
-        win_x=WINDOW_SIZE[0],
-        win_y=WINDOW_SIZE[1],
-        split=False)
+        win_x=window_size[0],
+        win_y=window_size[1],
+        split=True)
+
+
+
+#    import pdb; pdb.set_trace()
 
     for i in range(predictions.shape[0]):
         max_img = np.argmax(predictions[i], axis=-1)
@@ -219,6 +186,8 @@ def run_model_on_dir():
         out_file_path = os.path.join(output_location, cnnout_name)
 
         tiff.imsave(out_file_path, max_img)
+
+
 
 
 def export():
@@ -238,14 +207,14 @@ def export():
     channel_axis = 1 if data_format == 'channels_first' else 3
 
     if DATA_OUTPUT_MODE == 'sample':
-        the_model = dilated_bn_feature_net_31x31
+        the_model = watershednetwork
         if K.image_data_format() == 'channels_first':
             model_args['input_shape'] = (1, 1080, 1280)
         else:
             model_args['input_shape'] = (1080, 1280, 1)
 
     elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
-        the_model = bn_dense_feature_net
+        the_model = watershednetwork
         model_args['location'] = False
 
         size = (RESHAPE_SIZE, RESHAPE_SIZE) if RESIZE else X.shape[row_axis:col_axis + 1]
@@ -256,7 +225,7 @@ def export():
 
     model = the_model(**model_args)
 
-    model_name = '2018-06-27_mibi_samir_{}_{}__0.h5'.format(
+    model_name = '2018-07-06_mibi_watershed_{}_{}__0.h5'.format(
         K.image_data_format(), DATA_OUTPUT_MODE)
 
     weights_path = os.path.join(MODEL_DIR, PREFIX, model_name)

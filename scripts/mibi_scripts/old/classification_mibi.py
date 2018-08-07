@@ -1,4 +1,4 @@
-#flysampling classification
+#classification sample based
 
 ## Generate training data
 import os                   #operating system interface
@@ -26,10 +26,10 @@ from deepcell import export_model
 DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
-RESHAPE_SIZE = 2048
-N_EPOCHS = 64
+RESHAPE_SIZE = 2048 
+N_EPOCHS = 5
 WINDOW_SIZE = (15,15)
-BATCH_SIZE = 32
+BATCH_SIZE = 32 
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -37,39 +37,30 @@ MODEL_DIR = '/data/models'
 NPZ_DIR = '/data/npz_data'
 RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
+#PREFIX = 'tissues/mibi/samir'
 PREFIX = 'tissues/mibi/mibi_full'
-#PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
-DATA_FILE = 'mibi_flysampling_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-MODEL_NAME = '2018-08-03_mibi_flysampling_class_channels_last_sample__0.h5'
+DATA_FILE = 'mibi_medov4_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+MODEL_NAME = '2018-08-01_mibi_medov4_class_channels_last_sample__0.h5'
+
 RUN_DIR = 'set1'
-TRAIN_SET_RANGE = range(1, 39+1)
+
+TRAIN_SET_RANGE = range(1, 1+1) 
 
 
-
-MAX_TRAIN = 1e10
+MAX_TRAIN = 4e5
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'P']  #Add P?
 #CHANNEL_NAMES = ['dsDNA']
 
 # removed channels: CSF-1R, CD-163, B7H3
-#CHANNEL_NAMES = ['Au', 'catenin', 'Ca', 'CD11b', 'CD11c', 'CD138', 'CD16', 'CD209', 'CD20', 'CD31',
-#                 'CD3', 'CD45RO', 'CD45', 'CD4', 'CD56', 'CD63.', 'CD68.', 'CD8.', 'C.', 'dsDNA.',
-#                 'EGFR.', 'Fe.', 'FoxP3.', 'H3K27me3.', 'H3K9ac.', 'HLA_Class_1.', 'HLA-DR.', 'IDO.',
-#                 'Keratin17.', 'Keratin6.', 'Ki67.', 'Lag3.', 'MPO.', 'Na.', 'OX40.', 'p53.', 'Pan-Keratin.',
-#                 'PD1.', 'PD-L1.', 'phospho-S6.', 'P.', 'Si.', 'SMA.', 'Ta.', 'Vimentin.']
+'''CHANNEL_NAMES = ['Au', 'catenin', 'Ca', 'CD11b', 'CD11c', 'CD138', 'CD16', 'CD209', 'CD20', 'CD31', 
+                 'CD3', 'CD45RO', 'CD45', 'CD4', 'CD56', 'CD63.', 'CD68.', 'CD8.', 'C.', 'dsDNA.', 
+                 'EGFR.', 'Fe.', 'FoxP3.', 'H3K27me3.', 'H3K9ac.', 'HLA_Class_1.', 'HLA-DR.', 'IDO.', 
+                 'Keratin17.', 'Keratin6.', 'Ki67.', 'Lag3.', 'MPO.', 'Na.', 'OX40.', 'p53.', 'Pan-Keratin.', 
+                 'PD1.', 'PD-L1.', 'phospho-S6.', 'P.', 'Si.', 'SMA.', 'Ta.', 'Vimentin.', ]'''
 
-CHANNEL_NAMES = ['catenin', 'Ca', 'CD11b', 'CD11c', 'CD138', 'CD16', 'CD209', 'CD20', 'CD31',
-                 'CD3', 'CD45', 'CD4', 'CD56', 'CD68.', 'CD8.', 'dsDNA.',
-                 'EGFR.', 'FoxP3.', 'H3K27me3.', 'H3K9ac.', 'HLA_Class_1.', 'HLA-DR.', 'IDO.',
-                 'Keratin17.', 'Keratin6.', 'Ki67.', 'Lag3.', 'MPO.', 'OX40.', 'p53.', 'Pan-Keratin.',
-                 'PD1.', 'PD-L1.', 'SMA.', 'Ta.', 'Vimentin.']
-
-
-
-#CHANNEL_NAMES = ['Ca', 'dsDNA.', 'H3K27me3.', 'H3K9ac', 'HLA_Class_1', 'IDO', 'Ki67', 'Lag3','OX40.', 
-#                 'PD1.', 'PD-L1.', 'Ta.', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
-#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
-#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
-
+CHANNEL_NAMES = ['dsDNA.', 'H3K27me3.', 'Ta.', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.', 
+                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.', 
+                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
 NUM_FEATURES = 17
 
 
@@ -82,7 +73,7 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
-    num_of_features = 17 # Specify the number of feature masks that are present
+    num_of_features = 17 # Specify the number of feature masks that are present   
     channel_names = CHANNEL_NAMES
     raw_image_direc = 'raw'
     annotation_direc = 'celltype'
@@ -90,8 +81,6 @@ def generate_training_data():
     training_direcs = []
     for set_num in TRAIN_SET_RANGE:
         training_direcs.append('set' + str(set_num))
-
-    if 'set30' in training_direcs: training_direcs.remove('set30')
 
    # Create the training data
     make_training_data(
@@ -167,9 +156,9 @@ def train_model_on_training_data():
         direc_data=direc_data,
         lr_sched=lr_sched,
         class_weight=class_weights,
-        rotation_range=None,
+        rotation_range=180,
         flip=True,
-        shear=False)
+        shear=True)
 
 
 def run_model_on_dir():
@@ -188,7 +177,7 @@ def run_model_on_dir():
 
     weights = os.path.join(MODEL_DIR, PREFIX, MODEL_NAME)
 
-    n_features = 17
+    n_features = 17  
 
     if DATA_OUTPUT_MODE == 'sample':
         model_fn = dilated_bn_feature_net_31x31					#changed to 21x21

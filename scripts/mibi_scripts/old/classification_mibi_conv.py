@@ -1,4 +1,4 @@
-#flysampling classification
+#classification
 
 ## Generate training data
 import os                   #operating system interface
@@ -6,7 +6,7 @@ import errno                #error symbols
 import argparse             #command line input parsing
 
 import numpy as np          #scientific computing (aka matlab)
-import skimage.external.tifffile as tiff     #read/write TIFF files (aka our images)
+import tifffile as tiff     #read/write TIFF files (aka our images)
 from tensorflow.python.keras.optimizers import SGD    #optimizer
 from tensorflow.python.keras import backend as K            #tensorflow backend
 
@@ -22,14 +22,14 @@ from deepcell import run_models_on_directory
 from deepcell import export_model
 
 # data options
-#DATA_OUTPUT_MODE = 'conv'
-DATA_OUTPUT_MODE = 'sample'
+DATA_OUTPUT_MODE = 'conv'
+#DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
-RESHAPE_SIZE = 2048
-N_EPOCHS = 64
+RESHAPE_SIZE = 512
+N_EPOCHS = 40 
 WINDOW_SIZE = (15,15)
-BATCH_SIZE = 32
+BATCH_SIZE = 32 
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -37,39 +37,34 @@ MODEL_DIR = '/data/models'
 NPZ_DIR = '/data/npz_data'
 RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
+#PREFIX = 'tissues/mibi/samir'
 PREFIX = 'tissues/mibi/mibi_full'
-#PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
-DATA_FILE = 'mibi_flysampling_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-MODEL_NAME = '2018-08-03_mibi_flysampling_class_channels_last_sample__0.h5'
-RUN_DIR = 'set1'
-TRAIN_SET_RANGE = range(1, 39+1)
+DATA_FILE = 'mibi_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+MODEL_NAME = '2018-07-23_mibi_class_channels_last_conv__0.h5'
 
 
-
-MAX_TRAIN = 1e10
+MAX_TRAIN = 1e7
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'P']  #Add P?
 #CHANNEL_NAMES = ['dsDNA']
 
-# removed channels: CSF-1R, CD-163, B7H3
-#CHANNEL_NAMES = ['Au', 'catenin', 'Ca', 'CD11b', 'CD11c', 'CD138', 'CD16', 'CD209', 'CD20', 'CD31',
-#                 'CD3', 'CD45RO', 'CD45', 'CD4', 'CD56', 'CD63.', 'CD68.', 'CD8.', 'C.', 'dsDNA.',
-#                 'EGFR.', 'Fe.', 'FoxP3.', 'H3K27me3.', 'H3K9ac.', 'HLA_Class_1.', 'HLA-DR.', 'IDO.',
-#                 'Keratin17.', 'Keratin6.', 'Ki67.', 'Lag3.', 'MPO.', 'Na.', 'OX40.', 'p53.', 'Pan-Keratin.',
-#                 'PD1.', 'PD-L1.', 'phospho-S6.', 'P.', 'Si.', 'SMA.', 'Ta.', 'Vimentin.']
+# removed channels: CSF-1R, CD-163, B7H3, C, FoxP3
+CHANNEL_NAMES = ['Au', 'catenin', 'Ca', 'CD11b', 'CD11c', 'CD138', 'CD16', 'CD209', 'CD20', 'CD31', 
+                 'CD3', 'CD45RO', 'CD45', 'CD4', 'CD56', 'CD63.', 'CD68.', 'CD8.', 'dsDNA.', 
+                 'EGFR.', 'Fe.', 'H3K27me3.', 'H3K9ac.', 'HLA_Class_1.', 'HLA-DR.', 'IDO.', 
+                 'Keratin17.', 'Keratin6.', 'Ki67.', 'Lag3.', 'MPO.', 'Na.', 'OX40.', 'p53.', 'Pan-Keratin.', 
+                 'PD1.', 'PD-L1.', 'phospho-S6.', 'P.', 'Si.', 'SMA.', 'Ta.', 'Vimentin.', ]
+TRAIN_DIRS = ['set1', 'set2', 'set3', 'set4', 'set5', 'set6', 'set7', 'set8', 'set9', 'set10', 'set11',
+              'set12', 'set13', 'set14', 'set15', 'set16', 'set17', 'set18', 'set19', 'set20', 'set21',
+              'set22', 'set23', 'set24', 'set25', 'set26', 'set27', 'set28', 'set29','set30', 'set31', 
+              'set32', 'set33', 'set34', 'set35', 'set36', 'set37', 'set38', 'set39', 'set40', 'set41']
 
-CHANNEL_NAMES = ['catenin', 'Ca', 'CD11b', 'CD11c', 'CD138', 'CD16', 'CD209', 'CD20', 'CD31',
-                 'CD3', 'CD45', 'CD4', 'CD56', 'CD68.', 'CD8.', 'dsDNA.',
-                 'EGFR.', 'FoxP3.', 'H3K27me3.', 'H3K9ac.', 'HLA_Class_1.', 'HLA-DR.', 'IDO.',
-                 'Keratin17.', 'Keratin6.', 'Ki67.', 'Lag3.', 'MPO.', 'OX40.', 'p53.', 'Pan-Keratin.',
-                 'PD1.', 'PD-L1.', 'SMA.', 'Ta.', 'Vimentin.']
+RUN_DIR = 'set1'
 
 
 
-#CHANNEL_NAMES = ['Ca', 'dsDNA.', 'H3K27me3.', 'H3K9ac', 'HLA_Class_1', 'IDO', 'Ki67', 'Lag3','OX40.', 
-#                 'PD1.', 'PD-L1.', 'Ta.', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
-#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
-#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
-
+'''CHANNEL_NAMES = ['dsDNA.', 'H3K27me3.', 'Ta.', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.', 
+                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.', 
+                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']'''
 NUM_FEATURES = 17
 
 
@@ -82,16 +77,11 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
-    num_of_features = 17 # Specify the number of feature masks that are present
+    num_of_features = 17 # Specify the number of feature masks that are present   
+    training_direcs = TRAIN_DIRS
     channel_names = CHANNEL_NAMES
     raw_image_direc = 'raw'
     annotation_direc = 'celltype'
-
-    training_direcs = []
-    for set_num in TRAIN_SET_RANGE:
-        training_direcs.append('set' + str(set_num))
-
-    if 'set30' in training_direcs: training_direcs.remove('set30')
 
    # Create the training data
     make_training_data(
@@ -167,9 +157,9 @@ def train_model_on_training_data():
         direc_data=direc_data,
         lr_sched=lr_sched,
         class_weight=class_weights,
-        rotation_range=None,
+        rotation_range=180,
         flip=True,
-        shear=False)
+        shear=True)
 
 
 def run_model_on_dir():
@@ -188,7 +178,7 @@ def run_model_on_dir():
 
     weights = os.path.join(MODEL_DIR, PREFIX, MODEL_NAME)
 
-    n_features = 17
+    n_features = 17  
 
     if DATA_OUTPUT_MODE == 'sample':
         model_fn = dilated_bn_feature_net_31x31					#changed to 21x21
@@ -207,9 +197,9 @@ def run_model_on_dir():
         list_of_weights=[weights],
         image_size_x=image_size_x,
         image_size_y=image_size_y,
-        win_x=WINDOW_SIZE[0],
-        win_y=WINDOW_SIZE[1],
-        split=False)
+        win_x=0,
+        win_y=0,
+        split=True)
 
     for i in range(predictions.shape[0]):
         max_img = np.argmax(predictions[i], axis=-1)

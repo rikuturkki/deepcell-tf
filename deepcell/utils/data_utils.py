@@ -219,15 +219,15 @@ def get_max_sample_num_list(y, edge_feature, output_mode='sample', border_mode='
 
 
             #list_of_max_sample_numbers.append(class_list.min())
-            list_of_max_sample_numbers.append(np.median(class_list) / (len(class_list)/2) )
+            list_of_max_sample_numbers.append(np.median(class_list) / (len(class_list)/4) )
 
         else:
             list_of_max_sample_numbers.append(np.Inf)
 
     print('list_of_max is:', list_of_max_sample_numbers)
 
-    upper_bound = np.mean(list_of_max_sample_numbers)*2
-    lower_bound = np.mean(list_of_max_sample_numbers)/2
+    upper_bound = np.mean(list_of_max_sample_numbers)*1
+    lower_bound = np.mean(list_of_max_sample_numbers)/1
 
     for dir in range(0, len(list_of_max_sample_numbers) ):
         if list_of_max_sample_numbers[dir] > upper_bound:
