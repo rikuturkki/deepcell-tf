@@ -31,7 +31,7 @@ from .plot_utils import plot_training_data_3d
 from .transform_utils import distance_transform_2d
 
 CHANNELS_FIRST = K.image_data_format() == 'channels_first'
-
+MED_OVER_X_MULT = 1
 
 def get_data(file_name, mode='sample', test_size=.1, seed=None):
     """Load data from NPZ file and split into train and test sets
@@ -219,7 +219,7 @@ def get_max_sample_num_list(y, edge_feature, output_mode='sample', border_mode='
 
 
             #list_of_max_sample_numbers.append(class_list.min())
-            list_of_max_sample_numbers.append(np.median(class_list) / (len(class_list)/4) )
+            list_of_max_sample_numbers.append(np.median(class_list) / (len(class_list)/MED_OVER_X_MULT) )
 
         else:
             list_of_max_sample_numbers.append(np.Inf)

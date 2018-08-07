@@ -27,9 +27,9 @@ DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
 RESHAPE_SIZE = 2048 
-N_EPOCHS = 5
+N_EPOCHS = 40 
 WINDOW_SIZE = (15,15)
-BATCH_SIZE = 32 
+BATCH_SIZE = 64 
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -44,7 +44,7 @@ MODEL_NAME = '2018-08-01_mibi_medov4_class_channels_last_sample__0.h5'
 
 RUN_DIR = 'set1'
 
-TRAIN_SET_RANGE = range(1, 1+1) 
+TRAIN_SET_RANGE = range(1, 4+1) 
 
 
 MAX_TRAIN = 4e5
