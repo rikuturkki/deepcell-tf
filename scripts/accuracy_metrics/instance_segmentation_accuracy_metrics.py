@@ -213,31 +213,31 @@ def stats_objectbased(pred_input, truth_input):
     wshed_truth = np.copy(truth_input)
 
     stats_iou_matrix, dice_object, jaccard_object = dice_jaccard_object(wshed_pred, wshed_truth, crop_size=CROP_SIZE)
-#    false_pos, false_neg = count_false_pos_neg(stats_iou_matrix)
+    false_pos, false_neg = count_false_pos_neg(stats_iou_matrix)
 
-#    false_pos_perc_err = false_pos/(false_pos+false_neg)
-#    false_neg_perc_err = false_neg/(false_pos+false_neg)
+    false_pos_perc_err = false_pos/(false_pos+false_neg)
+    false_neg_perc_err = false_neg/(false_pos+false_neg)
 
-#    false_pos_perc_pred = false_pos/stats_iou_matrix.shape[1]
-#    false_neg_perc_truth = false_neg/stats_iou_matrix.shape[0]
+    false_pos_perc_pred = false_pos/stats_iou_matrix.shape[1]
+    false_neg_perc_truth = false_neg/stats_iou_matrix.shape[0]
 
-#    merge_div_iou_matrix = gen_iou_matrix_quick(wshed_pred, wshed_truth, threshold=MERGE_IOU_THRESH, crop_size=CROP_SIZE)
-#    merged, divided = count_merg_div(merge_div_iou_matrix)
+    merge_div_iou_matrix = gen_iou_matrix_quick(wshed_pred, wshed_truth, threshold=MERGE_IOU_THRESH, crop_size=CROP_SIZE)
+    merged, divided = count_merg_div(merge_div_iou_matrix)
 
-#    perc_merged = merged/stats_iou_matrix.shape[0]
-#    perc_divided = divided/stats_iou_matrix.shape[0]
+    perc_merged = merged/stats_iou_matrix.shape[0]
+    perc_divided = divided/stats_iou_matrix.shape[0]
 
     # round all print percentages to a given limit
-#    dice_object = round(dice_object, ROUND_TO)
-#    jaccard_object = round(jaccard_object, ROUND_TO)
-#    false_pos = round(false_pos, ROUND_TO)
-#    false_neg = round(false_neg, ROUND_TO)
-#    false_pos_perc_err = round(false_pos_perc_err, ROUND_TO)
-#    false_neg_perc_err = round(false_neg_perc_err, ROUND_TO)
-#    false_pos_perc_pred = round(false_pos_perc_pred, ROUND_TO)
-#    false_neg_perc_truth = round(false_neg_perc_truth, ROUND_TO)
-#    perc_merged = round(perc_merged, ROUND_TO)
-#    perc_divided = round(perc_divided, ROUND_TO)
+    dice_object = round(dice_object, ROUND_TO)
+    jaccard_object = round(jaccard_object, ROUND_TO)
+    false_pos = round(false_pos, ROUND_TO)
+    false_neg = round(false_neg, ROUND_TO)
+    false_pos_perc_err = round(false_pos_perc_err, ROUND_TO)
+    false_neg_perc_err = round(false_neg_perc_err, ROUND_TO)
+    false_pos_perc_pred = round(false_pos_perc_pred, ROUND_TO)
+    false_neg_perc_truth = round(false_neg_perc_truth, ROUND_TO)
+    perc_merged = round(perc_merged, ROUND_TO)
+    perc_divided = round(perc_divided, ROUND_TO)
 
     print('____________________Object-based statistics____________________')
     print('')
@@ -245,13 +245,13 @@ def stats_objectbased(pred_input, truth_input):
     print('dice/F1 index:', dice_object)
     print('jaccard index:', jaccard_object)
 
-#    print('#false positives:', false_pos, '  % of total error:', false_pos_perc_err, '  % of predicted incorrect:', false_pos_perc_pred)
-#    print('#false negatives:', false_neg, '  % of total error:', false_neg_perc_err, '  % of ground truth missed:', false_neg_perc_truth)
+    print('#false positives:', false_pos, '  % of total error:', false_pos_perc_err, '  % of predicted incorrect:', false_pos_perc_pred)
+    print('#false negatives:', false_neg, '  % of total error:', false_neg_perc_err, '  % of ground truth missed:', false_neg_perc_truth)
 
     print('')
-#    print('Intersection over Union thresholded at:', MERGE_IOU_THRESH)
-#    print('#incorrect merges:', merged, '     % of ground truth merged:', perc_merged)
-#    print('#incorrect divisions:', divided, '  % of ground truth divided:', perc_divided)
+    print('Intersection over Union thresholded at:', MERGE_IOU_THRESH)
+    print('#incorrect merges:', merged, '     % of ground truth merged:', perc_merged)
+    print('#incorrect divisions:', divided, '  % of ground truth divided:', perc_divided)
     print('')
 
 
