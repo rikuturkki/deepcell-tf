@@ -30,6 +30,7 @@ from .plot_utils import plot_training_data_2d
 from .plot_utils import plot_training_data_3d
 from .transform_utils import distance_transform_2d
 
+
 CHANNELS_FIRST = K.image_data_format() == 'channels_first'
 
 
@@ -50,90 +51,6 @@ def get_data(file_name, mode='sample', test_size=.1, seed=None):
     y = training_data['y']
     win_x = training_data['win_x']
     win_y = training_data['win_y']
-    win_z = None
-
-    class_weights = training_data['class_weights'] if 'class_weights' in training_data else None
-
-    if mode == 'sample' and X.ndim == 4:
-
-        print('batch in get_data is: ', training_data['batch'])
-
-        batch = training_data['batch']
-        pixels_x = training_data['pixels_x']
-        pixels_y = training_data['pixels_y']
-
-        batch_train, batch_test, y_train, y_test, px_train, px_test, py_train, py_test= train_test_split(batch, y, pixels_x, pixels_y,
-                                                 test_size=test_size, random_state=seed)
-
-
-    elif mode == 'sample' and X.ndim == 5:
-         print('ndims is 5, should be 4')
-
-#        batch = training_data['batch']
-#        pixels_x = training_data['pixels_x']
-#        pixels_y = training_data['pixels_y']
-#        pixels_z = training_data['pixels_z']
-#        win_z = training_data['win_z']
-
-#        batch_train, batch_test, y_train, y_test, px_train, px_test, py_train, py_test, pz_train, pz_test = train_test_split(batch, y, pixels_x, pixels_y, pixels_z,
-#                                                 test_size=test_size, random_state=seed)
-
-    train_dict = {
-        'X':X,
-        'y':y_train,
-        'batch':batch_train,
-        'pixels_x':px_train,
-        'pixels_y':py_train,
-        'win_x': win_x,
-        'win_y': win_y,
-        'class_weights': class_weights
-    }
-
-    test_dict = {
-        'X':X,
-        'y':y_test,
-        'batch':batch_test,
-        'pixels_x':px_test,
-        'pixels_y':py_test,
-        'win_x': win_x,
-        'win_y': win_y,
-        'class_weights': class_weights
-    }
-
-#    if X.ndim == 5:
-#        train_dict['pixels_z'] = pz_train
-#        test_dict['pixels_z'] = pz_test
-#        train_dict['win_z'] = win_z
-#        test_dict['win_z'] = win_z
-
-    print('get_data batch_train is: ', train_dict['batch'])
-    print('get_data batch_test is: ', test_dict['batch'])
-
-    return train_dict, test_dict
-
-
-
-'''
-
-def get_data(file_name, mode='sample', test_size=.1, seed=None):
-    """Load data from NPZ file and split into train and test sets
-    # Arguments
-        file_name: path to NPZ file to load
-        mode: if 'sample', will return datapoints for each pixel,
-              otherwise, returns the same data that was loaded
-        test_size: percent of data to leave as testing holdout
-        seed: seed number for random train/test split repeatability
-    # Returns
-        dict of training data, and a tuple of testing data:
-        train_dict, (X_test, y_test)
-    """
-    training_data = np.load(file_name)
-    X = training_data['X']
-    y = training_data['y']
-    win_x = training_data['win_x']
-    win_y = training_data['win_y']
-
-    print('batch in get_data is: ', training_data['batch'])
 
     class_weights = training_data['class_weights'] if 'class_weights' in training_data else None
 
@@ -153,9 +70,6 @@ def get_data(file_name, mode='sample', test_size=.1, seed=None):
             X_sample = np.zeros((len(batch), 2 * win_x + 1, 2 * win_y + 1, X.shape[3]))
 
         for i, (b, px, py) in enumerate(zip(batch, pixels_x, pixels_y)):
-
-            #print('batch is: ', b) 
-
             if CHANNELS_FIRST:
                 X_sample[i] = X[b, :, px - win_x:px + win_x + 1, py - win_y:py + win_y + 1]
             else:
@@ -175,10 +89,10 @@ def get_data(file_name, mode='sample', test_size=.1, seed=None):
     }
 
     return train_dict, (X_test, y_test)
-'''
+
 
 def get_max_sample_num_list(y, edge_feature, output_mode='sample', border_mode='valid',
-                            window_size_x=30, window_size_y=30, classfication=False):
+                            window_size_x=30, window_size_y=30):
     """For each set of images and each feature, find the maximum number
     of samples for to be used. This will be used to balance class sampling.
     # Arguments
@@ -197,58 +111,16 @@ def get_max_sample_num_list(y, edge_feature, output_mode='sample', border_mode='
     # for each set of images
     for j in range(y.shape[0]):
 
-        if output_mode.lower() == 'sample':
+        class_list = []
 
-            #class_list = np.zeros(y[j, :, :, 0].max())
-
-            class_list = np.zeros( len(y[j, 0, 0, :]) )
-
-         #   print('shape of class_list is:', class_list.shape)
-         #   print("shape of y is:", y.shape)
-         #   print('')
-    
-            #for each pixel class
-            for pixel_class in range(0, len(class_list)):
-
-                count = np.count_nonzero(y[j, :, :, pixel_class])
-                class_list[pixel_class] = count
-
-                #print('count of class ', pixel_class, 'is: ', count)
-
-            print('class list for set ', j+1, 'is: ', class_list)
+        print("shape of y is:", y.shape)
 
 
-            #list_of_max_sample_numbers.append(class_list.min())
-            list_of_max_sample_numbers.append(np.median(class_list) / (len(class_list)/2) )
-
-        else:
-            list_of_max_sample_numbers.append(np.Inf)
-
-    print('list_of_max is:', list_of_max_sample_numbers)
-
-    upper_bound = np.mean(list_of_max_sample_numbers)*2
-    lower_bound = np.mean(list_of_max_sample_numbers)/2
-
-    for dir in range(0, len(list_of_max_sample_numbers) ):
-        if list_of_max_sample_numbers[dir] > upper_bound:
-            list_of_max_sample_numbers[dir] = upper_bound
-
-        elif list_of_max_sample_numbers[dir] < lower_bound:
-            list_of_max_sample_numbers[dir] = lower_bound
-        else:
-            continue
 
 
-    #if less than 1/2 mean of list of maxes, set equal to 1/2 mean
-    #if greater than 2x mean of list of maxes, set equal to 2x mean
-    
 
-    print('list_of_max after mean-limiting is:', list_of_max_sample_numbers)
-    return list_of_max_sample_numbers
 
-'''
-    # for each set of images
-    for j in range(y.shape[0]):
+
         if output_mode.lower() == 'sample':
             for k, edge_feat in enumerate(edge_feature):
                 if edge_feat == 1:
@@ -262,7 +134,7 @@ def get_max_sample_num_list(y, edge_feature, output_mode='sample', border_mode='
             list_of_max_sample_numbers.append(np.Inf)
 
     return list_of_max_sample_numbers
-'''
+
 
 def sample_label_matrix(y, edge_feature, window_size_x=30, window_size_y=30,
                         border_mode='valid', output_mode='sample',
@@ -280,9 +152,19 @@ def sample_label_matrix(y, edge_feature, window_size_x=30, window_size_y=30,
     else:
         num_dirs, image_size_x, image_size_y, num_features = y.shape
 
+
+
+
+
+
     list_of_max_sample_numbers = get_max_sample_num_list(
         y=y, edge_feature=edge_feature, output_mode=output_mode, border_mode=border_mode,
         window_size_x=window_size_x, window_size_y=window_size_y)
+
+
+
+
+
 
     feature_rows, feature_cols, feature_batch, feature_label = [], [], [], []
 
@@ -332,8 +214,6 @@ def sample_label_matrix(y, edge_feature, window_size_x=30, window_size_y=30,
     feature_cols = np.array(feature_cols, dtype='int32')[rand_ind]
     feature_batch = np.array(feature_batch, dtype='int32')[rand_ind]
     feature_label = np.array(feature_label, dtype='int32')[rand_ind]
-
-    print('sample_label_matrix batch is: ', feature_batch)
 
     return feature_rows, feature_cols, feature_batch, feature_label
 
