@@ -8,7 +8,7 @@ TRUTH = 'wshed_mask.tif'
 WIN_SIZE = 15                    # if
 IM_SIZE = 2048
 ROUND_TO = 4
-CROP_SIZE = 32
+CROP_SIZE = 64 
 DICE_IOU_THRESH = 0.5
 MERGE_IOU_THRESH = 0.05
 
