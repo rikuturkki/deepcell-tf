@@ -15,7 +15,7 @@ import random
 
 import numpy as np
 from skimage.measure import label
-from skimage.morphology import disk, binary_dilation
+from skimage.morphology import disk, binary_dilation, binary_erosion
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import train_test_split
 from tensorflow.python.keras import backend as K
@@ -31,7 +31,9 @@ from .plot_utils import plot_training_data_3d
 from .transform_utils import distance_transform_2d
 
 CHANNELS_FIRST = K.image_data_format() == 'channels_first'
-MED_OVER_X_MULT = 1
+MED_OVER_X_MULT = 3 
+MEAN_LIMIT = 1
+MEAN_MULT = 1.5
 
 def get_data(file_name, mode='sample', test_size=.1, seed=None):
     """Load data from NPZ file and split into train and test sets
@@ -77,6 +79,20 @@ def get_data(file_name, mode='sample', test_size=.1, seed=None):
 
 #        batch_train, batch_test, y_train, y_test, px_train, px_test, py_train, py_test, pz_train, pz_test = train_test_split(batch, y, pixels_x, pixels_y, pixels_z,
 #                                                 test_size=test_size, random_state=seed)
+    elif mode == 'conv':
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=seed)
+
+        train_dict = {
+            'X': X_train,
+            'y': y_train,
+            'class_weights': class_weights,
+            'win_x': win_x,
+            'win_y': win_y
+        }
+
+        return train_dict, (X_test, y_test)    
+
 
     train_dict = {
         'X':X,
@@ -113,9 +129,9 @@ def get_data(file_name, mode='sample', test_size=.1, seed=None):
 
 
 
-'''
 
-def get_data(file_name, mode='sample', test_size=.1, seed=None):
+
+def get_data_conv(file_name, mode='conv', test_size=.1, seed=None):
     """Load data from NPZ file and split into train and test sets
     # Arguments
         file_name: path to NPZ file to load
@@ -175,7 +191,7 @@ def get_data(file_name, mode='sample', test_size=.1, seed=None):
     }
 
     return train_dict, (X_test, y_test)
-'''
+
 
 def get_max_sample_num_list(y, edge_feature, output_mode='sample', border_mode='valid',
                             window_size_x=30, window_size_y=30, classfication=False):
@@ -215,6 +231,8 @@ def get_max_sample_num_list(y, edge_feature, output_mode='sample', border_mode='
 
                 #print('count of class ', pixel_class, 'is: ', count)
 
+
+           # class_list[-1] = 0
             print('class list for set ', j+1, 'is: ', class_list)
 
 
@@ -226,15 +244,15 @@ def get_max_sample_num_list(y, edge_feature, output_mode='sample', border_mode='
 
     print('list_of_max is:', list_of_max_sample_numbers)
 
-    upper_bound = np.mean(list_of_max_sample_numbers)*1
-    lower_bound = np.mean(list_of_max_sample_numbers)/1
+    upper_bound = np.mean(list_of_max_sample_numbers)*MEAN_LIMIT
+    lower_bound = np.mean(list_of_max_sample_numbers)/MEAN_LIMIT
 
     for dir in range(0, len(list_of_max_sample_numbers) ):
         if list_of_max_sample_numbers[dir] > upper_bound:
-            list_of_max_sample_numbers[dir] = upper_bound
+            list_of_max_sample_numbers[dir] = upper_bound*MEAN_MULT
 
         elif list_of_max_sample_numbers[dir] < lower_bound:
-            list_of_max_sample_numbers[dir] = lower_bound
+            list_of_max_sample_numbers[dir] = lower_bound*MEAN_MULT
         else:
             continue
 
@@ -1023,12 +1041,27 @@ def load_annotated_images_2d_mibi(direc_name, training_direcs, image_size, edge_
             image_file = os.path.join(direc_name, direc, 'celltype', img)
             image_data = np.asarray(get_image(image_file), dtype=K.floatx())
 
+            dilated = binary_dilation(image_data)
+            dilated = binary_dilation(dilated)
+
+            eroded = binary_erosion(image_data)
+            eroded = binary_erosion(eroded)
+
+            pixels_to_rem = np.logical_and(dilated, eroded==False)
+
+            #set each of the pixels to remove to image_data.max()+1
+            image_data[pixels_to_rem] = 17
+
             if CHANNELS_FIRST:
                 y[b, 0, :, :] = image_data
             else:
                 y[b, :, :, 0] = image_data
 
     y_binary = to_categorical(y)
+
+    # delete 18th class of pixels to remove
+    y_binary = y_binary[:,:,:,:-1]
+
     print('y_tocat shape is:', y_binary.shape)
     print('y shape is:', y.shape)
 
