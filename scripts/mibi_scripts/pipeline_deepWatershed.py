@@ -204,12 +204,12 @@ def run_model_segmentation():
         else:
             fg_thresh = (test_images_fgbg[:, :, :, 1] + test_images_fgbg[:,:,:,0]) > 0.3
 
-            fg_thresh = skimage.morphology.binary_erosion(fg_thresh)
-            fg_thresh = skimage.morphology.binary_dilation(fg_thresh)
-            fg_thresh = skimage.morphology.binary_erosion(fg_thresh)
-            fg_thresh = skimage.morphology.binary_dilation(fg_thresh)
-            fg_thresh = skimage.morphology.binary_erosion(fg_thresh)
-            fg_thresh = skimage.morphology.binary_dilation(fg_thresh)
+#            fg_thresh = skimage.morphology.binary_erosion(fg_thresh)
+#            fg_thresh = skimage.morphology.binary_dilation(fg_thresh)
+#            fg_thresh = skimage.morphology.binary_erosion(fg_thresh)
+#            fg_thresh = skimage.morphology.binary_dilation(fg_thresh)
+#            fg_thresh = skimage.morphology.binary_erosion(fg_thresh)
+#            fg_thresh = skimage.morphology.binary_dilation(fg_thresh)
 #            fg_thresh = skimage.morphology.binary_erosion(fg_thresh)
     else:
         fg_thresh = (test_images_fgbg[:,:,:,0] + test_images_fgbg[:,:,:,1]) > 0.4

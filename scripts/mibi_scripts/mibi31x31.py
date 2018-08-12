@@ -46,8 +46,8 @@ EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/samir'
 #PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
 DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-#MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
-MODEL_NAME = ''
+MODEL_NAME = '2018-07-13_mibi_31x31_iterated_channels_last_sample__0.h5'
+#MODEL_NAME = ''
 
 
 MAX_TRAIN = 1e9
@@ -60,7 +60,7 @@ MAX_TRAIN = 1e9
 
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta', 'H3K9ac', 'watershed', 'P.', 'Na.']
 
-CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'P.']
+CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'edge_pred', 'interior_pred', 'bg_pred']
 
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
@@ -161,7 +161,7 @@ def train_model_on_training_data():
 def run_model_on_dir():
     raw_dir = 'raw'
 #    data_location = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
-    test_images = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
+    test_images = os.path.join(DATA_DIR, PREFIX, 'set2', raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
     channel_names = CHANNEL_NAMES
     image_size_x, image_size_y = get_image_sizes(test_images, channel_names)

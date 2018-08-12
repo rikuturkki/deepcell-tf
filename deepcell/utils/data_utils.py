@@ -210,77 +210,79 @@ def get_max_sample_num_list(y, edge_feature, output_mode='sample', border_mode='
     if border_mode.lower() == 'valid':
         y = trim_padding(y, window_size_x, window_size_y)
 
-    # for each set of images
-    for j in range(y.shape[0]):
+    print(edge_feature)
 
-        if output_mode.lower() == 'sample':
+    if len(edge_feature)==3:
+        # for each set of images
+        for j in range(y.shape[0]):
+            if output_mode.lower() == 'sample':
+                for k, edge_feat in enumerate(edge_feature):
+                    if edge_feat == 1:
+                        if K.image_data_format() == 'channels_first':
+                            y_sum = np.sum(y[j, k, :, :])
+                        else:
+                            y_sum = np.sum(y[j, :, :, k])
+                        list_of_max_sample_numbers.append(y_sum)
 
-            #class_list = np.zeros(y[j, :, :, 0].max())
+            else:
+                list_of_max_sample_numbers.append(np.Inf)
+ 
 
-            class_list = np.zeros( len(y[j, 0, 0, :]) )
+    else:
+
+        # for each set of images
+        for j in range(y.shape[0]):
+
+            if output_mode.lower() == 'sample':
+
+                #class_list = np.zeros(y[j, :, :, 0].max())
+
+                class_list = np.zeros( len(y[j, 0, 0, :]) )
 
          #   print('shape of class_list is:', class_list.shape)
          #   print("shape of y is:", y.shape)
          #   print('')
     
             #for each pixel class
-            for pixel_class in range(0, len(class_list)):
+                for pixel_class in range(0, len(class_list)):
 
-                count = np.count_nonzero(y[j, :, :, pixel_class])
-                class_list[pixel_class] = count
+                    count = np.count_nonzero(y[j, :, :, pixel_class])
+                    class_list[pixel_class] = count
 
                 #print('count of class ', pixel_class, 'is: ', count)
 
 
            # class_list[-1] = 0
-            print('class list for set ', j+1, 'is: ', class_list)
+                print('class list for set ', j+1, 'is: ', class_list)
 
 
             #list_of_max_sample_numbers.append(class_list.min())
-            list_of_max_sample_numbers.append(np.median(class_list) / (len(class_list)/MED_OVER_X_MULT) )
+                list_of_max_sample_numbers.append(np.median(class_list) / (len(class_list)/MED_OVER_X_MULT) )
 
-        else:
-            list_of_max_sample_numbers.append(np.Inf)
+            else:
+                list_of_max_sample_numbers.append(np.Inf)
 
-    print('list_of_max is:', list_of_max_sample_numbers)
+        print('list_of_max is:', list_of_max_sample_numbers)
 
-    upper_bound = np.mean(list_of_max_sample_numbers)*MEAN_LIMIT
-    lower_bound = np.mean(list_of_max_sample_numbers)/MEAN_LIMIT
+        upper_bound = np.mean(list_of_max_sample_numbers)*MEAN_LIMIT
+        lower_bound = np.mean(list_of_max_sample_numbers)/MEAN_LIMIT
 
-    for dir in range(0, len(list_of_max_sample_numbers) ):
-        if list_of_max_sample_numbers[dir] > upper_bound:
-            list_of_max_sample_numbers[dir] = upper_bound*MEAN_MULT
+        for dir in range(0, len(list_of_max_sample_numbers) ):
+            if list_of_max_sample_numbers[dir] > upper_bound:
+                list_of_max_sample_numbers[dir] = upper_bound*MEAN_MULT
 
-        elif list_of_max_sample_numbers[dir] < lower_bound:
-            list_of_max_sample_numbers[dir] = lower_bound*MEAN_MULT
-        else:
-            continue
+            elif list_of_max_sample_numbers[dir] < lower_bound:
+                list_of_max_sample_numbers[dir] = lower_bound*MEAN_MULT
+            else:
+                continue
 
 
     #if less than 1/2 mean of list of maxes, set equal to 1/2 mean
     #if greater than 2x mean of list of maxes, set equal to 2x mean
     
 
-    print('list_of_max after mean-limiting is:', list_of_max_sample_numbers)
+        print('list_of_max after mean-limiting is:', list_of_max_sample_numbers)
     return list_of_max_sample_numbers
-
-'''
-    # for each set of images
-    for j in range(y.shape[0]):
-        if output_mode.lower() == 'sample':
-            for k, edge_feat in enumerate(edge_feature):
-                if edge_feat == 1:
-                    if K.image_data_format() == 'channels_first':
-                        y_sum = np.sum(y[j, k, :, :])
-                    else:
-                        y_sum = np.sum(y[j, :, :, k])
-                    list_of_max_sample_numbers.append(y_sum)
-
-        else:
-            list_of_max_sample_numbers.append(np.Inf)
-
-    return list_of_max_sample_numbers
-'''
 
 def sample_label_matrix(y, edge_feature, window_size_x=30, window_size_y=30,
                         border_mode='valid', output_mode='sample',
