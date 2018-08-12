@@ -46,8 +46,14 @@ EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/samir'
 #PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
 DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-#MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
-MODEL_NAME = ''
+
+# OG segmentation, works pretty well
+MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
+
+# weirdly accurate?
+#MODEL_NAME = '2018-07-17_mibi_31x31_channels_last_sample__0.h5'
+
+#MODEL_NAME = ''
 
 
 MAX_TRAIN = 1e9
@@ -60,7 +66,7 @@ MAX_TRAIN = 1e9
 
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta', 'H3K9ac', 'watershed', 'P.', 'Na.']
 
-CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'P.']
+CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']
 
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
