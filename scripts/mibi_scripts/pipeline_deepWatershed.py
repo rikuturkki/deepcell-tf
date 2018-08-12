@@ -346,10 +346,10 @@ def post_processing(instance, classification):
 # runs model on segmentation/watershed/classification, and postprocesses the results.
 def run_pipeline_on_dir():
     instance_seg = run_model_segmentation()
-    cell_classes = run_model_classification()
+#    cell_classes = run_model_classification()
 
-    print('2')
-    post_processing(instance_seg, cell_classes)
+#    print('2')
+#    post_processing(instance_seg, cell_classes)
 
 
 
