@@ -113,6 +113,8 @@ def train_model_on_training_data():
     optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
 
+    print(lr_sched)
+
     model_args = {
         'norm_method': 'median',
         'reg': 1e-5,
