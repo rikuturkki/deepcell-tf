@@ -11,8 +11,6 @@ from tensorflow.python.keras import backend as K            #tensorflow backend
 from deepcell import get_image_sizes                #io_utils, returns shape of first image inside data_location
 from deepcell import make_training_data             #data_utils, reads images in training directories and saves as npz file
 
-from deepcell import bn_feature_net_61x61           #model_zoo
-from deepcell import dilated_bn_feature_net_61x61
 from deepcell import bn_dense_feature_net
 from deepcell import rate_scheduler                 #train_utils,
 from deepcell import train_model_disc, train_model_conv, train_model_sample     #training.py, probably use sample
@@ -128,7 +126,7 @@ def train_model_on_training_data():
         class_weight=class_weights,
         rotation_range=180,
         flip=True,
-        shear=True)
+        shear=False)
 
 
 def run_model_on_dir():

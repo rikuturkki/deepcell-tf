@@ -6,7 +6,7 @@ import errno
 import argparse
 
 import numpy as np
-import tifffile as tiff
+import skimage.external.tifffile as tiff
 from tensorflow.python.keras.optimizers import SGD
 from tensorflow.python.keras import backend as K
 

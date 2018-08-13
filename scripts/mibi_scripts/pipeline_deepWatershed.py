@@ -7,6 +7,7 @@ import argparse
 import numpy as np
 import skimage.io
 import skimage.external.tifffile as tiff
+import skimage.morphology
 from tensorflow.python.keras.optimizers import SGD
 from tensorflow.python.keras import backend as K
 from scipy import stats
@@ -24,6 +25,7 @@ from deepcell import run_models_on_directory
 from deepcell import export_model
 from deepcell import get_data
 
+
 # data options
 DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
@@ -35,6 +37,17 @@ BATCH_SIZE = 64
 MAX_TRAIN = 1e8
 BINS = 4
 
+INT_ONLY = True
+REMAKE_CONV = False
+
+# Check for channels_first or channels_last
+IS_CHANNELS_FIRST = K.image_data_format() == 'channels_first'
+ROW_AXIS = 2 if IS_CHANNELS_FIRST else 1
+COL_AXIS = 3 if IS_CHANNELS_FIRST else 2
+CHANNEL_AXIS = 1 if IS_CHANNELS_FIRST else -1
+
+
+
 # filepath constants
 DATA_DIR = '/data/data'
 MODEL_DIR = '/data/models'
@@ -44,18 +57,21 @@ EXPORT_DIR = '/data/exports'
 
 PREFIX_SEG = 'tissues/mibi/samir'
 PREFIX_CLASS = 'tissues/mibi/mibi_full'
-PREFX_SAVE = 'tissues/mibi/pipeline'
+PREFIX_SAVE = 'tissues/mibi/pipeline'
 
 FG_BG_DATA_FILE = 'mibi_pipe_wshedFB_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 WATERSHED_DATA_FILE = 'mibi_pipe_wshed_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-CONV_DATA_FILE = 'mibi_pipe_wshedconv_{}_{}'.format(K.image_data_format(), 'conv')
+#CONV_DATA_FILE = 'mibi_pipe_wshedconv_{}_{}'.format(K.image_data_format(), 'conv')
+CONV_DATA_FILE = 'mibi_watershedconv_{}_{}'.format(K.image_data_format(), 'conv')
+
 CLASS_DATA_FILE = 'mibi_pipe_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 
 #'2018-07-13_mibi_watershedFB_channels_last_sample_fgbg_0.h5'
 
-MODEL_FGBG = ''
-MODEL_WSHED = ''
-MODEL_CLASS = ''
+#MODEL_FGBG = '2018-08-02_mibi_watershedFB_channels_last_sample_fgbg_0.h5'
+MODEL_FGBG = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
+MODEL_WSHED = '2018-08-03_mibi_watershed_channels_last_sample_watershed_0.h5'
+MODEL_CLASS = '2018-08-09_mibi_balcompare_chan_flysampling_class_channels_last_sample__0.h5'
 
 RUN_DIR = 'set1'
 
@@ -91,16 +107,52 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 
 # runs the sample and watershed segmentation models
 def run_model_segmentation():
+    
+    print('1')
     raw_dir = 'raw'
     data_location = os.path.join(DATA_DIR, PREFIX_SEG, RUN_DIR, raw_dir)
-    output_location = os.path.join(RESULTS_DIR, PREFIX_SAVE)
-    image_size_x, image_size_y = get_image_sizes(data_location, CHANNELS_SEG)
+    output_location = os.path.join(RESULTS_DIR, PREFIX_SEG)
+    channel_names = CHANNELS_SEG
+    image_size_x, image_size_y = get_image_sizes(data_location, channel_names)
+
+    if REMAKE_CONV:
+
+        make_training_data(
+            direc_name=os.path.join(DATA_DIR, PREFIX_SEG),
+            dimensionality=2,
+            max_training_examples=MAX_TRAIN,
+            window_size_x=WINDOW_SIZE[0],
+            window_size_y=WINDOW_SIZE[1],
+            border_mode=BORDER_MODE,
+            file_name_save=os.path.join(NPZ_DIR, PREFIX_SEG, CONV_DATA_FILE),
+            training_direcs=[RUN_DIR],
+            distance_transform=False,  # not needed for conv mode
+            distance_bins=BINS,  # not needed for conv mode
+            channel_names=CHANNELS_SEG,
+            num_of_features=BINS,
+            raw_image_direc='raw',
+            annotation_direc='annotated',
+            reshape_size=None,
+            edge_feature=[1, 0, 0],
+            dilation_radius=1,
+            output_mode='conv',
+            display=False,
+            verbose=True)
+
+
 
     print('image_size_x is:', image_size_x)
     print('image_size_y is:', image_size_y)
+   
 
     # define model type
     model_fn = dilated_bn_feature_net_31x31
+
+    # model names
+    watershed_weights_file = os.path.join(MODEL_DIR, PREFIX_SEG, MODEL_WSHED)
+    # weights directories
+   # fgbg_weights_file = '2018-07-13_mibi_watershedFB_channels_last_sample_fgbg_0.h5'
+    fgbg_weights_file = os.path.join(MODEL_DIR, PREFIX_SEG, MODEL_FGBG)
 
     # Load the training data from NPZ into a numpy array
     testing_data = np.load(os.path.join(NPZ_DIR, PREFIX_SEG, CONV_DATA_FILE + '.npz'))
@@ -109,28 +161,26 @@ def run_model_segmentation():
     print('X.shape: {}\ny.shape: {}'.format(X.shape, y.shape))
 
     # save the size of the input data for input_shape model parameter
+    #size = (RESHAPE_SIZE, RESHAPE_SIZE) if RESIZE else X.shape[ROW_AXIS:COL_AXIS + 1]
     size = X.shape[ROW_AXIS:COL_AXIS + 1]
     if IS_CHANNELS_FIRST:
         input_shape = (X.shape[CHANNEL_AXIS], size[0], size[1])
     else:
+   #     input_shape = (size[0], size[1], X.shape[CHANNEL_AXIS])
         input_shape = (size[0], size[1], len(CHANNELS_SEG))
 
     print(IS_CHANNELS_FIRST)
     print('input_shape is:', input_shape)
 
-    watershed_weights_file = os.path.join(MODEL_DIR, PREFIX_SEG, MODEL_WSHED)
-    fgbg_weights_file = os.path.join(MODEL_DIR, PREFIX_SEG, MODEL_FGBG)
-
     # load weights into both models
     run_watershed_model = model_fn(n_features=BINS, input_shape=input_shape)
-    run_watershed_model.load_weights(watershed_weights_file)
-    run_fgbg_model = model_fn(n_features=NUM_FEATURES_OUT_SEG, input_shape=input_shape)
+    run_watershed_model.load_weights(watershed_weights_file) 
+    run_fgbg_model = model_fn(n_features=3, input_shape=input_shape)
     run_fgbg_model.load_weights(fgbg_weights_file)
 
     # get the data to run models on
     training_data_file = os.path.join(NPZ_DIR, PREFIX_SEG, CONV_DATA_FILE + '.npz')
     train_dict, (X_test, y_test) = get_data(training_data_file, mode='conv', seed=21)
-
     # run models
     test_images = run_watershed_model.predict(X_test)
     test_images_fgbg = run_fgbg_model.predict(X_test)
@@ -148,10 +198,21 @@ def run_model_segmentation():
 
     # threshold the foreground/background
     # and remove back ground from watershed transform
-    if IS_CHANNELS_FIRST:
-        fg_thresh = test_images_fgbg[:, 1, :, :] > 0.3
+    if INT_ONLY:
+        if IS_CHANNELS_FIRST:
+            fg_thresh = test_images_fgbg[:, 1, :, :] > 0.4
+        else:
+            fg_thresh = (test_images_fgbg[:, :, :, 1] + test_images_fgbg[:,:,:,0]) > 0.3
+
+#            fg_thresh = skimage.morphology.binary_erosion(fg_thresh)
+#            fg_thresh = skimage.morphology.binary_dilation(fg_thresh)
+#            fg_thresh = skimage.morphology.binary_erosion(fg_thresh)
+#            fg_thresh = skimage.morphology.binary_dilation(fg_thresh)
+#            fg_thresh = skimage.morphology.binary_erosion(fg_thresh)
+#            fg_thresh = skimage.morphology.binary_dilation(fg_thresh)
+#            fg_thresh = skimage.morphology.binary_erosion(fg_thresh)
     else:
-        fg_thresh = test_images_fgbg[:, :, :, 1] > 0.3
+        fg_thresh = (test_images_fgbg[:,:,:,0] + test_images_fgbg[:,:,:,1]) > 0.4
 
     fg_thresh = np.expand_dims(fg_thresh, axis=CHANNEL_AXIS)
     argmax_images_post_fgbg = argmax_images * fg_thresh
@@ -183,9 +244,20 @@ def run_model_segmentation():
 
     index = 0
 
-    tiff.imsave(os.path.join(output_location, 'raw_dsDNA.tif'), X_test[index, :, :, 0])
+    output_location = os.path.join(RESULTS_DIR, PREFIX_SAVE)
+    print('saving to: ', output_location)
+
+    dsDNA = np.copy(X_test[index,:,:,0])
+    dsDNA = dsDNA[15:-15, 15:-15]
+
+    watershed_segmentation = watershed_images[index, :, :, 0]
+    wshed_ero = skimage.morphology.erosion(np.copy(watershed_segmentation))
+    watershed_segmentation[watershed_segmentation != wshed_ero] = 0
+
+    tiff.imsave(os.path.join(output_location, 'raw_dsDNA.tif'), dsDNA)
     tiff.imsave(os.path.join(output_location, 'seg_prediction.tif'), test_images_fgbg[index, :, :, 1])
-    tiff.imsave(os.path.join(output_location, 'watershed_segmentation.tif'), watershed_images[index, :, :, 0])
+    tiff.imsave(os.path.join(output_location, 'edge_prediction.tif'), test_images_fgbg[index, :, :, 0])
+    tiff.imsave(os.path.join(output_location, 'watershed_segmentation.tif'), watershed_segmentation)
 
     return watershed_images[index, :, :, 0]
 
@@ -265,12 +337,24 @@ def post_processing(instance, classification):
 
             output[y,x] = cell_class
 
-    tiff.imsave('./output.tif', output)
+    output_location = os.path.join(RESULTS_DIR, PREFIX_SAVE)
+    cnnout_name = 'Cellular_Instance_Classification.tif'
+
+    tiff.imsave( os.path.join(output_location, cnnout_name), output)
 
 
 # runs model on segmentation/watershed/classification, and postprocesses the results.
 def run_pipeline_on_dir():
     instance_seg = run_model_segmentation()
-    cell_classes = run_model_classification()
+#    cell_classes = run_model_classification()
 
-    post_processing(instance_seg, cell_classes)
+#    print('2')
+#    post_processing(instance_seg, cell_classes)
+
+
+
+
+
+
+if __name__ == '__main__':
+    run_pipeline_on_dir()
