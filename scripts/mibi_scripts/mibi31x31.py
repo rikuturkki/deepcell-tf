@@ -53,10 +53,8 @@ DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 # weirdly accurate?
 #MODEL_NAME = '2018-07-17_mibi_31x31_channels_last_sample__0.h5'
 
-# iterated
-MODEL_NAME = '2018-08-12_mibi_31x31_channels_last_sample__0.h5'
-
-#MODEL_NAME = ''
+#4chan
+MODEL_NAME = '2018-08-14_mibi_31x31_channels_last_sample__0.h5'
 
 RUN_DIR = 'set1'
 MAX_TRAIN = 1e9
