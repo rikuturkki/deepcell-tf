@@ -29,7 +29,7 @@ RESIZE = True
 RESHAPE_SIZE = 2048
 N_EPOCHS = 64
 WINDOW_SIZE = (30,30)
-BATCH_SIZE = 64
+BATCH_SIZE = 16
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -39,8 +39,12 @@ RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/mibi_full'
 #PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
-DATA_FILE = 'mibi_61x61_pixelremTWO_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+DATA_FILE = 'mibi_61x61_pxR3_frot_lib5_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 MODEL_NAME = ''
+
+##noflip
+#MODEL_NAME = '2018-08-13_mibi_61x61_pixelremTWO_R2_class_channels_last_sample__0.h5'
+
 RUN_DIR = 'set1'
 TRAIN_SET_RANGE = range(1, 39+1)
 MAX_TRAIN = 1e10
@@ -70,6 +74,18 @@ NUM_FEATURES = 17
 CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
                  'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
                  'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+## channel set 4: Leeat classification + trimmed segmentation channels (26)
+CHANNEL_NAMES = ['dsDNA','Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+## channel set 5: Leeat classification + trimmed segmentation channels (25)
+CHANNEL_NAMES = ['dsDNA','Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -124,11 +140,11 @@ def train_model_on_training_data():
 
     n_epoch = N_EPOCHS
     batch_size = BATCH_SIZE if DATA_OUTPUT_MODE == 'sample' else 1
-    optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    lr_sched = rate_scheduler(lr=0.01, decay=0.99)
+    optimizer = SGD(lr=0.01, decay=1e-7, momentum=0.9, nesterov=True)
+    lr_sched = rate_scheduler(lr=0.05, decay=0.95)
 
     model_args = {
-        'norm_method': None,
+        'norm_method': 'std',
         'reg': 1e-5,
         'n_features': NUM_FEATURES,
     }
@@ -166,7 +182,7 @@ def train_model_on_training_data():
         direc_data=direc_data,
         lr_sched=lr_sched,
         class_weight=class_weights,
-        rotation_range=None,
+        rotation_range=180,
         flip=True,
         shear=False)
 
