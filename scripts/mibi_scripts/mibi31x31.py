@@ -48,13 +48,17 @@ PREFIX = 'tissues/mibi/samir'
 DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 
 # OG segmentation, works pretty well
-#MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
+MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
 
 # weirdly accurate?
 #MODEL_NAME = '2018-07-17_mibi_31x31_channels_last_sample__0.h5'
 
 #4chan
-MODEL_NAME = '2018-08-14_mibi_31x31_channels_last_sample__0.h5'
+#MODEL_NAME = '2018-08-14_mibi_31x31_channels_last_sample__0.h5'
+
+
+#3chan
+MODEL_NAME = '2018-08-15_mibi_31x31_3chan_channels_last_sample__0.h5'
 
 RUN_DIR = 'set1'
 MAX_TRAIN = 1e9
@@ -68,8 +72,8 @@ MAX_TRAIN = 1e9
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta', 'H3K9ac', 'watershed', 'P.', 'Na.']
 
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'edge_pred', 'interior_pred', 'bg_pred']
-CHANNEL_NAMES = ['dsDNA', 'Ca', 'P.', 'Ta']
-
+#CHANNEL_NAMES = ['dsDNA', 'P','Ca','Ta']
+CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta']
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
