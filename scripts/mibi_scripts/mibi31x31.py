@@ -44,7 +44,7 @@ NPZ_DIR = '/data/npz_data'
 RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/samir'
-#PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
+PREFIX_RUN_DATA = 'tissues/mibi/mibi_full'
 DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 
 # OG segmentation, works pretty well
@@ -54,13 +54,13 @@ MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
 #MODEL_NAME = '2018-07-17_mibi_31x31_channels_last_sample__0.h5'
 
 #4chan
-#MODEL_NAME = '2018-08-14_mibi_31x31_channels_last_sample__0.h5'
+MODEL_NAME = '2018-08-14_mibi_31x31_channels_last_sample__0.h5'
 
 
 #3chan
 MODEL_NAME = '2018-08-15_mibi_31x31_3chan_channels_last_sample__0.h5'
 
-RUN_DIR = 'set1'
+RUN_DIR = 'set3'
 MAX_TRAIN = 1e9
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
 #CHANNEL_NAMES = ['dsDNA']
@@ -72,7 +72,7 @@ MAX_TRAIN = 1e9
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta', 'H3K9ac', 'watershed', 'P.', 'Na.']
 
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'edge_pred', 'interior_pred', 'bg_pred']
-#CHANNEL_NAMES = ['dsDNA', 'P','Ca','Ta']
+CHANNEL_NAMES = ['dsDNA', 'P','Ca','Ta']
 CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta']
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
@@ -173,7 +173,7 @@ def train_model_on_training_data():
 def run_model_on_dir():
     raw_dir = 'raw'
 #    data_location = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
-    test_images = os.path.join(DATA_DIR, PREFIX, RUN_DIR, raw_dir)
+    test_images = os.path.join(DATA_DIR, PREFIX_RUN_DATA, RUN_DIR, raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
     channel_names = CHANNEL_NAMES
     image_size_x, image_size_y = get_image_sizes(test_images, channel_names)
