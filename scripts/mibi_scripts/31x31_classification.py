@@ -29,7 +29,7 @@ RESIZE = True
 RESHAPE_SIZE = 2048
 N_EPOCHS = 64
 WINDOW_SIZE = (15,15)
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -39,7 +39,7 @@ RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/mibi_full'
 #PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
-DATA_FILE = 'mibi_31x31_dil2ero2_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+DATA_FILE = 'mibi_31x31_dil2ero2_withrot_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 MODEL_NAME = '2018-08-11_mibi_31x31_dil2ero2_class_channels_last_sample__0.h5'
 RUN_DIR = 'set1'
 TRAIN_SET_RANGE = range(1, 39+1)
@@ -48,8 +48,6 @@ MAX_TRAIN = 1e10
 EXCLUDE_PIXELS = False
 
 NUM_FEATURES = 17
-if EXCLUDE_PIXELS:
-    NUM_FEATURES += 1
 
 
 # channel Library
@@ -127,7 +125,7 @@ def train_model_on_training_data():
 
     n_epoch = N_EPOCHS
     batch_size = BATCH_SIZE if DATA_OUTPUT_MODE == 'sample' else 1
-    optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    optimizer = SGD(lr=0.01, decay=1e-8, momentum=0.9, nesterov=True)
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
 
     model_args = {
@@ -169,7 +167,7 @@ def train_model_on_training_data():
         direc_data=direc_data,
         lr_sched=lr_sched,
         class_weight=class_weights,
-        rotation_range=None,
+        rotation_range=180,
         flip=True,
         shear=False)
 
@@ -225,9 +223,9 @@ def run_model_on_dir():
 
 def export():
     model_args = {
-        'norm_method': 'median',
+        'norm_method': None,
         'reg': 1e-5,
-        'n_features': 3
+        'n_features': NUM_FEATURES
     }
 
     direc_data = os.path.join(NPZ_DIR, PREFIX)
@@ -242,9 +240,9 @@ def export():
     if DATA_OUTPUT_MODE == 'sample':
         the_model = dilated_bn_feature_net_31x31
         if K.image_data_format() == 'channels_first':
-            model_args['input_shape'] = (1, 1080, 1280)
+            model_args['input_shape'] = (len(CHANNEL_NAMES), 2048, 2048)
         else:
-            model_args['input_shape'] = (1080, 1280, 1)
+            model_args['input_shape'] = (2048, 2048, len(CHANNEL_NAMES))
 
     elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
         the_model = bn_dense_feature_net
@@ -258,12 +256,10 @@ def export():
 
     model = the_model(**model_args)
 
-    model_name = '2018-06-27_mibi_samir_{}_{}__0.h5'.format(
-        K.image_data_format(), DATA_OUTPUT_MODE)
 
-    weights_path = os.path.join(MODEL_DIR, PREFIX, model_name)
+    weights_path = os.path.join(MODEL_DIR, PREFIX, MODEL_NAME)
     export_path = os.path.join(EXPORT_DIR, PREFIX)
-    export_model(model, export_path, model_version=0, weights_path=weights_path)
+    export_model(model, export_path, model_version=7, weights_path=weights_path)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

@@ -31,9 +31,9 @@ from .plot_utils import plot_training_data_3d
 from .transform_utils import distance_transform_2d
 
 CHANNELS_FIRST = K.image_data_format() == 'channels_first'
-MED_OVER_X_MULT = 3 
+MED_OVER_X_MULT = 1 
 MEAN_LIMIT = 1
-MEAN_MULT = 1.5
+MEAN_MULT = 1
 
 def get_data(file_name, mode='sample', test_size=.1, seed=None):
     """Load data from NPZ file and split into train and test sets
@@ -1045,9 +1045,13 @@ def load_annotated_images_2d_mibi(direc_name, training_direcs, image_size, edge_
 
             dilated = binary_dilation(image_data)
             dilated = binary_dilation(dilated)
+            dilated = binary_dilation(dilated)
 
             eroded = binary_erosion(image_data)
             eroded = binary_erosion(eroded)
+            eroded = binary_erosion(eroded)
+
+
 
             pixels_to_rem = np.logical_and(dilated, eroded==False)
 
