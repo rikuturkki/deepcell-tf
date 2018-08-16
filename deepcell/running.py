@@ -110,7 +110,6 @@ def run_models_on_directory(data_location, channel_names, output_location, model
         batch_shape = (1, input_shape[0], input_shape[1], input_shape[2])
 
     model = model_fn(input_shape=input_shape, n_features=n_features)
-
     if weightfmt == True:
         model = model_fn(input_shape=input_shape, n_features=n_features, )
 
