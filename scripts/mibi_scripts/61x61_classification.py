@@ -40,10 +40,13 @@ EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/mibi_full'
 #PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
 DATA_FILE = 'mibi_61x61_pxR3_frot_lib5_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-MODEL_NAME = ''
+#MODEL_NAME = '2018-08-14_mibi_61x61_lib3_pixR2_flip_rot_class_channels_last_sample__0.h5'
 
 ##noflip
-#MODEL_NAME = '2018-08-13_mibi_61x61_pixelremTWO_R2_class_channels_last_sample__0.h5'
+MODEL_NAME = '2018-08-13_mibi_61x61_pixelremTWO_R2_class_channels_last_sample__0.h5'
+
+
+
 
 RUN_DIR = 'set1'
 TRAIN_SET_RANGE = range(1, 39+1)
@@ -76,14 +79,14 @@ CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'FoxP3.', 'CD4.', 'C
                  'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
 
 ## channel set 4: Leeat classification + trimmed segmentation channels (26)
-CHANNEL_NAMES = ['dsDNA','Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
-                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
-                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+#CHANNEL_NAMES = ['dsDNA','Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
 
 ## channel set 5: Leeat classification + trimmed segmentation channels (25)
-CHANNEL_NAMES = ['dsDNA','Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
-                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
-                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+#CHANNEL_NAMES = ['dsDNA','Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
 
 
 
