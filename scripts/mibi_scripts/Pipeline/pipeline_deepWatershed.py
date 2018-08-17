@@ -50,7 +50,7 @@ WINDOW_SIZE_CLASS = (15,15)
 EDGE_THRESH = 0.25
 INT_THRESH = 0.25
 CELL_THRESH = 0.25
-NUM_FINAL_EROSIONS = 1 
+NUM_FINAL_EROSIONS = 1
 
 INT_ONLY = True
 REMAKE_CONV = False
@@ -135,43 +135,43 @@ def dilate(array, mask, num_dilations):
     copy = np.copy(array)
     for x in range(0, num_dilations):
         dilated = skimage.morphology.dilation(copy)
-        
+
         # if still within the mask range AND one cell not eating another, dilate
         #copy = np.where( ((mask!=0) & (dilated!=copy & copy==0)), dilated, copy)
         copy = np.where( (mask!=0) & (dilated!=copy) & (copy==0), dilated, copy)
     return copy
-    
+
 def dilate_nomask(array, num_dilations):
     copy = np.copy(array)
     for x in range(0, num_dilations):
         dilated = skimage.morphology.dilation(copy)
-        
+
         # if one cell not eating another, dilate
         #copy = np.where( ((mask!=0) & (dilated!=copy & copy==0)), dilated, copy)
         copy = np.where( (dilated!=copy) & (copy==0), dilated, copy)
     return copy
 
-    
+
 def erode(array, num_erosions):
     original = np.copy(array)
-    
+
     for x in range(0, num_erosions):
         eroded = skimage.morphology.erosion(np.copy(original))
         original[original != eroded] = 0
-        
+
     return original
 
 
 # runs the sample and watershed segmentation models
 def run_model_segmentation():
-    
+
     raw_dir = 'raw'
     data_location = os.path.join(DATA_DIR, PREFIX_CLASS, RUN_DIR, raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX_SEG)
     channel_names = CHANNELS_SEG
     image_size_x, image_size_y = get_image_sizes(data_location, channel_names)
 
- 
+
     weights = os.path.join(MODEL_DIR, PREFIX_SEG, MODEL_FGBG)
 
 
@@ -214,7 +214,7 @@ def run_model_segmentation():
     interior[interior > interior_thresh] = 1
     interior[interior < interior_thresh] = 0
 
-    cell_notcell = 1 - np.copy(predictions[:, :, :, 2]) 
+    cell_notcell = 1 - np.copy(predictions[:, :, :, 2])
     cell_notcell[cell_notcell > cell_thresh] = 1
     cell_notcell[cell_notcell < cell_thresh] = 0
 
@@ -234,7 +234,7 @@ def run_model_segmentation():
 
     dilation = 'old'
 
-    if dilation == 'new': 
+    if dilation == 'new':
         # dilate gradually into the mask area
         watershed_segmentation = dilate(watershed_segmentation, interior, 2)
         watershed_segmentation = erode(watershed_segmentation, 1)
@@ -316,10 +316,10 @@ def run_model_segmentation():
     tiff.imsave(os.path.join(output_location, 'raw_dsDNA.tif'), dsDNA)
     tiff.imsave(os.path.join(output_location, 'edge_prediction.tif'), predictions[index, :, :, 0])
     tiff.imsave(os.path.join(output_location, 'interior_bound.tif'), interior)
-    tiff.imsave(os.path.join(output_location, 'cell_notcell.tif'), cell_notcell)
+#    tiff.imsave(os.path.join(output_location, 'cell_notcell.tif'), cell_notcell)
     tiff.imsave(os.path.join(output_location, 'shallowWatershed_instance_seg.tif'), watershed_segmentation)
 
-    return watershed_segmentation 
+    return watershed_segmentation
 
 # runs the classification model
 def run_model_classification():
@@ -369,7 +369,7 @@ def run_model_classification():
 def post_processing(instance, classification):
 
     print('Classifying cell types')
- 
+
     # make an empty array of the same size as the instance input to store the output values
     rows = instance.shape[0]
     cols = instance.shape[1]
@@ -435,11 +435,3 @@ if __name__ == '__main__':
 
     mask = skimage.io.imread('/data/data/tissues/mibi/samir/set1/annotated/feature_1.tif')
 #    run_stats(instance_seg, mask)
-
-
-
-    
-
-
-
-

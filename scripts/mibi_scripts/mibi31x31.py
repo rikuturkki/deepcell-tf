@@ -26,12 +26,12 @@ from deepcell import export_model
 DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
-RESHAPE_SIZE = None 
+RESHAPE_SIZE = None
 N_EPOCHS = 50
 WINDOW_SIZE = (15,15)
-BATCH_SIZE = 64 if DATA_OUTPUT_MODE == 'sample' else 1
+BATCH_SIZE = 32 if DATA_OUTPUT_MODE == 'sample' else 1
 
-# channels 
+# channels
 IS_CHANNELS_FIRST = K.image_data_format() == 'channels_first'
 ROW_AXIS = 2 if IS_CHANNELS_FIRST else 1
 COL_AXIS = 3 if IS_CHANNELS_FIRST else 2
@@ -44,7 +44,7 @@ NPZ_DIR = '/data/npz_data'
 RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/samir'
-#PREFIX = 'tissues/mibi/mibi_full'
+PREFIX_RUN_DATA = 'tissues/mibi/mibi_full'
 DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 
 # OG segmentation, works pretty well
@@ -53,10 +53,22 @@ MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
 # weirdly accurate?
 #MODEL_NAME = '2018-07-17_mibi_31x31_channels_last_sample__0.h5'
 
+=======
+
+
+
+## what is this
 MODEL_NAME = '2018-07-06_mibi_31x31_channels_last_sample__0.h5'
+
+#4chan
+MODEL_NAME = '2018-08-14_mibi_31x31_channels_last_sample__0.h5'
 
 RUN_DIR = 'set1'
 
+#3chan
+MODEL_NAME = '2018-08-15_mibi_31x31_3chan_channels_last_sample__0.h5'
+
+RUN_DIR = 'set3'
 MAX_TRAIN = 1e9
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
 #CHANNEL_NAMES = ['dsDNA']
@@ -69,7 +81,8 @@ MAX_TRAIN = 1e9
 
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'edge_pred', 'interior_pred', 'bg_pred']
 CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']
-
+CHANNEL_NAMES = ['dsDNA', 'P', 'Ca', 'Ta']
+CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta']
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -80,7 +93,7 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
-    num_of_features = 2 # Specify the number of feature masks that are present   
+    num_of_features = 2 # Specify the number of feature masks that are present
     training_direcs = ['set1', 'set2']
     channel_names = CHANNEL_NAMES
     raw_image_direc = 'raw'
@@ -118,8 +131,8 @@ def train_model_on_training_data():
 
     n_epoch = N_EPOCHS
     #batch_size = 32 if DATA_OUTPUT_MODE == 'sample' else 1
-    optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    lr_sched = rate_scheduler(lr=0.01, decay=0.99)
+    optimizer = SGD(lr=0.01, decay=1e-8, momentum=0.9, nesterov=True)
+    lr_sched = rate_scheduler(lr=0.01, decay=0.98)
 
     model_args = {
         'norm_method': 'median',
@@ -169,7 +182,7 @@ def train_model_on_training_data():
 def run_model_on_dir():
     raw_dir = 'raw'
 #    data_location = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
-    test_images = os.path.join(DATA_DIR, PREFIX, RUN_DIR, raw_dir)
+    test_images = os.path.join(DATA_DIR, PREFIX_RUN_DATA, RUN_DIR, raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
     channel_names = CHANNEL_NAMES
     image_size_x, image_size_y = get_image_sizes(test_images, channel_names)
@@ -177,8 +190,8 @@ def run_model_on_dir():
 #    model_name = '2018-07-13_mibi_31x31_{}_{}__0.h5'.format(
 #        K.image_data_format(), DATA_OUTPUT_MODE)
 
-    model_name = MODEL_NAME 
- 
+    model_name = MODEL_NAME
+
     weights = os.path.join(MODEL_DIR, PREFIX, model_name)
 
     n_features = 3
