@@ -126,14 +126,15 @@ def create_generators(args):
     if args.dataset_type == 'train':
 
         train_generator = MaskRCNNGenerator(
-            direc_name='/data/data/cells/HeLa/S3',
+            direc_name='/data/data/tissues/mibi/samir',
             training_dirs=['set1', 'set2'],
             raw_image_dir='raw',
-            channel_names=['FITC'],
+            channel_names=['dsDNA'],
             annotation_dir='annotated',
-            annotation_names=['corrected'],
+            annotation_names=['feature_1'],
             transform_generator=transform_generator,
-            batch_size=args.batch_size
+            batch_size=args.batch_size,
+            crop_iterations=40
         )
 
         if args.val_annotations:
@@ -186,11 +187,11 @@ def parse_args(args):
     parser.add_argument('--backbone', help='Backbone model used by retinanet.', default='resnet50', type=str)
     parser.add_argument('--batch-size', help='Size of the batches.', default=1, type=int)
     parser.add_argument('--gpu', help='Id of the GPU to use (as reported by nvidia-smi).')
-    parser.add_argument('--epochs', help='Number of epochs to train.', type=int, default=10)
+    parser.add_argument('--epochs', help='Number of epochs to train.', type=int, default=300)
     parser.add_argument('--steps', help='Number of steps per epoch.', type=int, default=1000)
     parser.add_argument('--snapshot-path', help='Path to store snapshots of models during training (defaults to \'./snapshots\')', default='./snapshots')
     parser.add_argument('--tensorboard-dir', help='Log directory for Tensorboard output', default='./logs')
-    parser.add_argument('--no-snapshots', help='Disable saving snapshots.', dest='snapshots', action='store_false')
+    parser.add_argument('--no-snapshots', help='Disable saving snapshots.', dest='snapshots', action='store_true')
     parser.add_argument('--no-evaluation', help='Disable per epoch evaluation.', dest='evaluation', action='store_false')
     parser.add_argument('--freeze-backbone', help='Freeze training of backbone layers.', action='store_true')
     parser.add_argument('--no-class-specific-filter', help='Disables class specific filtering.', dest='class_specific_filter', action='store_false')
