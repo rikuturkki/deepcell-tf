@@ -85,6 +85,9 @@ DTYPE = 'int32'
 WIN_SIZE = (15, 15)
 NUM_CHAN = 3
 PAD = 15
+CROP_SIZE = 256
+IM_SIZE = 2048
+
 
 def dilate(array, mask, num_dilations):
     copy = np.copy(array)
@@ -260,7 +263,7 @@ def run_segmentation(set):
 
     return watershed_segmentation, dsDNA, cell_notcell, cell_edge
 
-def crop_im_and_save(img, save_file_path, im_size, crop_size, im_name, mask):
+def crop_im_and_save(img, save_file_path, im_size, crop_size, im_name, mask, relabel):
 
     print('shape of image is:', img.shape)
 
@@ -274,7 +277,7 @@ def crop_im_and_save(img, save_file_path, im_size, crop_size, im_name, mask):
             crop = img[x:x+crop_size, y:y+crop_size]
             crop_num = str(crop_counter)
 
-            
+
             out_file_path = save_file_path + '/' + mask + 'crop' + crop_num + '_' + im_name
             tiff.imsave( out_file_path, crop)
             crop_counter += 1
@@ -284,22 +287,30 @@ def process_set(set_num):
     set_dir = 'set' + str(set_num)
     mask, raw, interior, edge = run_segmentation(set_dir)
 
-    # concatenate raw, interior, and edge into one 3 channel image
-#    output = concat_channels(raw, interior, edge)
+    set_path = os.path.join(RET_DATA_DIR, set_dir)
+    raw_path = os.path.join(set_path, 'raw')
+    anno_path = os.path.join(set_path, 'annotated')
+
+    if not os.path.exists(set_path):                  # /data/data/tissues/mibi/retinanet
+        os.mkdir(set_path)
+        os.mkdir(raw_path)
+        os.mkdir(anno_path)
+
+    mask = np.pad( np.squeeze(mask), WIN_SIZE, 'constant')
 
     output_name = 'dsDNA' + str(set_num) + '.tif'
     mask_name = 'mask_dsDNA' + str(set_num) + '.tif'
 
-    print(raw.sum())
-    print(mask.sum())
+    print('shapes should be 2048x2048')
+    print('shape of mask is:', mask.shape)
+    print('shape of raw is:', raw.shape)
 
-    
     print('cropping input')
-    crop_im_and_save(output, os.path.join(MRCNN_DATA_DIR, MRCNN_TRAIN_DIR), 2048, 512, output_name, mask='')
+    crop_im_and_save(output, raw_path, IM_SIZE, CROP_SIZE, output_name, mask='')
 
-    mask = np.pad( np.squeeze(mask), WIN_SIZE, 'constant')
     print('cropping mask')
-    crop_im_and_save(mask, os.path.join(MRCNN_DATA_DIR, MRCNN_ANNO_DIR), 2048, 512, output_name, mask='mask_')
+    crop_im_and_save(mask, anno_path, IM_SIZE, CROP_SIZE, output_name, mask='mask_')
+
 
 if __name__ == '__main__':
 
