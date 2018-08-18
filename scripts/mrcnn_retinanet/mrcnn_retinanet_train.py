@@ -126,15 +126,14 @@ def create_generators(args):
     if args.dataset_type == 'train':
 
         train_generator = MaskRCNNGenerator(
-            direc_name='/data/data/tissues/mibi/samir',
+            direc_name='/data/data/cells/HeLa/S3',
             training_dirs=['set1', 'set2'],
             raw_image_dir='raw',
-            channel_names=['dsDNA'],
+            channel_names=['FITC'],
             annotation_dir='annotated',
-            annotation_names=['feature_1'],
+            annotation_names=['corrected'],
             transform_generator=transform_generator,
             batch_size=args.batch_size,
-            crop_iterations=40
         )
 
         if args.val_annotations:
