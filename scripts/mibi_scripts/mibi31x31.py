@@ -27,7 +27,7 @@ DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
 RESHAPE_SIZE = None
-N_EPOCHS = 50
+N_EPOCHS = 40
 WINDOW_SIZE = (15,15)
 BATCH_SIZE = 32 if DATA_OUTPUT_MODE == 'sample' else 1
 
@@ -45,7 +45,7 @@ RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/samir'
 PREFIX_RUN_DATA = 'tissues/mibi/mibi_full'
-DATA_FILE = 'mibi_31x31_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+DATA_FILE = 'mibi_31x31_2chan_seg_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 
 # OG segmentation, works pretty well
 MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
@@ -53,7 +53,6 @@ MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
 # weirdly accurate?
 #MODEL_NAME = '2018-07-17_mibi_31x31_channels_last_sample__0.h5'
 
-=======
 
 
 
@@ -80,9 +79,9 @@ MAX_TRAIN = 1e9
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta', 'H3K9ac', 'watershed', 'P.', 'Na.']
 
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'edge_pred', 'interior_pred', 'bg_pred']
-CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']
-CHANNEL_NAMES = ['dsDNA', 'P', 'Ca', 'Ta']
-CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta']
+#CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']
+#CHANNEL_NAMES = ['dsDNA', 'P', 'Ca', 'Ta']
+CHANNEL_NAMES = ['dsDNA', 'Ta']
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -131,8 +130,8 @@ def train_model_on_training_data():
 
     n_epoch = N_EPOCHS
     #batch_size = 32 if DATA_OUTPUT_MODE == 'sample' else 1
-    optimizer = SGD(lr=0.01, decay=1e-8, momentum=0.9, nesterov=True)
-    lr_sched = rate_scheduler(lr=0.01, decay=0.98)
+    optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    lr_sched = rate_scheduler(lr=0.01, decay=0.99)
 
     model_args = {
         'norm_method': 'median',
