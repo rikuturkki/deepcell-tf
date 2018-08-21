@@ -82,8 +82,9 @@ CLASS_DATA_FILE = 'mibi_pipe_class_{}_{}'.format(K.image_data_format(), DATA_OUT
 #'2018-07-13_mibi_watershedFB_channels_last_sample_fgbg_0.h5'
 
 #MODEL_FGBG = '2018-08-02_mibi_watershedFB_channels_last_sample_fgbg_0.h5'
-MODEL_FGBG = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
-
+#MODEL_FGBG = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
+MODEL_FGBG = '2018-08-20_mibi_31x31_8chanCFHHNPTd__channels_last_sample__0.h5'
+CHANNELS_SEG = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.']
 
 #single channel?
 #MODEL_FGBG = '2018-07-06_mibi_31x31_channels_last_sample__0.h5'
@@ -106,7 +107,7 @@ NUM_FEATURES_IN_SEG = 2
 NUM_FEATURES_OUT_SEG = 3
 NUM_FEATURES_CLASS = 17
 
-CHANNELS_SEG = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
+#CHANNELS_SEG = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
 #CHANNELS_SEG = ['dsDNA']
 
 CHANNELS_CLASS = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
@@ -434,4 +435,4 @@ if __name__ == '__main__':
     instance_seg = run_pipeline_on_dir()
 
     mask = skimage.io.imread('/data/data/tissues/mibi/samir/set1/annotated/feature_1.tif')
-#    run_stats(instance_seg, mask)
+    run_stats(instance_seg, mask)
