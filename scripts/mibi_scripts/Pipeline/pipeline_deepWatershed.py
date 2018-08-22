@@ -152,7 +152,6 @@ def dilate_nomask(array, num_dilations):
         copy = np.where( (dilated!=copy) & (copy==0), dilated, copy)
     return copy
 
-
 def erode(array, num_erosions):
     original = np.copy(array)
 
@@ -161,7 +160,6 @@ def erode(array, num_erosions):
         original[original != eroded] = 0
 
     return original
-
 
 # runs the sample and watershed segmentation models
 def run_model_segmentation():
@@ -200,7 +198,7 @@ def run_model_segmentation():
         win_y=WINDOW_SIZE[1],
         split=False)
 
-#0.25 0.25 works good
+    #0.25 0.25 works good
     edge_thresh = EDGE_THRESH
     interior_thresh = INT_THRESH
     cell_thresh = CELL_THRESH
@@ -317,7 +315,7 @@ def run_model_segmentation():
     tiff.imsave(os.path.join(output_location, 'raw_dsDNA.tif'), dsDNA)
     tiff.imsave(os.path.join(output_location, 'edge_prediction.tif'), predictions[index, :, :, 0])
     tiff.imsave(os.path.join(output_location, 'interior_bound.tif'), interior)
-#    tiff.imsave(os.path.join(output_location, 'cell_notcell.tif'), cell_notcell)
+ #    tiff.imsave(os.path.join(output_location, 'cell_notcell.tif'), cell_notcell)
     tiff.imsave(os.path.join(output_location, 'shallowWatershed_instance_seg.tif'), watershed_segmentation)
 
     return watershed_segmentation
@@ -386,11 +384,17 @@ def post_processing(instance, classification):
 
             x = x_y[1]
             y = x_y[0]
-            label_classes = np.append(label_classes, classification[y,x])
+            if classification[y,x] != 0
+                label_classes = np.append(label_classes, classification[y,x])
 
-        # find the most prevalent class in the cell
-        m = stats.mode(label_classes)
-        cell_class = np.asscalar(m[0])
+        # If there are any cell classes for that cell, find the mode
+        if len(label_classes) != 0:
+            m = stats.mode(label_classes)
+            cell_class = np.asscalar(m[0])
+
+        # if every pixel in the cell was classified as background, classify it as background. This should *not* happen
+        elif len(label_classes) == 0:
+            cell_class = 0
         #print('class of cell#', label, ' is:', cell_class)
 
         for x_y in pixel_locations:
