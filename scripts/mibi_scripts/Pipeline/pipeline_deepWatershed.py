@@ -95,8 +95,11 @@ CHANNELS_SEG = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.'
 #61x61 newnoflip
 #MODEL_CLASS = '2018-08-13_mibi_61x61_pixelremTWO_R2_class_channels_last_sample__0.h5'
 
-#31x31
-MODEL_CLASS = '2018-08-11_mibi_31x31_dil2ero2_class_channels_last_sample__0.h5'
+#31x31 no aug
+#MODEL_CLASS = '2018-08-11_mibi_31x31_dil2ero2_class_channels_last_sample__0.h5'
+
+#31x31 std lib4
+MODEL_CLASS = '2018-08-21_mibi_31x31_r4_rot_med8_normStd_lib4_class_channels_last_sample__0.h5'
 
 RUN_DIR = 'set1'
 
@@ -110,10 +113,15 @@ NUM_FEATURES_CLASS = 17
 #CHANNELS_SEG = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
 #CHANNELS_SEG = ['dsDNA']
 
-CHANNELS_CLASS = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#CHANNELS_CLASS = ['dsDNA', 'Ca','H3K27me3', 'H3K9ac', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+
+## channel lib 4: Leeat classification + trimmed segmentation channels (26)
+CHANNELS_CLASS = ['dsDNA', 'Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
                  'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
                  'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
-
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -384,7 +392,7 @@ def post_processing(instance, classification):
 
             x = x_y[1]
             y = x_y[0]
-            if classification[y,x] != 0
+            if classification[y,x] != 0:
                 label_classes = np.append(label_classes, classification[y,x])
 
         # If there are any cell classes for that cell, find the mode
@@ -413,11 +421,11 @@ def post_processing(instance, classification):
 # runs model on segmentation/watershed/classification, and postprocesses the results.
 def run_pipeline_on_dir():
     instance_seg = np.squeeze(run_model_segmentation())
-    #cell_classes = run_model_classification()
+    cell_classes = run_model_classification()
 
-    #print(instance_seg.shape, cell_classes.shape)
+    print(instance_seg.shape, cell_classes.shape)
 
-    #post_processing(instance_seg, cell_classes)
+    post_processing(instance_seg, cell_classes)
 
 
     return instance_seg
