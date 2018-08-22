@@ -7,10 +7,10 @@ PREDICTION = './wshed_pred.tif'
 TRUTH = 'wshed_mask.tif'
 WIN_SIZE = 15                    # if
 IM_SIZE = 2048
-ROUND_TO = 4
+ROUND_TO = 4 
 CROP_SIZE = 32
-DICE_IOU_THRESH = 0.5
-MERGE_IOU_THRESH = 0.01
+DICE_IOU_THRESH = 0.5 
+MERGE_IOU_THRESH = 1e-5
 
 # reads images into ndarrays, and trims them to fit each other.
 def im_prep(prediction, mask, win_size):
@@ -61,21 +61,22 @@ def stats_pixelbased(pred_input, truth_input):
 
     dice_pixel = round(dice_pixel, ROUND_TO)
     jaccard_pixel = round(jaccard_pixel, ROUND_TO)
-    false_pos = round(false_pos, ROUND_TO)
-    false_neg = round(false_neg, ROUND_TO)
-    false_pos_perc_err = round(false_pos_perc_err, ROUND_TO)
-    false_neg_perc_err = round(false_neg_perc_err, ROUND_TO)
-    false_pos_perc_pred = round(false_pos_perc_pred, ROUND_TO)
-    false_neg_perc_truth = round(false_neg_perc_truth, ROUND_TO)
+    false_pos = round(false_pos*100, ROUND_TO)
+    false_neg = round(false_neg*100, ROUND_TO)
+    false_pos_perc_err = round(false_pos_perc_err*100, ROUND_TO)
+    false_neg_perc_err = round(false_neg_perc_err*100, ROUND_TO)
+    false_pos_perc_pred = round(false_pos_perc_pred*100, ROUND_TO)
+    false_neg_perc_truth = round(false_neg_perc_truth*100, ROUND_TO)
 
     print('')
     print('____________________Pixel-based statistics____________________')
     print('')
     print('dice/F1 index:', dice_pixel)
     print('jaccard index:', jaccard_pixel)
+    print('% Accuracy:', round(np.count_nonzero(np.logical_and(pred, truth))/ np.count_nonzero(truth), ROUND_TO))
 
-    print('#false positives:', false_pos, '  % of total error:', false_pos_perc_err, '  % of predicted incorrect:', false_pos_perc_pred)
-    print('#false negatives:', false_neg, '  % of total error:', false_neg_perc_err, '  % of ground truth missed:', false_neg_perc_truth)
+#    print('#false positives:', false_pos, '  % of total error:', false_pos_perc_err, '  % of predicted incorrect:', false_pos_perc_pred)
+#    print('#false negatives:', false_neg, '  % of total error:', false_neg_perc_err, '  % of ground truth missed:', false_neg_perc_truth)
     print('')
     print('')
 
@@ -103,7 +104,7 @@ def calc_cropped_ious(crop_pred, crop_truth, threshold, iou_matrix):
 def gen_iou_matrix_quick(pred, truth, threshold, crop_size, im_size=IM_SIZE):
 
     # label ground truth masks, neccesary if not already tagged with cellID numbers
-    truth = skimage.measure.label(truth, connectivity = 1)
+    truth = skimage.measure.label(truth, connectivity = 2)
 
     # create empty intersection over union matrix, with shape n(truth) by m(prediction)
     iou_matrix = np.zeros((truth.max(), pred.max()))
@@ -165,7 +166,8 @@ def count_false_pos_neg(iou_matrix):
         counter = 0
 
         # check all ground truth cells
-        for n in range(1, iou_matrix.shape[0]):
+#        for n in range(1, iou_matrix.shape[0]):
+        for n in range(0, iou_matrix.shape[0]):
 
             # if any of the ground truth cells match the predicted mask, move on to the next
             if iou_matrix[n,m] == 1:
@@ -198,7 +200,8 @@ def count_merg_div(iou_matrix):
     merged = 0
     for m in range(0, iou_matrix.shape[1]):
         counter = 0
-        for n in range(1, iou_matrix.shape[0]):
+#        for n in range(1, iou_matrix.shape[0]):
+        for n in range(0, iou_matrix.shape[0]):
             if iou_matrix[n,m] == 1:
                 counter+=1
         if counter > 1:
@@ -232,22 +235,25 @@ def stats_objectbased(pred_input, truth_input):
     jaccard_object = round(jaccard_object, ROUND_TO)
     false_pos = round(false_pos, ROUND_TO)
     false_neg = round(false_neg, ROUND_TO)
-    false_pos_perc_err = round(false_pos_perc_err, ROUND_TO)
-    false_neg_perc_err = round(false_neg_perc_err, ROUND_TO)
-    false_pos_perc_pred = round(false_pos_perc_pred, ROUND_TO)
-    false_neg_perc_truth = round(false_neg_perc_truth, ROUND_TO)
-    perc_merged = round(perc_merged, ROUND_TO)
-    perc_divided = round(perc_divided, ROUND_TO)
+    false_pos_perc_err = round(false_pos_perc_err*100, ROUND_TO) 
+    false_neg_perc_err = round(false_neg_perc_err*100, ROUND_TO) 
+    false_pos_perc_pred = round(false_pos_perc_pred*100, ROUND_TO)
+    false_neg_perc_truth = round(false_neg_perc_truth*100, ROUND_TO) 
+    perc_merged = round(perc_merged*100, ROUND_TO) 
+    perc_divided = round(perc_divided*100, ROUND_TO) 
 
     print('____________________Object-based statistics____________________')
     print('')
     print('Intersection over Union thresholded at:', DICE_IOU_THRESH)
     print('dice/F1 index:', dice_object)
     print('jaccard index:', jaccard_object)
-
-    print('#false positives:', false_pos, '  % of total error:', false_pos_perc_err, '  % of predicted incorrect:', false_pos_perc_pred)
-    print('#false negatives:', false_neg, '  % of total error:', false_neg_perc_err, '  % of ground truth missed:', false_neg_perc_truth)
-
+    print('')
+    print('Number of cells predicted:', stats_iou_matrix.shape[1])
+    print('Number of cells present in ground truth:', stats_iou_matrix.shape[0])
+    print('% Accuracy:', round((100*(stats_iou_matrix.shape[1] - false_pos)/ stats_iou_matrix.shape[0]), ROUND_TO))
+    print('')
+    print('Number of false positives:', false_pos, '  % of total error:', false_pos_perc_err, '  % of predicted incorrect:', false_pos_perc_pred)
+    print('Number of false negatives:', false_neg, '  % of total error:', false_neg_perc_err, '  % of ground truth missed:', false_neg_perc_truth)
     print('')
     print('Intersection over Union thresholded at:', MERGE_IOU_THRESH)
     print('#incorrect merges:', merged, '     % of ground truth merged:', perc_merged)
