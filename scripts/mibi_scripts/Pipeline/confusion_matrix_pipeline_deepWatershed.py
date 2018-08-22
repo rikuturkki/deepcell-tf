@@ -30,7 +30,7 @@ from deepcell import export_model
 from deepcell import get_data
 
 import accuracy_metrics
-
+from sklearn.metrics import confusion_matrix
 from accuracy_metrics import *
 
 # data options
@@ -415,7 +415,6 @@ def post_processing(instance, classification, ground_truth):
         elif len(label_classes) == 0:
             cell_class_pred = 0
 
-
         #classification for ground truth
         # If there are any cell classes for that cell, find the mode
         if len(label_truth_classes) != 0:
@@ -426,9 +425,10 @@ def post_processing(instance, classification, ground_truth):
         elif len(label_truth_classes) == 0:
             cell_class_truth = 0
 
+        cells_pred = np.append(cells_pred, cell_class_pred)
+        cells_truth = np.append(cells_truth, cell_class_truth)
 
-
-
+        print(confusion_matrix(cells_truth, cells_pred, labels=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]))
 
         for x_y in pixel_locations:
 
@@ -437,6 +437,8 @@ def post_processing(instance, classification, ground_truth):
 
             instance_type_pred[y,x] = cell_class_pred
             instance_type_truth[y,x] = cell_class_truth
+
+
 
     output_location = os.path.join(RESULTS_DIR, PREFIX_SAVE)
     cnnout_name_pred = 'Cellular_Instance_Classification_prediction.tif'
