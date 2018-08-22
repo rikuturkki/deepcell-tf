@@ -381,7 +381,7 @@ def post_processing(instance, classification, ground_truth):
     rows = instance.shape[0]
     cols = instance.shape[1]
     instance_type_pred = np.zeros((cols, rows), dtype='uint16')
-    instance__type_truth = np.zeros((cols, rows), dtype='uint16')
+    instance_type_truth = np.zeros((cols, rows), dtype='uint16')
 
     cells_pred = np.array([])
     cells_truth = np.array([])
@@ -436,14 +436,14 @@ def post_processing(instance, classification, ground_truth):
             y = x_y[0]
 
             instance_type_pred[y,x] = cell_class_pred
-            instance__type_truth[y,x] = cell_class_truth
+            instance_type_truth[y,x] = cell_class_truth
 
     output_location = os.path.join(RESULTS_DIR, PREFIX_SAVE)
-    cnnout_name = 'Cellular_Instance_Classification_prediction.tif'
-    cnnout_name = 'Cellular_Instance_Classification_truth.tif'
+    cnnout_name_pred = 'Cellular_Instance_Classification_prediction.tif'
+    cnnout_name_truth = 'Cellular_Instance_Classification_truth.tif'
 
-    tiff.imsave( os.path.join(output_location, cnnout_name), instance_type_pred)
-
+    tiff.imsave( os.path.join(output_location, cnnout_name_pred), instance_type_pred)
+    tiff.imsave( os.path.join(output_location, cnnout_name_truth), instance_type_truth)
 
 # runs model on segmentation/watershed/classification, and postprocesses the results.
 def run_pipeline_on_dir():
@@ -476,5 +476,5 @@ def run_stats(instance, mask):
 if __name__ == '__main__':
     instance_seg = run_pipeline_on_dir()
 
-    mask = skimage.io.imread( os.path.join('/data/data/tissues/mibi/samir/', RUN_DIR, '/annotated/feature_1.tif') )
+    mask = skimage.io.imread( '/data/data/tissues/mibi/samir/set1/annotated/feature_1.tif') )
     run_stats(instance_seg, mask)

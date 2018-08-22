@@ -421,11 +421,11 @@ def post_processing(instance, classification):
 # runs model on segmentation/watershed/classification, and postprocesses the results.
 def run_pipeline_on_dir():
     instance_seg = np.squeeze(run_model_segmentation())
-    cell_classes = run_model_classification()
+#    cell_classes = run_model_classification()
 
-    print(instance_seg.shape, cell_classes.shape)
+#    print(instance_seg.shape, cell_classes.shape)
 
-    post_processing(instance_seg, cell_classes)
+#    post_processing(instance_seg, cell_classes)
 
 
     return instance_seg
