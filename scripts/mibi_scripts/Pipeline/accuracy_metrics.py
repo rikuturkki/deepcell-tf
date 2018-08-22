@@ -166,7 +166,8 @@ def count_false_pos_neg(iou_matrix):
         counter = 0
 
         # check all ground truth cells
-        for n in range(1, iou_matrix.shape[0]):
+#        for n in range(1, iou_matrix.shape[0]):
+        for n in range(0, iou_matrix.shape[0]):
 
             # if any of the ground truth cells match the predicted mask, move on to the next
             if iou_matrix[n,m] == 1:
@@ -199,7 +200,8 @@ def count_merg_div(iou_matrix):
     merged = 0
     for m in range(0, iou_matrix.shape[1]):
         counter = 0
-        for n in range(1, iou_matrix.shape[0]):
+#        for n in range(1, iou_matrix.shape[0]):
+        for n in range(0, iou_matrix.shape[0]):
             if iou_matrix[n,m] == 1:
                 counter+=1
         if counter > 1:
