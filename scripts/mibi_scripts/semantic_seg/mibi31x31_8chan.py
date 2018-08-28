@@ -47,7 +47,7 @@ PREFIX = 'tissues/mibi/samir'
 PREFIX_RUN_DATA = 'tissues/mibi/mibi_full'
 DATA_FILE = 'mibi_31x31_8chanCFHHNPTd__{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 
-RUN_DIR = 'set2'
+RUN_DIR = 'set4'
 MAX_TRAIN = 1e9
 
 # OG segmentation, works pretty well
