@@ -29,9 +29,9 @@ from deepcell import run_models_on_directory
 from deepcell import export_model
 from deepcell import get_data
 
-import accuracy_metrics
+import accuracy_metrics_will
 from sklearn.metrics import confusion_matrix
-from accuracy_metrics import *
+from accuracy_metrics_will import *
 
 # data options
 DATA_OUTPUT_MODE = 'sample'
@@ -459,14 +459,14 @@ def post_processing(instance, classification, ground_truth):
 # runs model on segmentation/watershed/classification, and postprocesses the results.
 def run_pipeline_on_dir():
     instance_seg = np.squeeze(run_model_segmentation())
-    cell_classes = run_model_classification()
+#    cell_classes = run_model_classification()
 
-    print(instance_seg.shape, cell_classes.shape)
+#    print(instance_seg.shape, cell_classes.shape)
 
-    ground_truth = skimage.io.imread('/data/data/tissues/mibi/mibi_full/TNBCcellTypes/P1_labeledImage.tiff')
-    ground_truth = ground_truth[15:-15, 15:-15]
+#    ground_truth = skimage.io.imread('/data/data/tissues/mibi/mibi_full/TNBCcellTypes/P1_labeledImage.tiff')
+#    ground_truth = ground_truth[15:-15, 15:-15]
 
-    post_processing(instance_seg, cell_classes, ground_truth)
+#    post_processing(instance_seg, cell_classes, ground_truth)
 
 
     return instance_seg
@@ -475,32 +475,22 @@ def run_pipeline_on_dir():
 def run_stats(instance, mask):
 
 
-    pred, truth = im_prep(instance, mask, 15)
+    truth, pred = im_prep(mask, instance, 15)
 
 #    stats_pixelbased(pred, truth)
 #    stats_objectbased(pred, truth)
-    stats_pixelbased(pred, truth)
-    stats_objectbased(pred, truth)
+    stats_pixelbased(truth, pred)
+    stats_objectbased(truth, pred)
 
 
 if __name__ == '__main__':
-    import time
-
-    start = time.time()
-    print("hello")
-    
     instance_seg = run_pipeline_on_dir()
-    
-    end = time.time()
-    print(end - start)
-
-
 
     mask = skimage.io.imread( '/data/data/tissues/mibi/samir/set1/annotated/feature_1.tif') 
-#    GT = skimage.io.imread('/data/data/tissues/mibi/mibi_full/TNBCcellTypes/P1_labeledImage.tiff')    
-#    GT[GT > 1] = 1
-#    GT = skimage.measure.label(GT, connectivity=2)
+    GT = skimage.io.imread('/data/data/tissues/mibi/mibi_full/TNBCcellTypes/P1_labeledImage.tiff')    
+    GT[GT > 1] = 1
+    GT = skimage.measure.label(GT, connectivity=2)
      
     run_stats(instance_seg, mask)
- #   mask = skimage.io.imread( '/data/data/tissues/mibi/samir/set1/annotated/feature_1.tif') 
- #   run_stats(GT, mask)
+    mask = skimage.io.imread( '/data/data/tissues/mibi/samir/set1/annotated/feature_1.tif') 
+    run_stats(GT, mask)

@@ -12,8 +12,8 @@ WIN_SIZE = 15                    # if
 IM_SIZE = 2048
 ROUND_TO = 4 
 CROP_SIZE = 32
-DICE_IOU_THRESH = 0.7 
-MERGE_IOU_THRESH = 1e-1
+DICE_IOU_THRESH = 0.5 
+MERGE_IOU_THRESH = 0.5e-1
 
 # reads images into ndarrays, and trims them to fit each other.
 def im_prep(prediction, mask, win_size):
@@ -109,7 +109,8 @@ def gen_iou_matrix_quick(pred, truth, threshold, crop_size, im_size=IM_SIZE):
     # label ground truth masks, neccesary if not already tagged with cellID numbers
     truth = skimage.measure.label(truth, connectivity = 2)
 
-    truth = dilate_nomask(truth, 1)
+    # dilate mask to account for edge
+#    truth = dilate_nomask(truth, 1)
 
     # create empty intersection over union matrix, with shape n(truth) by m(prediction)
     iou_matrix = np.zeros((truth.max(), pred.max()))
@@ -270,4 +271,3 @@ if __name__ == '__main__':
     wshed_pred, wshed_truth = im_prep(PREDICTION, TRUTH, WIN_SIZE)
     stats_pixelbased(wshed_pred, wshed_truth)
     stats_objectbased(wshed_pred, wshed_truth)
-
