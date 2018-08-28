@@ -361,7 +361,7 @@ def train_model_watershed_sample(model=None, dataset=None, optimizer=None,
     file_name_save = os.path.join(direc_save, '{}_{}_{}_{}.h5'.format(todays_date, dataset, expt, it))
     file_name_save_loss = os.path.join(direc_save, '{}_{}_{}_{}.npz'.format(todays_date, dataset, expt, it))
 
-    train_dict, (X_test, y_test) = get_data(training_data_file_name, mode='sample')
+    train_dict, test_dict = get_data(training_data_file_name, mode='sample')
 
     if class_weight is None:
         class_weight = train_dict['class_weights']
@@ -369,8 +369,8 @@ def train_model_watershed_sample(model=None, dataset=None, optimizer=None,
     # the data, shuffled and split between train and test sets
     print('X_train shape:', train_dict['X'].shape)
     print('y_train shape:', train_dict['y'].shape)
-    print('X_test shape:', X_test.shape)
-    print('y_test shape:', y_test.shape)
+    print('X_test shape:', test_dict['X'].shape)
+    print('y_test shape:', test_dict['y'].shape)
     print('Output Shape:', model.layers[-1].output_shape)
     print('Number of Classes:', n_classes)
 
@@ -398,11 +398,11 @@ def train_model_watershed_sample(model=None, dataset=None, optimizer=None,
 
     # convert class vectors to binary class matrices
     train_dict['y'] = to_categorical(train_dict['y'], n_classes)
-    y_test = to_categorical(y_test, n_classes)
+    test_dict['y'] = to_categorical(test_dict['y'], n_classes)
 
     validation_dict = {
-        'X': X_test,
-        'y': y_test,
+        'X': test_dict['X'],
+        'y': test_dict['y'],
         'win_x': train_dict['win_x'],
         'win_y': train_dict['win_y']
     }

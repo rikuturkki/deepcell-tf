@@ -1,4 +1,4 @@
-#61x61mibi.py
+#31x31mibi.py
 
 ## Generate training data
 import os                   #operating system interface
@@ -12,8 +12,8 @@ from tensorflow.python.keras import backend as K            #tensorflow backend
 
 from deepcell import get_image_sizes                #io_utils, returns shape of first image inside data_location
 from deepcell import make_training_data             #data_utils, reads images in training directories and saves as npz file
-from deepcell import bn_feature_net_61x61           #model_zoo
-from deepcell import dilated_bn_feature_net_61x61
+from deepcell import bn_feature_net_31x31           #model_zoo
+from deepcell import dilated_bn_feature_net_31x31
 
 from deepcell import bn_dense_feature_net
 from deepcell import rate_scheduler                 #train_utils,
@@ -26,12 +26,12 @@ from deepcell import export_model
 DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
-RESHAPE_SIZE = None 
-N_EPOCHS = 50
-WINDOW_SIZE = (30,30)
-BATCH_SIZE = 64 if DATA_OUTPUT_MODE == 'sample' else 1
+RESHAPE_SIZE = None
+N_EPOCHS = 25
+WINDOW_SIZE = (15,15)
+BATCH_SIZE = 32 if DATA_OUTPUT_MODE == 'sample' else 1
 
-# channels 
+# channels
 IS_CHANNELS_FIRST = K.image_data_format() == 'channels_first'
 ROW_AXIS = 2 if IS_CHANNELS_FIRST else 1
 COL_AXIS = 3 if IS_CHANNELS_FIRST else 2
@@ -44,24 +44,44 @@ NPZ_DIR = '/data/npz_data'
 RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/samir'
-#PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
-DATA_FILE = 'mibi_61x61_iterated_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-MODEL_NAME = ''
-#MODEL_NAME = ''
+PREFIX_RUN_DATA = 'tissues/mibi/mibi_full'
+DATA_FILE = 'mibi_31x31_4chan_dCT__{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 
-
+RUN_DIR = 'set1'
 MAX_TRAIN = 1e9
+
+# OG segmentation, works pretty well
+#MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
+
+# weirdly accurate?
+#MODEL_NAME = '2018-07-17_mibi_31x31_channels_last_sample__0.h5'
+
+
+
+
+## what is this
+#MODEL_NAME = '2018-07-06_mibi_31x31_channels_last_sample__0.h5'
+
+#4chan
+#MODEL_NAME = '2018-08-14_mibi_31x31_channels_last_sample__0.h5'
+
+
+#3chan
+#MODEL_NAME = '2018-08-18_mibi_31x31_2chan_seg_channels_last_sample__0.h5'
+
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
 #CHANNEL_NAMES = ['dsDNA']
 
 
 #Segmentation channel names, others: Au, Si
-#CHANNEL_NAMES = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.', 'watershed']
+#CHANNEL_NAMES = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.']
 
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta', 'H3K9ac', 'watershed', 'P.', 'Na.']
 
-CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'edge_pred', 'interior_pred', 'bg_pred']
-
+#CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'edge_pred', 'interior_pred', 'bg_pred']
+CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta']
+#CHANNEL_NAMES = ['dsDNA', 'P', 'Ca', 'Ta']
+#CHANNEL_NAMES = ['dsDNA', 'Ta', 'Ca']
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -72,7 +92,7 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
-    num_of_features = 2 # Specify the number of feature masks that are present   
+    num_of_features = 2 # Specify the number of feature masks that are present
     training_direcs = ['set1', 'set2']
     channel_names = CHANNEL_NAMES
     raw_image_direc = 'raw'
@@ -110,13 +130,11 @@ def train_model_on_training_data():
 
     n_epoch = N_EPOCHS
     #batch_size = 32 if DATA_OUTPUT_MODE == 'sample' else 1
-    optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    lr_sched = rate_scheduler(lr=0.01, decay=0.99)
-
-    print(lr_sched)
+    optimizer = SGD(lr=0.01, decay=1e-7, momentum=0.9, nesterov=True)
+    lr_sched = rate_scheduler(lr=0.01, decay=0.98)
 
     model_args = {
-        'norm_method': 'median',
+        'norm_method': 'std',
         'reg': 1e-5,
         'n_features': 3,
         'n_channels' : len(CHANNEL_NAMES)
@@ -129,7 +147,7 @@ def train_model_on_training_data():
 
     if DATA_OUTPUT_MODE == 'sample':
         train_model = train_model_sample
-        the_model = bn_feature_net_61x61				#changed to 21x21
+        the_model = bn_feature_net_31x31				#changed to 21x21
         model_args['n_channels'] = len(CHANNEL_NAMES)
 
     elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
@@ -163,7 +181,7 @@ def train_model_on_training_data():
 def run_model_on_dir():
     raw_dir = 'raw'
 #    data_location = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
-    test_images = os.path.join(DATA_DIR, PREFIX, 'set2', raw_dir)
+    test_images = os.path.join(DATA_DIR, PREFIX_RUN_DATA, RUN_DIR, raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
     channel_names = CHANNEL_NAMES
     image_size_x, image_size_y = get_image_sizes(test_images, channel_names)
@@ -171,15 +189,15 @@ def run_model_on_dir():
 #    model_name = '2018-07-13_mibi_31x31_{}_{}__0.h5'.format(
 #        K.image_data_format(), DATA_OUTPUT_MODE)
 
-    model_name = MODEL_NAME 
- 
+    model_name = MODEL_NAME
+
     weights = os.path.join(MODEL_DIR, PREFIX, model_name)
 
     n_features = 3
     window_size = (30, 30)
 
     if DATA_OUTPUT_MODE == 'sample':
-        model_fn = dilated_bn_feature_net_61x61					#changed to 21x21
+        model_fn = dilated_bn_feature_net_31x31					#changed to 21x21
     elif DATA_OUTPUT_MODE == 'conv':
         model_fn = bn_dense_feature_net
     else:
@@ -210,7 +228,7 @@ def run_model_on_dir():
 
 def export():
     model_args = {
-        'norm_method': 'median',
+        'norm_method': '',
         'reg': 1e-5,
         'n_features': 3
     }
@@ -225,7 +243,7 @@ def export():
     channel_axis = 1 if data_format == 'channels_first' else 3
 
     if DATA_OUTPUT_MODE == 'sample':
-        the_model = dilated_bn_feature_net_61x61
+        the_model = dilated_bn_feature_net_31x31
         if K.image_data_format() == 'channels_first':
             model_args['input_shape'] = (len(CHANNEL_NAMES), 2048, 2048)
         else:

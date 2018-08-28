@@ -1,4 +1,4 @@
-#flysampling classification
+#flysampling classification new
 
 ## Generate training data
 import os                   #operating system interface
@@ -27,9 +27,9 @@ DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
 RESHAPE_SIZE = 2048
-N_EPOCHS = 5
+N_EPOCHS = 15 
 WINDOW_SIZE = (15,15)
-BATCH_SIZE = 128 
+BATCH_SIZE = 32
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -39,14 +39,19 @@ RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/mibi_full'
 #PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
-DATA_FILE = 'mibi_flysampling_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
-MODEL_NAME = ''
-RUN_DIR = 'set1'
-TRAIN_SET_RANGE = range(1, 20+1)
-MAX_TRAIN = 1e9
-#CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'P']  #Add P?
-#CHANNEL_NAMES = ['dsDNA']
+DATA_FILE = 'mibi_31x31_r5_med2_normStd_lib8_re6_class_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+#MODEL_NAME = '2018-08-20_mibi_31x31_r4_rot_med2_mean1_normStd_class_channels_last_sample__0.h5'
 
+MODEL_NAME = '2018-08-22_mibi_31x31_r5_med2_normStd_lib8_re6_class_channels_last_sample__0.h5'
+
+RUN_DIR = 'set1'
+TRAIN_SET_RANGE = range(1, 39+1)
+MAX_TRAIN = 1e10
+
+NUM_FEATURES = 17
+
+
+# channel Library
 # removed channels: CSF-1R, CD-163, B7H3
 #CHANNEL_NAMES = ['Au', 'catenin', 'Ca', 'CD11b', 'CD11c', 'CD138', 'CD16', 'CD209', 'CD20', 'CD31',
 #                 'CD3', 'CD45RO', 'CD45', 'CD4', 'CD56', 'CD63.', 'CD68.', 'CD8.', 'C.', 'dsDNA.',
@@ -54,12 +59,47 @@ MAX_TRAIN = 1e9
 #                 'Keratin17.', 'Keratin6.', 'Ki67.', 'Lag3.', 'MPO.', 'Na.', 'OX40.', 'p53.', 'Pan-Keratin.',
 #                 'PD1.', 'PD-L1.', 'phospho-S6.', 'P.', 'Si.', 'SMA.', 'Ta.', 'Vimentin.']
 
-CHANNEL_NAMES = ['dsDNA.', 'H3K27me3.', 'Ta.', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+
+## channel set 1: segmentation channels (5)
+#CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
+
+## channel set 2: base classification based off Leeat's reccomendations (23)
+#CHANNEL_NAMES = ['FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+## channel set 3: Leeat classification + segmentation channels (28)
+#CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+
+## channel lib 4: Leeat classification + trimmed segmentation channels (26)
+#CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+## channel lib 5: Leeat classification + trimmed segmentation channels + HLA_Class_1 (27)
+#CHANNEL_NAMES = ['HLA_Class_1.', 'dsDNA', 'Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+## channel lib 6: Leeat classification + trimmed segmentation channels + H3K27me3 (27)
+#CHANNEL_NAMES = ['H3K27me3.', 'dsDNA', 'Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+
+## channel lib 7: Leeat classification + dsDNA
+#CHANNEL_NAMES = ['dsDNA', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+## channel lib 8: Leeat classification + seg8 (best segmentation results so far) (31)
+CHANNEL_NAMES = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.',
+                 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
                  'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
                  'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
-
-NUM_FEATURES = 17
-
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -70,7 +110,8 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
-    num_of_features = 17 # Specify the number of feature masks that are present
+    num_of_features = NUM_FEATURES # Specify the number of feature masks that are present
+
     channel_names = CHANNEL_NAMES
     raw_image_direc = 'raw'
     annotation_direc = 'celltype'
@@ -78,6 +119,8 @@ def generate_training_data():
     training_direcs = []
     for set_num in TRAIN_SET_RANGE:
         training_direcs.append('set' + str(set_num))
+
+    if 'set30' in training_direcs: training_direcs.remove('set30')
 
    # Create the training data
     make_training_data(
@@ -111,13 +154,13 @@ def train_model_on_training_data():
 
     n_epoch = N_EPOCHS
     batch_size = BATCH_SIZE if DATA_OUTPUT_MODE == 'sample' else 1
-    optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    lr_sched = rate_scheduler(lr=0.01, decay=0.99)
+    optimizer = SGD(lr=0.01, decay=1e-8, momentum=0.9, nesterov=True)
+    lr_sched = rate_scheduler(lr=0.01, decay=0.95)
 
     model_args = {
-        'norm_method': None,
-        'reg': 1e-5,
-        'n_features': 17,
+        'norm_method': 'std',
+        'reg': 1e-6,
+        'n_features': NUM_FEATURES,
     }
 
     data_format = K.image_data_format()
@@ -155,7 +198,7 @@ def train_model_on_training_data():
         class_weight=class_weights,
         rotation_range=180,
         flip=True,
-        shear=True)
+        shear=False)
 
 
 def run_model_on_dir():
@@ -209,9 +252,9 @@ def run_model_on_dir():
 
 def export():
     model_args = {
-        'norm_method': 'median',
+        'norm_method': 'whole_image',
         'reg': 1e-5,
-        'n_features': 3
+        'n_features': NUM_FEATURES
     }
 
     direc_data = os.path.join(NPZ_DIR, PREFIX)
@@ -226,9 +269,9 @@ def export():
     if DATA_OUTPUT_MODE == 'sample':
         the_model = dilated_bn_feature_net_31x31
         if K.image_data_format() == 'channels_first':
-            model_args['input_shape'] = (1, 1080, 1280)
+            model_args['input_shape'] = (len(CHANNEL_NAMES), 2048, 2048)
         else:
-            model_args['input_shape'] = (1080, 1280, 1)
+            model_args['input_shape'] = (2048, 2048, len(CHANNEL_NAMES))
 
     elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
         the_model = bn_dense_feature_net
@@ -242,12 +285,10 @@ def export():
 
     model = the_model(**model_args)
 
-    model_name = '2018-06-27_mibi_samir_{}_{}__0.h5'.format(
-        K.image_data_format(), DATA_OUTPUT_MODE)
 
-    weights_path = os.path.join(MODEL_DIR, PREFIX, model_name)
+    weights_path = os.path.join(MODEL_DIR, PREFIX, MODEL_NAME)
     export_path = os.path.join(EXPORT_DIR, PREFIX)
-    export_model(model, export_path, model_version=0, weights_path=weights_path)
+    export_model(model, export_path, model_version=7, weights_path=weights_path)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
