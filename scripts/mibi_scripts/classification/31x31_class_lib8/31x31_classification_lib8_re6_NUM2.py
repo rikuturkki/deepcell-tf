@@ -1,4 +1,4 @@
-#31x31mibi.py
+#flysampling classification new
 
 ## Generate training data
 import os                   #operating system interface
@@ -26,16 +26,10 @@ from deepcell import export_model
 DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
-RESHAPE_SIZE = None
-N_EPOCHS = 25 
+RESHAPE_SIZE = 2048
+N_EPOCHS = 64 
 WINDOW_SIZE = (15,15)
-BATCH_SIZE = 32 if DATA_OUTPUT_MODE == 'sample' else 1
-
-# channels
-IS_CHANNELS_FIRST = K.image_data_format() == 'channels_first'
-ROW_AXIS = 2 if IS_CHANNELS_FIRST else 1
-COL_AXIS = 3 if IS_CHANNELS_FIRST else 2
-CHANNEL_AXIS = 1 if IS_CHANNELS_FIRST else -1
+BATCH_SIZE = 32
 
 # filepath constants
 DATA_DIR = '/data/data'
@@ -43,58 +37,69 @@ MODEL_DIR = '/data/models'
 NPZ_DIR = '/data/npz_data'
 RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
-PREFIX = 'tissues/mibi/samir'
-PREFIX_RUN_DATA = 'tissues/mibi/mibi_full'
-DATA_FILE = 'mibi_31x31_8chan__{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+PREFIX = 'tissues/mibi/mibi_full'
+#PREFIX = 'tissues/mibi/mibi_full/TNBCShareData'
+DATA_FILE = 'mibi_31x31_r36_med8_normStd_lib8_re6_class_TRAININGNUMBERTWO_{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+#MODEL_NAME = '2018-08-20_mibi_31x31_r4_rot_med2_mean1_normStd_class_channels_last_sample__0.h5'
 
-RUN_DIR = 'set4'
-MAX_TRAIN = 1e9
+#MODEL_NAME = '2018-08-22_mibi_31x31_r5_med2_normStd_lib8_re6_class_channels_last_sample__0.h5'
 
-# OG segmentation, works pretty well
-#MODEL_NAME = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
+RUN_DIR = 'set1'
+TRAIN_SET_RANGE = range(1, 39+1)
+MAX_TRAIN = 1e10
 
-# weirdly accurate?
-#MODEL_NAME = '2018-07-17_mibi_31x31_channels_last_sample__0.h5'
-
-
+NUM_FEATURES = 17
 
 
-## what is this
-#MODEL_NAME = '2018-07-06_mibi_31x31_channels_last_sample__0.h5'
-
-#4chan
-#MODEL_NAME = '2018-08-14_mibi_31x31_channels_last_sample__0.h5'
-
-
-#3chan
-#MODEL_NAME = '2018-08-18_mibi_31x31_2chan_seg_channels_last_sample__0.h5'
+# channel Library
+# removed channels: CSF-1R, CD-163, B7H3
+#CHANNEL_NAMES = ['Au', 'catenin', 'Ca', 'CD11b', 'CD11c', 'CD138', 'CD16', 'CD209', 'CD20', 'CD31',
+#                 'CD3', 'CD45RO', 'CD45', 'CD4', 'CD56', 'CD63.', 'CD68.', 'CD8.', 'C.', 'dsDNA.',
+#                 'EGFR.', 'Fe.', 'FoxP3.', 'H3K27me3.', 'H3K9ac.', 'HLA_Class_1.', 'HLA-DR.', 'IDO.',
+#                 'Keratin17.', 'Keratin6.', 'Ki67.', 'Lag3.', 'MPO.', 'Na.', 'OX40.', 'p53.', 'Pan-Keratin.',
+#                 'PD1.', 'PD-L1.', 'phospho-S6.', 'P.', 'Si.', 'SMA.', 'Ta.', 'Vimentin.']
 
 
-#8chan**
-MODEL_NAME = '2018-08-20_mibi_31x31_8chanCFHHNPTd__channels_last_sample__0.h5'
-
+## channel set 1: segmentation channels (5)
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
-#CHANNEL_NAMES = ['dsDNA']
 
+## channel set 2: base classification based off Leeat's reccomendations (23)
+#CHANNEL_NAMES = ['FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
 
-#Segmentation channel names, others: Au, Si
-#CHANNEL_NAMES = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.']
-
-#CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta', 'H3K9ac', 'watershed', 'P.', 'Na.']
-
-#CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'edge_pred', 'interior_pred', 'bg_pred']
-#CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']
-#CHANNEL_NAMES = ['dsDNA', 'P', 'Ca', 'Ta']
-#CHANNEL_NAMES = ['dsDNA', 'Ta', 'Ca']
-
-## channel lib 8: Leeat classification + seg8 (best segmentation results so far) (31)
-#CHANNEL_NAMES = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.',
-#                 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+## channel set 3: Leeat classification + segmentation channels (28)
+#CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
 #                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
 #                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
 
 
+## channel lib 4: Leeat classification + trimmed segmentation channels (26)
+#CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
 
+## channel lib 5: Leeat classification + trimmed segmentation channels + HLA_Class_1 (27)
+#CHANNEL_NAMES = ['HLA_Class_1.', 'dsDNA', 'Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+## channel lib 6: Leeat classification + trimmed segmentation channels + H3K27me3 (27)
+#CHANNEL_NAMES = ['H3K27me3.', 'dsDNA', 'Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+
+## channel lib 7: Leeat classification + dsDNA
+#CHANNEL_NAMES = ['dsDNA', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+
+## channel lib 8: Leeat classification + seg8 (best segmentation results so far) (31)
+CHANNEL_NAMES = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.',
+                 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -105,28 +110,34 @@ for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
 
 def generate_training_data():
     file_name_save = os.path.join(NPZ_DIR, PREFIX, DATA_FILE)
-    num_of_features = 2 # Specify the number of feature masks that are present
-    training_direcs = ['set1', 'set2']
+    num_of_features = NUM_FEATURES # Specify the number of feature masks that are present
+
     channel_names = CHANNEL_NAMES
     raw_image_direc = 'raw'
-    annotation_direc = 'annotated'
+    annotation_direc = 'celltype'
 
-    # Create the training data
+    training_direcs = []
+    for set_num in TRAIN_SET_RANGE:
+        training_direcs.append('set' + str(set_num))
+
+    if 'set30' in training_direcs: training_direcs.remove('set30')
+
+   # Create the training data
     make_training_data(
         direc_name=os.path.join(DATA_DIR, PREFIX),
-        dimensionality=2,
+        dimensionality=4,
         max_training_examples=MAX_TRAIN, # Define maximum number of training examples
         window_size_x=WINDOW_SIZE[0],
         window_size_y=WINDOW_SIZE[1],
         border_mode=BORDER_MODE,
         file_name_save=file_name_save,
         training_direcs=training_direcs,
-        channel_names=channel_names,
+        channel_names=CHANNEL_NAMES,
         num_of_features=num_of_features,
         raw_image_direc=raw_image_direc,
         annotation_direc=annotation_direc,
         reshape_size=RESHAPE_SIZE if RESIZE else None,
-        edge_feature=[1, 0, 0], # Specify which feature is the edge feature,
+        edge_feature=[1], # Specify which feature is the edge feature,
         dilation_radius=1,
         output_mode=DATA_OUTPUT_MODE,
         display=False,
@@ -142,15 +153,14 @@ def train_model_on_training_data():
     print('X.shape: {}\ny.shape: {}'.format(X.shape, y.shape))
 
     n_epoch = N_EPOCHS
-    #batch_size = 32 if DATA_OUTPUT_MODE == 'sample' else 1
-    optimizer = SGD(lr=0.01, decay=1e-7, momentum=0.9, nesterov=True)
-    lr_sched = rate_scheduler(lr=0.01, decay=0.98)
+    batch_size = BATCH_SIZE if DATA_OUTPUT_MODE == 'sample' else 1
+    optimizer = SGD(lr=0.01, decay=1e-8, momentum=0.9, nesterov=True)
+    lr_sched = rate_scheduler(lr=0.01, decay=0.95)
 
     model_args = {
         'norm_method': 'std',
         'reg': 1e-6,
-        'n_features': 3,
-        'n_channels' : len(CHANNEL_NAMES)
+        'n_features': NUM_FEATURES,
     }
 
     data_format = K.image_data_format()
@@ -180,7 +190,7 @@ def train_model_on_training_data():
         model=model,
         dataset=DATA_FILE,
         optimizer=optimizer,
-        batch_size=BATCH_SIZE,
+        batch_size=batch_size,
         n_epoch=n_epoch,
         direc_save=direc_save,
         direc_data=direc_data,
@@ -193,21 +203,21 @@ def train_model_on_training_data():
 
 def run_model_on_dir():
     raw_dir = 'raw'
-#    data_location = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
-    test_images = os.path.join(DATA_DIR, PREFIX_RUN_DATA, RUN_DIR, raw_dir)
+    data_location = os.path.join(DATA_DIR, PREFIX, 'set1', raw_dir)
+#    test_images = os.path.join(DATA_DIR, 'tissues/mibi/mibi_full/TNBCShareData', 'set1', raw_dir)
     output_location = os.path.join(RESULTS_DIR, PREFIX)
-    channel_names = CHANNEL_NAMES
-    image_size_x, image_size_y = get_image_sizes(test_images, channel_names)
+    image_size_x, image_size_y = get_image_sizes(data_location, CHANNEL_NAMES)
+
+
+    print('image_size_x is:', image_size_x)
+    print('image_size_y is:', image_size_y)
 
 #    model_name = '2018-07-13_mibi_31x31_{}_{}__0.h5'.format(
 #        K.image_data_format(), DATA_OUTPUT_MODE)
 
-    model_name = MODEL_NAME
+    weights = os.path.join(MODEL_DIR, PREFIX, MODEL_NAME)
 
-    weights = os.path.join(MODEL_DIR, PREFIX, model_name)
-
-    n_features = 3
-    window_size = (15,15)
+    n_features = 17
 
     if DATA_OUTPUT_MODE == 'sample':
         model_fn = dilated_bn_feature_net_31x31					#changed to 21x21
@@ -218,16 +228,16 @@ def run_model_on_dir():
             DATA_OUTPUT_MODE))
 
     predictions = run_models_on_directory(
-        data_location=test_images,
-        channel_names=channel_names,
+        data_location=data_location,
+        channel_names=CHANNEL_NAMES,
         output_location=output_location,
         n_features=n_features,
         model_fn=model_fn,
         list_of_weights=[weights],
         image_size_x=image_size_x,
         image_size_y=image_size_y,
-        win_x=window_size[0],
-        win_y=window_size[1],
+        win_x=WINDOW_SIZE[0],
+        win_y=WINDOW_SIZE[1],
         split=False)
 
     for i in range(predictions.shape[0]):
@@ -239,16 +249,17 @@ def run_model_on_dir():
 
         tiff.imsave(out_file_path, max_img)
 
+
 def export():
     model_args = {
-        'norm_method': '',
+        'norm_method': 'whole_image',
         'reg': 1e-5,
-        'n_features': 3
+        'n_features': NUM_FEATURES
     }
 
-#    direc_data = os.path.join(NPZ_DIR, PREFIX)
-#    training_data = np.load(os.path.join(direc_data, DATA_FILE + '.npz'))
-#    X, y = training_data['X'], training_data['y']
+    direc_data = os.path.join(NPZ_DIR, PREFIX)
+    training_data = np.load(os.path.join(direc_data, DATA_FILE + '.npz'))
+    X, y = training_data['X'], training_data['y']
 
     data_format = K.image_data_format()
     row_axis = 2 if data_format == 'channels_first' else 1
@@ -262,35 +273,22 @@ def export():
         else:
             model_args['input_shape'] = (2048, 2048, len(CHANNEL_NAMES))
 
+    elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
+        the_model = bn_dense_feature_net
+        model_args['location'] = False
 
-
-
-#    elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
-#        the_model = bn_dense_feature_net
-#        model_args['location'] = False
-
-#        size = (RESHAPE_SIZE, RESHAPE_SIZE) if RESIZE else X.shape[row_axis:col_axis + 1]
-#        if data_format == 'channels_first':
-#            model_args['input_shape'] = (X.shape[channel_axis], size[0], size[1])
-#        else:
-#            model_args['input_shape'] = (size[0], size[1], X.shape[channel_axis])
+        size = (RESHAPE_SIZE, RESHAPE_SIZE) if RESIZE else X.shape[row_axis:col_axis + 1]
+        if data_format == 'channels_first':
+            model_args['input_shape'] = (X.shape[channel_axis], size[0], size[1])
+        else:
+            model_args['input_shape'] = (size[0], size[1], X.shape[channel_axis])
 
     model = the_model(**model_args)
 
-#    model_name = '2018-06-27_mibi_samir_{}_{}__0.h5'.format(
-#        K.image_data_format(), DATA_OUTPUT_MODE)
-
-    model_name = MODEL_NAME
 
     weights_path = os.path.join(MODEL_DIR, PREFIX, MODEL_NAME)
     export_path = os.path.join(EXPORT_DIR, PREFIX)
-    export_model(model, export_path, model_version=6, weights_path=weights_path)
-
-    print('weights path is:', weights_path)
-    print('model name is:', model_name)
-    print('lchanns is:', len(CHANNEL_NAMES))
-    print('input shape is:', model_args['input_shape'])
-
+    export_model(model, export_path, model_version=7, weights_path=weights_path)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

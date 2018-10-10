@@ -1,4 +1,4 @@
-#31x31mibi.py
+#61x61mibi.py
 
 ## Generate training data
 import os                   #operating system interface
@@ -12,8 +12,8 @@ from tensorflow.python.keras import backend as K            #tensorflow backend
 
 from deepcell import get_image_sizes                #io_utils, returns shape of first image inside data_location
 from deepcell import make_training_data             #data_utils, reads images in training directories and saves as npz file
-from deepcell import bn_feature_net_31x31           #model_zoo
-from deepcell import dilated_bn_feature_net_31x31
+from deepcell import bn_feature_net_61x61           #model_zoo
+from deepcell import dilated_bn_feature_net_61x61
 
 from deepcell import bn_dense_feature_net
 from deepcell import rate_scheduler                 #train_utils,
@@ -27,8 +27,8 @@ DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
 RESHAPE_SIZE = None
-N_EPOCHS = 25 
-WINDOW_SIZE = (15,15)
+N_EPOCHS = 30
+WINDOW_SIZE = (30,30)
 BATCH_SIZE = 32 if DATA_OUTPUT_MODE == 'sample' else 1
 
 # channels
@@ -45,7 +45,7 @@ RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/samir'
 PREFIX_RUN_DATA = 'tissues/mibi/mibi_full'
-DATA_FILE = 'mibi_31x31_8chan__{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+DATA_FILE = 'mibi_seg_61x61_31chanlib8__{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 
 RUN_DIR = 'set4'
 MAX_TRAIN = 1e9
@@ -88,10 +88,10 @@ MODEL_NAME = '2018-08-20_mibi_31x31_8chanCFHHNPTd__channels_last_sample__0.h5'
 #CHANNEL_NAMES = ['dsDNA', 'Ta', 'Ca']
 
 ## channel lib 8: Leeat classification + seg8 (best segmentation results so far) (31)
-#CHANNEL_NAMES = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.',
-#                 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
-#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
-#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+CHANNEL_NAMES = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.',
+                 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
 
 
 
@@ -160,7 +160,7 @@ def train_model_on_training_data():
 
     if DATA_OUTPUT_MODE == 'sample':
         train_model = train_model_sample
-        the_model = bn_feature_net_31x31				#changed to 21x21
+        the_model = bn_feature_net_61x61
         model_args['n_channels'] = len(CHANNEL_NAMES)
 
     elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
@@ -207,10 +207,9 @@ def run_model_on_dir():
     weights = os.path.join(MODEL_DIR, PREFIX, model_name)
 
     n_features = 3
-    window_size = (15,15)
 
     if DATA_OUTPUT_MODE == 'sample':
-        model_fn = dilated_bn_feature_net_31x31					#changed to 21x21
+        model_fn = dilated_bn_feature_net_61x61
     elif DATA_OUTPUT_MODE == 'conv':
         model_fn = bn_dense_feature_net
     else:

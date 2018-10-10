@@ -18,16 +18,8 @@ def im_prep(mask, prediction, win_size):
     if win_size == 0 or prediction.shape == mask.shape:
         return mask, prediction
 
-    print('___')
-    print('mask shape in im_prep is:', mask.shape)
-    print('win_size is:', win_size)
-    print('___')
-    
-
     # otherwise, pad prediction to imsize and zero out the outer layer of mask
     mask = mask[win_size:-win_size, win_size:-win_size]
-    print('mask shape after trim is:', mask.shape)
-
     mask = np.pad(mask, (win_size, win_size), 'constant')
     prediction = np.pad(prediction, (win_size, win_size), 'constant')
     return mask, prediction

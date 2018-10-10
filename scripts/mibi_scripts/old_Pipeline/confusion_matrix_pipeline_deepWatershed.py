@@ -29,9 +29,9 @@ from deepcell import run_models_on_directory
 from deepcell import export_model
 from deepcell import get_data
 
-import accuracy_metrics_will
+import accuracy_metrics
 from sklearn.metrics import confusion_matrix
-from accuracy_metrics_will import *
+from accuracy_metrics import *
 
 # data options
 DATA_OUTPUT_MODE = 'sample'
@@ -39,9 +39,13 @@ BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
 RESHAPE_SIZE = 2048
 N_EPOCHS = 40
+WINDOW_SIZE = (15,15)
 BATCH_SIZE = 64
 MAX_TRAIN = 1e8
 BINS = 4
+
+WINDOW_SIZE_CLASS = (15,15)
+
 
 EDGE_THRESH = 0.25
 INT_THRESH = 0.25
@@ -79,60 +83,28 @@ CLASS_DATA_FILE = 'mibi_pipe_class_{}_{}'.format(K.image_data_format(), DATA_OUT
 
 #MODEL_FGBG = '2018-08-02_mibi_watershedFB_channels_last_sample_fgbg_0.h5'
 #MODEL_FGBG = '2018-07-13_mibi_31x31_channels_last_sample__0.h5'
-
-
-# CURRENT BEST SEGMENTATION
 MODEL_FGBG = '2018-08-20_mibi_31x31_8chanCFHHNPTd__channels_last_sample__0.h5'
 CHANNELS_SEG = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.']
 
-
-
-#STROMAL ONLY SEGMENTATION
-#MODEL_FGBG = '2018-10-02_mibi_31x31_stromal__channels_last_sample__0.h5'
-#CHANNELS_SEG = ['dsDNA', 'SMA', 'CD31', 'Vimentin'] 
-
-
-#MODEL_FGBG = '2018-09-13_mibi_31x31_31chanlib8__channels_last_sample__0.h5'
-## channel lib 8: Leeat classification + seg8 (best segmentation results so far) (31)
-#CHANNELS_SEG = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.',
-#                 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
-#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
-#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
-
-
-
-
 #single channel?
 #MODEL_FGBG = '2018-07-06_mibi_31x31_channels_last_sample__0.h5'
+
 #31x31 classification older
 #MODEL_CLASS = '2018-08-09_mibi_balcompare_chan_flysampling_class_channels_last_sample__0.h5'
+
 #61x61 newnoflip
 #MODEL_CLASS = '2018-08-13_mibi_61x61_pixelremTWO_R2_class_channels_last_sample__0.h5'
+
 #31x31 no aug
 #MODEL_CLASS = '2018-08-11_mibi_31x31_dil2ero2_class_channels_last_sample__0.h5'
-#31x31 std lib4 80% accurate
-#MODEL_CLASS = '2018-08-21_mibi_31x31_r4_rot_med8_normStd_lib4_class_channels_last_sample__0.h5'
-#31x31 lib8 
-#MODEL_CLASS = '2018-09-02_mibi_31x31_r36_med8_normStd_lib8_re6_class_channels_last_sample__0.h5'
+
+#31x31 std lib4
+MODEL_CLASS = '2018-08-21_mibi_31x31_r4_rot_med8_normStd_lib4_class_channels_last_sample__0.h5'
+
 #61x61 std lib5
 #MODEL_CLASS = '2018-08-16_mibi_61x61_pxR3_frot_lib5_class_channels_last_sample__0.h5'
 
-#61x61 lib8
-#MODEL_CLASS = '2018-08-29_mibi_61x61_r4_med8_normStd_lib8_re7_class_channels_last_sample__0.h5'
-
-#61x61 megatrained and eroded 6x
-MODEL_CLASS = '2018-09-13_mibi_31x31_r36_med8_normStd_lib8_re6_class_ITONE_channels_last_sample__0.h5'
-
-
-#CORE100 class
-#MODEL_CLASS = '2018-09-30_mibi_31x31_r36_med8_normStd_lib8_re6_class_CORE100_channels_last_sample__0.h5'
-
-MODEL_CLASS = '2018-10-08_mibi_31x31_CORE100_test1_channels_last_sample__0.h5'
-
 RUN_DIR = 'set1'
-
-WINDOW_SIZE_SEG = (15,15)
-WINDOW_SIZE_CLASS = (30,30)
 
 TRAIN_DIR_SAMPLE = ['set1', 'set2']
 TRAIN_DIR_CLASS_RANGE = range(1, 39+1)
@@ -150,31 +122,14 @@ NUM_FEATURES_CLASS = 17
 
 
 ## channel lib 4: Leeat classification + trimmed segmentation channels (26)
-#CHANNELS_CLASS = ['dsDNA', 'Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
-#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
-#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
+CHANNELS_CLASS = ['dsDNA', 'Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
+                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
+                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
 
 ## channel set 5: Leeat classification + trimmed segmentation channels (25)
 #CHANNELS_CLASS = ['dsDNA','Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
 #                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
 #                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
-
-## channel lib 6: Leeat classification + trimmed segmentation channels + H3K27me3 (27)
-#CHANNELS_CLASS = ['H3K27me3.', 'dsDNA', 'Ca', 'Ta', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
-#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
-#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
-
-
-## channel lib 7: Leeat classification + dsDNA
-#CHANNELS_CLASS = ['dsDNA', 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
-#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
-#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
-
-## channel lib 8: Leeat classification + seg8 (best segmentation results so far) (31)
-CHANNELS_CLASS = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.',
-                 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
-                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
-                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
 
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
@@ -237,12 +192,10 @@ def run_model_segmentation():
 
 
     n_features = 3
+    window_size = (30, 30)
 
     if DATA_OUTPUT_MODE == 'sample':
-        if WINDOW_SIZE_SEG == (15,15):
-            model_fn = dilated_bn_feature_net_31x31                               
-        elif WINDOW_SIZE_SEG == (30,30):
-            model_fn = dilated_bn_feature_net_61x61
+        model_fn = dilated_bn_feature_net_31x31                                 #changed to 21x21
     elif DATA_OUTPUT_MODE == 'conv':
         model_fn = bn_dense_feature_net
     else:
@@ -258,8 +211,8 @@ def run_model_segmentation():
         list_of_weights=[weights],
         image_size_x=image_size_x,
         image_size_y=image_size_y,
-        win_x=WINDOW_SIZE_SEG[0],
-        win_y=WINDOW_SIZE_SEG[1],
+        win_x=WINDOW_SIZE[0],
+        win_y=WINDOW_SIZE[1],
         split=False)
 
     #0.25 0.25 works good
@@ -365,7 +318,6 @@ def run_model_segmentation():
         watershed_segmentation = erode(watershed_segmentation, 2)
         watershed_segmentation = dilate_nomask(watershed_segmentation, 2)
         watershed_segmentation = erode(watershed_segmentation, NUM_FINAL_EROSIONS)
-        
 
     index = 0
 
@@ -398,12 +350,8 @@ def run_model_classification():
 
     weights = os.path.join(MODEL_DIR, PREFIX_CLASS, MODEL_CLASS)
 
-
     if DATA_OUTPUT_MODE == 'sample':
-        if WINDOW_SIZE_CLASS == (15,15):
-            model_fn = dilated_bn_feature_net_31x31
-        elif WINDOW_SIZE_CLASS == (30,30):
-            model_fn = dilated_bn_feature_net_61x61
+        model_fn = dilated_bn_feature_net_31x31					#changed to 21x21
     elif DATA_OUTPUT_MODE == 'conv':
         model_fn = bn_dense_feature_net
     else:
@@ -432,14 +380,9 @@ def run_model_classification():
         out_file_path = os.path.join(output_location, cnnout_name)
         tiff.imsave(out_file_path, max_img)
 
-
-    print('classification model output shape is:', max_img.shape)
-
     return max_img
 
 def post_processing(instance, classification, ground_truth):
-
-
 
     print('Classifying cell types')
 
@@ -466,10 +409,10 @@ def post_processing(instance, classification, ground_truth):
             y = x_y[0]
 
             # store that pixels class unless it is background
-            if classification[y,x] >= 0:
+            if classification[y,x] != 0:
                 label_classes = np.append(label_classes, classification[y,x])
 
-            if ground_truth[y,x] >= 0:
+            if ground_truth[y,x] != 0:
                 label_truth_classes = np.append(label_truth_classes, ground_truth[y,x])
 
         # If there are any cell classes for that cell, find the mode
@@ -520,46 +463,24 @@ def run_pipeline_on_dir():
 
     print(instance_seg.shape, cell_classes.shape)
 
-    ground_truth_class = skimage.io.imread('/data/data/tissues/mibi/mibi_full/TNBCcellTypes/P1_labeledImage.tiff')
-    
-    # trim ground truth, cell classes, and instance seg to all be the same shape THIS IS BAD, HARDCODED CODE IM SORRY IM LAZY NEED TO FIX
-    if (WINDOW_SIZE_CLASS == (15,15)) and (WINDOW_SIZE_SEG == (15,15)):
-        ground_truth_class = ground_truth_class[15:-15, 15:-15]
+    ground_truth = skimage.io.imread('/data/data/tissues/mibi/mibi_full/TNBCcellTypes/P1_labeledImage.tiff')
+    ground_truth = ground_truth[15:-15, 15:-15]
 
-    elif (WINDOW_SIZE_CLASS == (30, 30)) and (WINDOW_SIZE_SEG == (30,30)):
-        ground_truth_class = ground_truth_class[30:-30, 30:-30]
-
-    elif (WINDOW_SIZE_CLASS == (30, 30)) and (WINDOW_SIZE_SEG == (15,15)):
-        ground_truth_class = ground_truth_class[30:-30, 30:-30]
-        instance_seg = instance_seg[15:-15, 15:-15]
-
-    elif (WINDOW_SIZE_CLASS == (15, 15)) and (WINDOW_SIZE_SEG == (30,30)):
-        ground_truth_class = ground_truth_class[30:-30, 30:-30]
-        cell_classes = cell_classes[15:-15, 15:-15]
- 
-
-    post_processing(instance_seg, cell_classes, ground_truth_class)
+    post_processing(instance_seg, cell_classes, ground_truth)
 
 
     return instance_seg
 
 
-def run_stats(mask, instance, trim):
-
-    print('shape of mask pre-prep is:', mask.shape)
-    print('shape of instance pre-prep is:', instance.shape)
+def run_stats(instance, mask):
 
 
-    truth, pred = im_prep(mask, instance, trim)
+    pred, truth = im_prep(instance, mask, 15)
 
-    print('shape of mask post-prep is:', pred.shape)
-    print('shape of instance post-prep is:', truth.shape)
-    
-
-#    stats_pixelbased(truth, pred)
-#    stats_objectbased(truth, pred)
-    stats_pixelbased(truth, pred)
-    stats_objectbased(truth, pred)
+#    stats_pixelbased(pred, truth)
+#    stats_objectbased(pred, truth)
+    stats_pixelbased(pred, truth)
+    stats_objectbased(pred, truth)
 
 
 if __name__ == '__main__':
@@ -572,9 +493,14 @@ if __name__ == '__main__':
     
     end = time.time()
     print(end - start)
+
+
+
     mask = skimage.io.imread( '/data/data/tissues/mibi/samir/set1/annotated/feature_1.tif') 
-
-    # find the amount of edge that needs to be trimmed off
-    trim = int((2048 - instance_seg.shape[0])/2)
-    run_stats(mask, instance_seg, trim)
-
+    GT = skimage.io.imread('/data/data/tissues/mibi/mibi_full/TNBCcellTypes/P1_labeledImage.tiff')    
+    GT[GT > 1] = 1
+    GT = skimage.measure.label(GT, connectivity=2)
+     
+    run_stats(instance_seg, mask)
+    mask = skimage.io.imread( '/data/data/tissues/mibi/samir/set1/annotated/feature_1.tif') 
+    run_stats(GT, mask)

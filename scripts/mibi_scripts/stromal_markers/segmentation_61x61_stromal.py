@@ -1,4 +1,4 @@
-#31x31mibi.py
+#31x31mibi.py:q
 
 ## Generate training data
 import os                   #operating system interface
@@ -27,8 +27,8 @@ DATA_OUTPUT_MODE = 'sample'
 BORDER_MODE = 'valid' if DATA_OUTPUT_MODE == 'sample' else 'same'
 RESIZE = True
 RESHAPE_SIZE = None
-N_EPOCHS = 25 
-WINDOW_SIZE = (15,15)
+N_EPOCHS = 32 
+WINDOW_SIZE = (30,30)
 BATCH_SIZE = 32 if DATA_OUTPUT_MODE == 'sample' else 1
 
 # channels
@@ -45,9 +45,9 @@ RESULTS_DIR = '/data/results'
 EXPORT_DIR = '/data/exports'
 PREFIX = 'tissues/mibi/samir'
 PREFIX_RUN_DATA = 'tissues/mibi/mibi_full'
-DATA_FILE = 'mibi_31x31_8chan__{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
+DATA_FILE = 'mibi_61x61_stromal_3class__{}_{}'.format(K.image_data_format(), DATA_OUTPUT_MODE)
 
-RUN_DIR = 'set4'
+RUN_DIR = 'set1'
 MAX_TRAIN = 1e9
 
 # OG segmentation, works pretty well
@@ -69,10 +69,6 @@ MAX_TRAIN = 1e9
 #3chan
 #MODEL_NAME = '2018-08-18_mibi_31x31_2chan_seg_channels_last_sample__0.h5'
 
-
-#8chan**
-MODEL_NAME = '2018-08-20_mibi_31x31_8chanCFHHNPTd__channels_last_sample__0.h5'
-
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']  #Add P?
 #CHANNEL_NAMES = ['dsDNA']
 
@@ -82,19 +78,9 @@ MODEL_NAME = '2018-08-20_mibi_31x31_8chanCFHHNPTd__channels_last_sample__0.h5'
 
 #CHANNEL_NAMES = ['dsDNA', 'Ca', 'Ta', 'H3K9ac', 'watershed', 'P.', 'Na.']
 
-#CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta', 'edge_pred', 'interior_pred', 'bg_pred']
-#CHANNEL_NAMES = ['dsDNA', 'Ca', 'H3K27me3', 'H3K9ac', 'Ta']
-#CHANNEL_NAMES = ['dsDNA', 'P', 'Ca', 'Ta']
-#CHANNEL_NAMES = ['dsDNA', 'Ta', 'Ca']
-
-## channel lib 8: Leeat classification + seg8 (best segmentation results so far) (31)
-#CHANNEL_NAMES = ['Ca.', 'Fe.', 'H3K27me3', 'H3K9ac', 'Na.', 'P.', 'Ta.', 'dsDNA.',
-#                 'FoxP3.', 'CD4.', 'CD16.', 'EGFR.', 'CD68.', 'CD8.', 'CD3.',
-#                 'Keratin17.', 'CD20.', 'p53.', 'catenin.', 'HLA-DR.', 'CD45.', 'Pan-Keratin.', 'MPO.',
-#                 'Keratin6.', 'Vimentin.', 'SMA.', 'CD31.', 'CD56.', 'CD209.', 'CD11c.', 'CD11b.']
 
 
-
+CHANNEL_NAMES = ['dsDNA', 'SMA', 'CD31', 'Vimentin']
 
 for d in (NPZ_DIR, MODEL_DIR, RESULTS_DIR):
     try:
@@ -148,7 +134,7 @@ def train_model_on_training_data():
 
     model_args = {
         'norm_method': 'std',
-        'reg': 1e-6,
+        'reg': 1e-5,
         'n_features': 3,
         'n_channels' : len(CHANNEL_NAMES)
     }
@@ -160,7 +146,7 @@ def train_model_on_training_data():
 
     if DATA_OUTPUT_MODE == 'sample':
         train_model = train_model_sample
-        the_model = bn_feature_net_31x31				#changed to 21x21
+        the_model = bn_feature_net_61x61				#changed to 21x21
         model_args['n_channels'] = len(CHANNEL_NAMES)
 
     elif DATA_OUTPUT_MODE == 'conv' or DATA_OUTPUT_MODE == 'disc':
@@ -207,10 +193,10 @@ def run_model_on_dir():
     weights = os.path.join(MODEL_DIR, PREFIX, model_name)
 
     n_features = 3
-    window_size = (15,15)
+    window_size = (30, 30)
 
     if DATA_OUTPUT_MODE == 'sample':
-        model_fn = dilated_bn_feature_net_31x31					#changed to 21x21
+        model_fn = dilated_bn_feature_net_61x61					#changed to 21x21
     elif DATA_OUTPUT_MODE == 'conv':
         model_fn = bn_dense_feature_net
     else:
