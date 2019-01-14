@@ -52,7 +52,7 @@ from keras.models import Sequential
 from keras.layers.convolutional import Conv3D
 from keras.layers.normalization import BatchNormalization
 import pylab as plt
-from keras.layers.convolutional_recurrent import ConvLSTM2D
+from keras.layers.convolutional_recurrent import ConvLSTM2D, ConvRNN2D
 
 class ConvGRU2DCell(Layer):
     """Cell class for the ConvGRU2D layer.
@@ -138,7 +138,7 @@ class ConvGRU2DCell(Layer):
         
         self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
         self.padding = conv_utils.normalize_padding(padding)
-        self.data_format = normalize_data_format(data_format)
+        self.data_format = conv_utils.normalize_data_format(data_format)
         self.dilation_rate = conv_utils.normalize_tuple(dilation_rate, 2,
                                                         'dilation_rate')
         self.activation = activations.get(activation)
