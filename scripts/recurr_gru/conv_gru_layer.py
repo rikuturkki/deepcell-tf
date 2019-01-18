@@ -15,6 +15,7 @@ TODO:
 tensorflow-1.12.0
 keras-applications-1.0.6                               
 keras-preprocessing: 1.0.5
+python-3.6.6
 
 '''
 
@@ -27,32 +28,26 @@ import warnings
 
 import tensorflow as tf
 
-
 from tensorflow.python.keras import activations
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras import constraints
 from tensorflow.python.keras import initializers
 from tensorflow.python.keras import regularizers
-from tensorflow.python.keras.engine.base_layer import InputSpec
 from tensorflow.python.keras.engine.base_layer import Layer
 from tensorflow.python.keras.layers.recurrent import _generate_dropout_mask
-from tensorflow.python.keras.layers.recurrent import _standardize_args
 from tensorflow.python.keras.layers.recurrent import RNN
+
 from tensorflow.python.keras.utils import conv_utils
 from tensorflow.python.keras.utils import generic_utils
 from tensorflow.python.keras.utils import tf_utils
 
 from tensorflow.python.keras.engine.base_layer import Layer
-# from keras.layers.convolutional_recurrent import ConvRNN2D, ConvLSTM2D
-from keras.legacy import interfaces
-from keras.legacy.layers import Recurrent, ConvRecurrent2D
-from keras.models import Sequential
 
-from keras.models import Sequential
-from keras.layers.convolutional import Conv3D
-from keras.layers.normalization import BatchNormalization
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.layers.convolutional import Conv3D
+from tensorflow.python.keras.layers.normalization import BatchNormalization
 import pylab as plt
-from keras.layers.convolutional_recurrent import ConvLSTM2D, ConvRNN2D
+from tensorflow.python.keras.layers.convolutional_recurrent import ConvLSTM2D, ConvRNN2D
 
 class ConvGRU2DCell(Layer):
     """Cell class for the ConvGRU2D layer.
@@ -133,8 +128,7 @@ class ConvGRU2DCell(Layer):
         super(ConvGRU2DCell, self).__init__(**kwargs)
         self.filters = filters
         self.kernel_size = conv_utils.normalize_tuple(kernel_size, 2, 'kernel_size')
-        print("kernel_size")
-        print(self.kernel_size)
+        print("kernel_size", self.kernel_size)
         
         self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
         self.padding = conv_utils.normalize_padding(padding)
@@ -162,71 +156,72 @@ class ConvGRU2DCell(Layer):
         self.state_size = (self.filters, self.filters)
         self._dropout_mask = None
         self._recurrent_dropout_mask = None
+        print("finished initializing")
             
 
     def build(self, input_shape):
-        print("building")
 
-        if self.data_format == 'channels_first':
-            channel_axis = 1
-        else:
-            channel_axis = -1
-        if input_shape[channel_axis] is None:
-            raise ValueError('The channel dimension of the inputs '
+      print("building")
+      if self.data_format == 'channels_first':
+          channel_axis = 1
+      else:
+          channel_axis = -1
+      if input_shape[channel_axis] is None:
+          raise ValueError('The channel dimension of the inputs '
                            'should be defined. Found `None`.')
-        input_dim = input_shape[channel_axis]
-        kernel_shape = self.kernel_size + (input_dim, self.filters * 3)
-        self.kernel_shape = kernel_shape
-        recurrent_kernel_shape = self.kernel_size + (self.filters, self.filters * 3)
+      input_dim = input_shape[channel_axis]
+      kernel_shape = self.kernel_size + (input_dim, self.filters * 3)
+      self.kernel_shape = kernel_shape
+      recurrent_kernel_shape = self.kernel_size + (self.filters, self.filters * 3)
 
-        self.kernel = self.add_weight(shape=kernel_shape,
+      self.kernel = self.add_weight(shape=kernel_shape,
                                       initializer=self.kernel_initializer,
                                       name='kernel',
                                       regularizer=self.kernel_regularizer,
                                       constraint=self.kernel_constraint)
-        self.recurrent_kernel = self.add_weight(
+      self.recurrent_kernel = self.add_weight(
             shape=recurrent_kernel_shape,
             initializer=self.recurrent_initializer,
             name='recurrent_kernel',
             regularizer=self.recurrent_regularizer,
             constraint=self.recurrent_constraint)
 
-        if self.use_bias:
-            self.bias = self.add_weight(
+      if self.use_bias:
+          self.bias = self.add_weight(
                 shape=(self.filters * 3,), 
                 name='bias',
                 initializer= self.bias_initializer,
                 regularizer=self.bias_regularizer,
                 constraint=self.bias_constraint)
+      else:
+          self.bias = None
 
-        else:
-            self.bias = None
-
-        # update gate
-        self.kernel_z = self.kernel[:, :, :, :self.filters]
-        self.recurrent_kernel_z = self.recurrent_kernel[:, :, :, :self.filters]
-        # reset gate
-        self.kernel_r = self.kernel[:, :, :, self.filters: self.filters * 2]
-        self.recurrent_kernel_r = self.recurrent_kernel[:, :, :, self.filters:
+      # update gate
+      self.kernel_z = self.kernel[:, :, :, :self.filters]
+      self.recurrent_kernel_z = self.recurrent_kernel[:, :, :, :self.filters]
+      # reset gate
+      self.kernel_r = self.kernel[:, :, :, self.filters: self.filters * 2]
+      self.recurrent_kernel_r = self.recurrent_kernel[:, :, :, self.filters:
                                                         self.filters * 2]
-        # new gate                                                                                           self.filters * 3]
-        self.kernel_h = self.kernel[:, :, :, self.filters * 2:]
-        self.recurrent_kernel_h = self.recurrent_kernel[:, :, :, self.filters * 2:]
+      # new gate                                                                                           self.filters * 3]
+      self.kernel_h = self.kernel[:, :, :, self.filters * 2:]
+      self.recurrent_kernel_h = self.recurrent_kernel[:, :, :, self.filters * 2:]
 
-        if self.use_bias:
-            # bias for inputs
-            self.bias_z = self.bias[:self.filters]
-            self.bias_r = self.bias[self.filters: self.filters * 2]
-            self.bias_h = self.bias[self.filters * 2:]
-        else:
-            self.bias_z = None
-            self.bias_r = None
-            self.bias_h = None
-        self.built = True
+      if self.use_bias:
+          # bias for inputs
+          self.bias_z = self.bias[:self.filters]
+          self.bias_r = self.bias[self.filters: self.filters * 2]
+          self.bias_h = self.bias[self.filters * 2:]
+      else:
+          self.bias_z = None
+          self.bias_r = None
+          self.bias_h = None
+      self.built = True
 
         
         
     def call(self, inputs, states, training=None):
+        print("called  cell")
         h_tm1 = states[0]  # previous memory state
 
         if 0 < self.dropout < 1 and self._dropout_mask is None:
@@ -313,6 +308,7 @@ class ConvGRU2DCell(Layer):
     
 
     def get_config(self):
+        print("called get_config")
         config = {'filters': self.filters,
                   'kernel_size': self.kernel_size,
                   'strides': self.strides,
@@ -365,28 +361,26 @@ class ConvGRU2D(ConvRNN2D):
                dropout=0.,
                recurrent_dropout=0.,
                **kwargs):
-        print("kernel_size")
-        print(kernel_size)
         cell = ConvGRU2DCell(filters=filters,
                              kernel_size=kernel_size,
                              strides=strides,
-                          padding=padding,
-                          data_format=data_format,
-                          dilation_rate=dilation_rate,
-                          activation=activation,
-                          recurrent_activation=recurrent_activation,
-                          use_bias=use_bias,
-                          kernel_initializer=kernel_initializer,
-                          recurrent_initializer=recurrent_initializer,
-                          bias_initializer=bias_initializer,
-                          kernel_regularizer=kernel_regularizer,
-                          recurrent_regularizer=recurrent_regularizer,
-                          bias_regularizer=bias_regularizer,
-                          kernel_constraint=kernel_constraint,
-                          recurrent_constraint=recurrent_constraint,
-                          bias_constraint=bias_constraint,
-                          dropout=dropout,
-                          recurrent_dropout=recurrent_dropout)
+                            padding=padding,
+                            data_format=data_format,
+                            dilation_rate=dilation_rate,
+                            activation=activation,
+                            recurrent_activation=recurrent_activation,
+                            use_bias=use_bias,
+                            kernel_initializer=kernel_initializer,
+                            recurrent_initializer=recurrent_initializer,
+                            bias_initializer=bias_initializer,
+                            kernel_regularizer=kernel_regularizer,
+                            recurrent_regularizer=recurrent_regularizer,
+                            bias_regularizer=bias_regularizer,
+                            kernel_constraint=kernel_constraint,
+                            recurrent_constraint=recurrent_constraint,
+                            bias_constraint=bias_constraint,
+                            dropout=dropout,
+                            recurrent_dropout=recurrent_dropout)
         print("created cell")
         super(ConvGRU2D, self).__init__(cell,
                                         return_sequences=return_sequences,
@@ -397,10 +391,11 @@ class ConvGRU2D(ConvRNN2D):
         
     def call(self, inputs, mask=None, training=None, initial_state=None):
         print("called")
-        return super(ConvGRU2D, self).call(inputs, mask=mask,
-                                           training=training, initial_state=initial_state)
-    
-    
+        return super(ConvGRU2D, self).call(inputs, 
+                                          mask=mask,
+                                          training=training, 
+                                          initial_state=initial_state)
+
     @property
     def filters(self):
         return self.cell.filters
