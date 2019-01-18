@@ -50,58 +50,7 @@ import pylab as plt
 from tensorflow.python.keras.layers.convolutional_recurrent import ConvLSTM2D, ConvRNN2D
 
 class ConvGRU2DCell(Layer):
-    """Cell class for the ConvGRU2D layer.
-      # Arguments
-          filters: Integer, the dimensionality of the output space
-              (i.e. the number of output filters in the convolution).
-          kernel_size: An integer or tuple/list of n integers, specifying the
-              dimensions of the convolution window.
-          strides: An integer or tuple/list of n integers,
-              specifying the strides of the convolution.
-              Specifying any stride value != 1 is incompatible with specifying
-              any `dilation_rate` value != 1.
-          padding: One of `"valid"` or `"same"` (case-insensitive).
-          data_format: A string,
-              one of `channels_last` (default) or `channels_first`.
-              It defaults to the `image_data_format` value found in your
-              Keras config file at `~/.keras/keras.json`.
-              If you never set it, then it will be "channels_last".
-          dilation_rate: An integer or tuple/list of n integers, specifying
-              the dilation rate to use for dilated convolution.
-              Currently, specifying any `dilation_rate` value != 1 is
-              incompatible with specifying any `strides` value != 1.
-          activation: Activation function to use.
-              If you don't specify anything, no activation is applied
-              (ie. "linear" activation: `a(x) = x`).
-          recurrent_activation: Activation function to use
-              for the recurrent step.
-          use_bias: Boolean, whether the layer uses a bias vector.
-          kernel_initializer: Initializer for the `kernel` weights matrix,
-              used for the linear transformation of the inputs.
-          recurrent_initializer: Initializer for the `recurrent_kernel`
-              weights matrix,
-              used for the linear transformation of the recurrent state.
-          bias_initializer: Initializer for the bias vector.
-          kernel_regularizer: Regularizer function applied to
-              the `kernel` weights matrix.
-          recurrent_regularizer: Regularizer function applied to
-              the `recurrent_kernel` weights matrix.
-          bias_regularizer: Regularizer function applied to the bias vector.
-          kernel_constraint: Constraint function applied to
-              the `kernel` weights matrix.
-          recurrent_constraint: Constraint function applied to
-              the `recurrent_kernel` weights matrix.
-          bias_constraint: Constraint function applied to the bias vector.
-          dropout: Float between 0 and 1.
-              Fraction of the units to drop for
-              the linear transformation of the inputs.
-          recurrent_dropout: Float between 0 and 1.
-              Fraction of the units to drop for
-              the linear transformation of the recurrent state.
-          reset_after: GRU convention (whether to apply reset gate after or
-            before matrix multiplication). False = "before" (default),
-            True = "after" (CuDNN compatible).
-      """
+    """Cell class for the ConvGRU2D layer."""
     
     def __init__(self,
                  filters,
@@ -128,7 +77,7 @@ class ConvGRU2DCell(Layer):
         super(ConvGRU2DCell, self).__init__(**kwargs)
         self.filters = filters
         self.kernel_size = conv_utils.normalize_tuple(kernel_size, 2, 'kernel_size')
-        print("kernel_size", self.kernel_size)
+        # print("kernel_size", self.kernel_size)
         
         self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
         self.padding = conv_utils.normalize_padding(padding)
@@ -156,12 +105,12 @@ class ConvGRU2DCell(Layer):
         self.state_size = (self.filters, self.filters)
         self._dropout_mask = None
         self._recurrent_dropout_mask = None
-        print("finished initializing")
+        # print("finished initializing ConvGRU2DCell")
             
 
     def build(self, input_shape):
 
-      print("building")
+      # print("building ConvGRU2DCell")
       if self.data_format == 'channels_first':
           channel_axis = 1
       else:
@@ -187,6 +136,7 @@ class ConvGRU2DCell(Layer):
             constraint=self.recurrent_constraint)
 
       if self.use_bias:
+          bias_initializer = self.bias_initializer
           self.bias = self.add_weight(
                 shape=(self.filters * 3,), 
                 name='bias',
@@ -221,7 +171,7 @@ class ConvGRU2DCell(Layer):
         
         
     def call(self, inputs, states, training=None):
-        print("called  cell")
+        # print("called  ConvGRU2DCell")
         h_tm1 = states[0]  # previous memory state
 
         if 0 < self.dropout < 1 and self._dropout_mask is None:
@@ -240,6 +190,7 @@ class ConvGRU2DCell(Layer):
 
         # dropout matrices for input units
         dp_mask = self._dropout_mask
+
         # dropout matrices for recurrent units
         rec_dp_mask = self._recurrent_dropout_mask
 
@@ -288,7 +239,7 @@ class ConvGRU2DCell(Layer):
             if training is None:
                 h._uses_learning_phase = True
 
-        return h, [h]
+        return h, [h,hh]
 
     def input_conv(self, x, w, b=None, padding='valid'):
         conv_out = K.conv2d(x, w, strides=self.strides,
@@ -308,7 +259,7 @@ class ConvGRU2DCell(Layer):
     
 
     def get_config(self):
-        print("called get_config")
+        # print("called get_config")
         config = {'filters': self.filters,
                   'kernel_size': self.kernel_size,
                   'strides': self.strides,
@@ -381,20 +332,23 @@ class ConvGRU2D(ConvRNN2D):
                             bias_constraint=bias_constraint,
                             dropout=dropout,
                             recurrent_dropout=recurrent_dropout)
-        print("created cell")
+    
         super(ConvGRU2D, self).__init__(cell,
                                         return_sequences=return_sequences,
                                         go_backwards=go_backwards,
                                         stateful=stateful,
                                         **kwargs)
         self.activity_regularizer = regularizers.get(activity_regularizer)
+        # print("finished __init__ ConvGRU2D")
         
     def call(self, inputs, mask=None, training=None, initial_state=None):
-        print("called")
-        return super(ConvGRU2D, self).call(inputs, 
+        # print("called ConvGRU2D")
+        result = super(ConvGRU2D, self).call(inputs, 
                                           mask=mask,
                                           training=training, 
                                           initial_state=initial_state)
+        # print("result from call ConvGRU2D:", result)
+        return result
 
     @property
     def filters(self):
