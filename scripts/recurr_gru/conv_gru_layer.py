@@ -25,6 +25,8 @@ from __future__ import print_function
 
 import numpy as np
 import warnings
+import matplotlib
+matplotlib.use('Agg') 
 
 import tensorflow as tf
 
@@ -482,7 +484,7 @@ To test the layer
 # (n_frames, width, height, channels) and returns a movie
 # of identical shape.
 
-
+'''
 seq = Sequential()
 seq.add(ConvGRU2D(filters=40, kernel_size=(3, 3),
                    input_shape=(None, 40, 40, 1),
@@ -529,7 +531,7 @@ seq.add(Conv3D(filters=1, kernel_size=(3, 3, 3),
                activation='sigmoid',
                padding='same', data_format='channels_last'))
 seq.compile(loss='binary_crossentropy', optimizer='adadelta')
-'''
+
 
 # Artificial data generation:
 # Generate movies with 3 to 7 moving squares inside.
@@ -594,7 +596,7 @@ def generate_movies(n_samples=1200, n_frames=15):
 # Train the network
 noisy_movies, shifted_movies = generate_movies(n_samples=1200)
 seq.fit(noisy_movies[:1000], shifted_movies[:1000], batch_size=10,
-        epochs=300, validation_split=0.05)
+        epochs=3, validation_split=0.05)
 
 # Testing the network on one movie
 # feed it with the first 7 positions and then
@@ -632,7 +634,7 @@ for i in range(15):
         toplot = shifted_movies[which][i - 1, ::, ::, 0]
 
     plt.imshow(toplot)
-    # plt.savefig('%i_animate.png' % (i + 1))
+    plt.savefig('%i_animate_LSTM.png' % (i + 1))
 
 
 
