@@ -28,6 +28,7 @@ import warnings
 import os
 import pylab as plt
 import matplotlib
+
 import tensorflow as tf
 
 from tensorflow.python.keras import activations
@@ -600,7 +601,7 @@ def generate_movies(n_samples=1200, n_frames=15):
 # Train the network
 noisy_movies, shifted_movies = generate_movies(n_samples=1200)
 seq.fit(noisy_movies[:1000], shifted_movies[:1000], batch_size=10,
-        epochs=300, validation_split=0.05)
+        epochs=3, validation_split=0.05)
 
 # Testing the network on one movie
 # feed it with the first 7 positions and then
@@ -639,6 +640,7 @@ for i in range(15):
 
     plt.imshow(toplot)
     plt.savefig('%i_animate.png' % (i + 1))
+
 
 
 
