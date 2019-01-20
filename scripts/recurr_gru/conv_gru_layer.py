@@ -25,7 +25,9 @@ from __future__ import print_function
 
 import numpy as np
 import warnings
-
+import os
+import pylab as plt
+import matplotlib
 import tensorflow as tf
 
 from tensorflow.python.keras import activations
@@ -46,8 +48,12 @@ from tensorflow.python.keras.engine.base_layer import Layer
 from tensorflow.python.keras.models import Sequential
 from tensorflow.python.keras.layers.convolutional import Conv3D
 from tensorflow.python.keras.layers.normalization import BatchNormalization
-import pylab as plt
 from tensorflow.python.keras.layers.convolutional_recurrent import ConvLSTM2D, ConvRNN2D
+
+
+if os.environ.get('DISPLAY','') == '':
+    print('no display found. Using non-interactive Agg backend')
+    matplotlib.use('Agg')
 
 class ConvGRU2DCell(Layer):
     """Cell class for the ConvGRU2D layer."""
@@ -632,7 +638,7 @@ for i in range(15):
         toplot = shifted_movies[which][i - 1, ::, ::, 0]
 
     plt.imshow(toplot)
-    # plt.savefig('%i_animate.png' % (i + 1))
+    plt.savefig('%i_animate.png' % (i + 1))
 
 
 
