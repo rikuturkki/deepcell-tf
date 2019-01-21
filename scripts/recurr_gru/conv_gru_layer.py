@@ -488,7 +488,7 @@ To test the layer
 # (n_frames, width, height, channels) and returns a movie
 # of identical shape.
 
-
+'''
 seq = Sequential()
 seq.add(ConvGRU2D(filters=40, kernel_size=(3, 3),
                    input_shape=(None, 40, 40, 1),
@@ -535,7 +535,7 @@ seq.add(Conv3D(filters=1, kernel_size=(3, 3, 3),
                activation='sigmoid',
                padding='same', data_format='channels_last'))
 seq.compile(loss='binary_crossentropy', optimizer='adadelta')
-'''
+
 
 # Artificial data generation:
 # Generate movies with 3 to 7 moving squares inside.
@@ -638,7 +638,7 @@ for i in range(15):
         toplot = shifted_movies[which][i - 1, ::, ::, 0]
 
     plt.imshow(toplot)
-    plt.savefig('%i_animate.png' % (i + 1))
+    plt.savefig('%i_animate_LSTM.png' % (i + 1))
 
 
 
