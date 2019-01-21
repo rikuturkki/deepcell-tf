@@ -26,8 +26,11 @@ from __future__ import print_function
 import numpy as np
 import warnings
 import os
-import pylab as plt
+# import pylab as plt
 import matplotlib
+matplotlib.use('Agg')
+import pylab as plt
+
 
 import tensorflow as tf
 
@@ -51,10 +54,6 @@ from tensorflow.python.keras.layers.convolutional import Conv3D
 from tensorflow.python.keras.layers.normalization import BatchNormalization
 from tensorflow.python.keras.layers.convolutional_recurrent import ConvLSTM2D, ConvRNN2D
 
-
-if os.environ.get('DISPLAY','') == '':
-    print('no display found. Using non-interactive Agg backend')
-    matplotlib.use('Agg')
 
 class ConvGRU2DCell(Layer):
     """Cell class for the ConvGRU2D layer."""
@@ -601,7 +600,7 @@ def generate_movies(n_samples=1200, n_frames=15):
 # Train the network
 noisy_movies, shifted_movies = generate_movies(n_samples=1200)
 seq.fit(noisy_movies[:1000], shifted_movies[:1000], batch_size=10,
-        epochs=3, validation_split=0.05)
+        epochs=300, validation_split=0.05)
 
 # Testing the network on one movie
 # feed it with the first 7 positions and then
