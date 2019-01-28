@@ -13,6 +13,11 @@ import datetime
 import os
 import sys
 
+path = sys.path[0]
+parentdir = path.replace("scripts/recurr_gru","")
+sys.path.insert(0,parentdir) 
+
+
 import numpy as np
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras import callbacks
@@ -85,6 +90,8 @@ def load_data(file_name, test_size=.2, seed=0):
 
     return (x_train, y_train), (x_test, y_test)
 
+data_filename = 'nuclear_movie_hela0-7_same.npz'
+(X_train, y_train), (X_test, y_test) = load_data(data_filename, test_size=test_size)
 
 # ==============================================================================
 # Set up training parameters¶
@@ -356,8 +363,6 @@ def train_model(model,
     np.savez(loss_path, loss_history=loss_history.history)
 
     return model
-
-data_filename = 'nuclear_movie_hela0-7_same.npz'
 
 
 conv_gru_model = train_model(
