@@ -37,6 +37,7 @@ from tensorflow.python.keras import backend as K
 from tensorflow.python.keras import callbacks
 from tensorflow.python.keras.optimizers import SGD
 
+import deepcell
 from deepcell import losses
 from deepcell import image_generators
 from deepcell.utils import train_utils

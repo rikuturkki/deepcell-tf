@@ -121,3 +121,7 @@ Thumbs.db
 # Generated images
 scripts/recurr_gru/LSTM_images
 scripts/recurr_gru/GRU_images
+
+# NPZ files
+scripts/recurr_gru/*.npz
+
