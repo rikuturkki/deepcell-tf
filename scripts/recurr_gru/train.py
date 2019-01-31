@@ -26,9 +26,6 @@ from tensorflow.python.keras.optimizers import SGD
 
 from tensorflow.python.keras.utils.data_utils import get_file
 
-# /deepcell/losses.py
-# /deepcell/scripts/recurr_gru/train.py
-
 import deepcell
 from deepcell import losses
 from deepcell import image_generators
@@ -45,8 +42,10 @@ from deepcell.layers import ImageNormalization3D
 from tensorflow.python.keras.models import Sequential
 
 
-
 from sklearn.model_selection import train_test_split
+
+from tensorflow.python.client import device_lib
+print(device_lib.list_local_devices())
 
 
 # ==============================================================================
@@ -104,7 +103,6 @@ conv_gru_model_name = 'conv_gru_model'
 
 n_epoch = 10  # Number of training epochs
 test_size = .20  # % of data saved as test
-norm_method = 'std'  # data normalization
 receptive_field = 41  # should be adjusted for the scale of the data
 
 optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
