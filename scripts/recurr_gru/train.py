@@ -12,6 +12,7 @@ from __future__ import division
 import datetime
 import os
 import sys
+import errno
 
 path = sys.path[0]
 parentdir = path.replace("scripts/recurr_gru","")
@@ -41,6 +42,7 @@ from tensorflow.python.keras.layers import BatchNormalization
 from tensorflow.python.keras.layers import Conv3D
 from tensorflow.python.keras.regularizers import l2
 from deepcell.layers import ImageNormalization3D
+from tensorflow.python.keras.models import Sequential
 
 
 
@@ -88,10 +90,10 @@ def load_data(file_name, test_size=.2, seed=0):
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size, random_state=seed)
 
-    return (x_train, y_train), (x_test, y_test)
+    return (X_train, y_train), (X_test, y_test)
 
 data_filename = 'nuclear_movie_hela0-7_same.npz'
-(X_train, y_train), (X_test, y_test) = load_data(data_filename, test_size=test_size)
+(X_train, y_train), (X_test, y_test) = load_data(data_filename, test_size=0.2)
 
 # ==============================================================================
 # Set up training parameters¶
@@ -179,22 +181,22 @@ def feature_net_3D(receptive_field=61,
         rf_counter = rf_counter // 2
 
 
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_initializer=init, 
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(3, 3), 
                     kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
 
 
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_initializer=init, 
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(3, 3), 
                     kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
 
 
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_initializer=init, 
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(3, 3), 
                     kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
 
 
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_initializer=init, 
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(3, 3), 
                     kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
 
