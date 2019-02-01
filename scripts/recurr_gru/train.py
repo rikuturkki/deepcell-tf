@@ -109,20 +109,19 @@ norm_method = 'whole_image'  # data normalization - `whole_image` for 3d conv
 def feature_net_3D(input_shape,
                     receptive_field=61,
                     n_frames=5,
-                      n_features=3,
-                      n_channels=1,
-                      reg=1e-5,
-                      n_conv_filters=64,
-                      n_dense_filters=200,
-                      init='he_normal',
-                      norm_method='std',
-                      include_top=True):
+                    n_features=3,
+                    n_channels=1,
+                    reg=1e-5,
+                    n_conv_filters=40,
+                    n_dense_filters=200,
+                    init='he_normal',
+                    norm_method='std',
+                    include_top=True):
     # Create layers list (x) to store all of the layers.
     # We need to use the functional API to enable the multiresolution mode
-
+    '''
     win = (receptive_field - 1) // 2
     win_z = (n_frames - 1) // 2
-
 
     if K.image_data_format() == 'channels_first':
         channel_axis = 1
@@ -184,8 +183,31 @@ def feature_net_3D(input_shape,
                     kernel_regularizer=l2(reg), activation='relu',
                    padding='same', data_format='channels_last'))
     model.compile(loss='binary_crossentropy', optimizer='adadelta')
+    '''
+    seq = Sequential()
+    seq.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                       input_shape=input_shape,
+                       padding='same', return_sequences=True))
+    seq.add(BatchNormalization())
 
-    return model
+    seq.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                       padding='same', return_sequences=True))
+    seq.add(BatchNormalization())
+
+    seq.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                       padding='same', return_sequences=True))
+    seq.add(BatchNormalization())
+
+    seq.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                       padding='same', return_sequences=True))
+    seq.add(BatchNormalization())
+
+    seq.add(Conv3D(filters=1, kernel_size=(3, 3, 3),
+                   activation='sigmoid',
+                   padding='same', data_format='channels_last'))
+    seq.compile(loss='binary_crossentropy', optimizer='adadelta')
+
+    return seq
 
 
 # ==============================================================================
@@ -353,7 +375,6 @@ fgbg_model = feature_net_3D(
     n_frames=frames_per_batch,
     n_conv_filters=32,
     n_dense_filters=128,
-    multires=False,
     norm_method=norm_method)
 
 fgbg_model = train_model(
@@ -377,13 +398,12 @@ fgbg_model = train_model(
 # ==============================================================================
 
 conv_gru_model = feature_net_3D(
-    input_shape=(3, 216, 256, 1),
+    input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
     receptive_field=receptive_field,
     n_features=4, 
     n_frames=frames_per_batch,
     n_conv_filters=32,
     n_dense_filters=128,
-    input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
     norm_method=norm_method)
 
 conv_gru_model = train_model(
