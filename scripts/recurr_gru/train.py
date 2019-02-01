@@ -95,7 +95,7 @@ data_filename = 'nuclear_movie_hela0-7_same.npz'
 (X_train, y_train), (X_test, y_test) = load_data(data_filename, test_size=0.2)
 
 # ==============================================================================
-# Set up training parameters¶
+# Set up training parameters
 # ==============================================================================
 
 
@@ -165,7 +165,7 @@ def feature_net_3D(receptive_field=61,
 
     while rf_counter > 4:
         filter_size = 3 if rf_counter % 2 == 0 else 4
-        model.add(Conv3D(n_conv_filters, (1, filter_size, filter_size), 
+        model.add(Conv3D(n_conv_filters, kernel_size=(1, filter_size, filter_size), 
             dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', 
             kernel_regularizer=l2(reg), activation='relu'))
         model.add(BatchNormalization(axis=channel_axis))
@@ -179,27 +179,28 @@ def feature_net_3D(receptive_field=61,
         rf_counter = rf_counter // 2
 
 
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(3, 3), 
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(1, filter_size, filter_size), 
                     kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
 
 
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(3, 3), 
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(1, filter_size, filter_size), 
                     kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
 
 
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(3, 3), 
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(1, filter_size, filter_size), 
                     kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
 
 
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(3, 3), 
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(1, filter_size, filter_size), 
                     kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
 
 
-    model.add(Conv3D(filters=n_dense_filters, kernel_initializer=init, 
+    model.add(Conv3D(filters=n_dense_filters, kernel_size=(1, filter_size, filter_size), 
+                    kernel_initializer=init, 
                     kernel_regularizer=l2(reg), activation='relu',
                    padding='same', data_format='channels_last'))
     model.compile(loss='binary_crossentropy', optimizer='adadelta')
