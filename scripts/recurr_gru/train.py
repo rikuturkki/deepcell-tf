@@ -289,7 +289,7 @@ def train_model(model,
     else:
         skip = None
 
-    if train_dict['X'].ndim == 5:
+    if X_train.ndim == 5:
         DataGenerator = image_generators.MovieDataGenerator
     else:
         raise ValueError('Expected `X` to have ndim 5. Got',
@@ -297,18 +297,18 @@ def train_model(model,
 
     if num_gpus >= 2:
         # Each GPU must have at least one validation example
-        if test_dict['y'].shape[0] < num_gpus:
+        if y_test.shape[0] < num_gpus:
             raise ValueError('Not enough validation data for {} GPUs. '
                              'Received {} validation sample.'.format(
-                                 test_dict['y'].shape[0], num_gpus))
+                                 y_test.shape[0], num_gpus))
 
         # When using multiple GPUs and skip_connections,
         # the training data must be evenly distributed across all GPUs
-        num_train = train_dict['y'].shape[0]
+        num_train = y_train.shape[0]
         nb_samples = num_train - num_train % batch_size
         if nb_samples:
-            train_dict['y'] = train_dict['y'][:nb_samples]
-            train_dict['X'] = train_dict['X'][:nb_samples]
+            y_train  = y_train[:nb_samples]
+            X_train = X_train[:nb_samples]
 
     # this will do preprocessing and realtime data augmentation
     datagen = DataGenerator(
@@ -325,9 +325,9 @@ def train_model(model,
         horizontal_flip=0,
         vertical_flip=0)
 
-    if train_dict['X'].ndim == 5:
+    if X_train.ndim == 5:
         train_data = datagen_val.flow(
-            train_dict,
+            (X_train, y_train),
             skip=skip,
             batch_size=batch_size,
             transform=transform,
@@ -335,7 +335,7 @@ def train_model(model,
             frames_per_batch=frames_per_batch)
 
         val_data = datagen_val.flow(
-            test_dict,
+            (X_test, y_test),
             skip=skip,
             batch_size=batch_size,
             transform=transform,
@@ -368,11 +368,10 @@ def train_model(model,
 
 conv_gru_model = train_model(
     model=conv_gru_model,
-    dataset=data_filename,  # full path to npz file
+    data_filename = 'nuclear_movie_hela0-7_same.npz',
     model_name=conv_gru_model_name,
     optimizer=optimizer,
     transform=transform,
-    batch_size=batch_size,
     frames_per_batch=frames_per_batch,
     n_epoch=n_epoch,
     model_dir=MODEL_DIR,
