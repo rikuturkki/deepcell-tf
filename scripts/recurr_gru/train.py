@@ -30,6 +30,7 @@ import deepcell
 from deepcell import losses
 from deepcell import image_generators
 from deepcell.utils import train_utils
+from deepcell.utils.data_utils import get_data
 from deepcell.utils.train_utils import rate_scheduler
 from deepcell.training import train_model_conv
 
@@ -89,10 +90,20 @@ def load_data(file_name, test_size=.2, seed=0):
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size, random_state=seed)
 
-    return (X_train, y_train), (X_test, y_test)
+    train_dict = {
+        'X': X_train,
+        'y': y_train
+    }
+
+    test_dict = {
+        'X': X_test,
+        'y': y_test
+    }
+
+    return train_dict, test_dict 
 
 data_filename = 'nuclear_movie_hela0-7_same.npz'
-(X_train, y_train), (X_test, y_test) = load_data(data_filename, test_size=0.2)
+train_dict, test_dict = get_data(data_filename, test_size=0.2)
 
 # ==============================================================================
 # Set up training parameters
@@ -214,14 +225,14 @@ conv_gru_model = feature_net_3D(
     n_frames=frames_per_batch,
     n_conv_filters=32,
     n_dense_filters=128,
-    input_shape=tuple([frames_per_batch] + list(X_train.shape[2:])),
+    input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
     norm_method=norm_method)
 
 # ==============================================================================
 # Train model
 # ==============================================================================
 
-def train_model(model,
+def train_conv_gru_model(model,
                      data_filename,
                      expt='',
                      test_size=.1,
@@ -252,15 +263,15 @@ def train_model(model,
     loss_path = os.path.join(model_dir, '{}.npz'.format(model_name))
 
 
-    (X_train, y_train), (X_test, y_test) = load_data(data_filename, test_size=test_size)
+    train_dict, test_dict = get_data(data_filename, test_size=test_size)
 
 
     n_classes = model.layers[-1].output_shape[1 if is_channels_first else -1]
     # the data, shuffled and split between train and test sets
-    print('X_train shape:', X_train.shape)
-    print('y_train shape:', y_test.shape)
-    print('X_test shape:', X_test.shape)
-    print('y_test shape:', y_test.shape)
+    print('X_train shape:', train_dict['X'].shape)
+    print('y_train shape:', train_dict['y'].shape)
+    print('X_test shape:', test_dict['X'].shape)
+    print('y_test shape:', test_dict['y'].shape)
     print('Output Shape:', model.layers[-1].output_shape)
     print('Number of Classes:', n_classes)
 
@@ -289,7 +300,7 @@ def train_model(model,
     else:
         skip = None
 
-    if X_train.ndim == 5:
+    if train_dict['X'].ndim == 5:
         DataGenerator = image_generators.MovieDataGenerator
     else:
         raise ValueError('Expected `X` to have ndim 5. Got',
@@ -297,18 +308,18 @@ def train_model(model,
 
     if num_gpus >= 2:
         # Each GPU must have at least one validation example
-        if y_test.shape[0] < num_gpus:
+        if test_dict['y'].shape[0] < num_gpus:
             raise ValueError('Not enough validation data for {} GPUs. '
                              'Received {} validation sample.'.format(
-                                 y_test.shape[0], num_gpus))
+                                 test_dict['y'].shape[0], num_gpus))
 
         # When using multiple GPUs and skip_connections,
         # the training data must be evenly distributed across all GPUs
-        num_train = y_train.shape[0]
+        num_train = train_dict['y'].shape[0]
         nb_samples = num_train - num_train % batch_size
         if nb_samples:
-            y_train  = y_train[:nb_samples]
-            X_train = X_train[:nb_samples]
+            train_dict['y']  = train_dict['y'][:nb_samples]
+            train_dict['X'] = train_dict['X'][:nb_samples]
 
     # this will do preprocessing and realtime data augmentation
     datagen = DataGenerator(
@@ -325,9 +336,9 @@ def train_model(model,
         horizontal_flip=0,
         vertical_flip=0)
 
-    if X_train.ndim == 5:
+    if train_dict['X'].ndim == 5:
         train_data = datagen_val.flow(
-            (X_train, y_train),
+            train_dict,
             skip=skip,
             batch_size=batch_size,
             transform=transform,
@@ -335,7 +346,7 @@ def train_model(model,
             frames_per_batch=frames_per_batch)
 
         val_data = datagen_val.flow(
-            (X_test, y_test),
+            test_dict,
             skip=skip,
             batch_size=batch_size,
             transform=transform,
