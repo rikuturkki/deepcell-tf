@@ -54,8 +54,8 @@ print(device_lib.list_local_devices())
 # Set up file paths
 # ==============================================================================
 
-MODEL_DIR = os.path.join('models')
-LOG_DIR = os.path.join('logs')
+MODEL_DIR = os.path.join(sys.path[0], 'models')
+LOG_DIR = os.path.join(sys.path[0], 'logs')
 
 # create directories if they do not exist
 for d in (MODEL_DIR, LOG_DIR):
@@ -122,6 +122,7 @@ receptive_field = 61  # should be adjusted for the scale of the data
 optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 
 lr_sched = rate_scheduler(lr=0.01, decay=0.99)
+batch_size = 1  # FC training uses 1 image per batch
 
 
 # Transformation settings
@@ -381,7 +382,6 @@ fgbg_model = model_zoo.bn_feature_net_3D(
     n_dense_filters=128,
     input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
     multires=False,
-    last_only=False,
     norm_method=norm_method)
 
 fgbg_model = train_model(
