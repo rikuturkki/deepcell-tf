@@ -141,7 +141,7 @@ norm_method = 'whole_image'  # data normalization - `whole_image` for 3d conv
 
 def feature_net_3D(receptive_field=61,
                       n_frames=5,
-                      input_shape=(5, 256, 256, 1),
+                      input_shape=(3, 216, 256, 1),
                       n_features=3,
                       n_channels=1,
                       reg=1e-5,
@@ -237,8 +237,8 @@ def train_model(model,
                 frames_per_batch=5,
                 transform=None,
                 optimizer=SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True),
-                log_dir='/data/tensorboard_logs',
-                model_dir='/data/models',
+                log_dir=LOG_DIR,
+                model_dir=MODEL_DIR,
                 model_name=None,
                 focal=False,
                 gamma=0.5,
@@ -254,6 +254,9 @@ def train_model(model,
         todays_date = datetime.datetime.now().strftime('%Y-%m-%d')
         data_name = os.path.splitext(os.path.basename(dataset))[0]
         model_name = '{}_{}_{}'.format(todays_date, data_name, expt)
+
+    print("Training: ", model_name)
+
     model_path = os.path.join(model_dir, '{}.h5'.format(model_name))
     loss_path = os.path.join(model_dir, '{}.npz'.format(model_name))
 
@@ -289,6 +292,8 @@ def train_model(model,
     print('Training on {} GPUs'.format(num_gpus))
 
     model.compile(loss=loss_function, optimizer=optimizer, metrics=['accuracy'])
+
+    print("Input shape of model: ", model.input_shape)
 
     if isinstance(model.output_shape, list):
         skip = len(model.output_shape) - 1
