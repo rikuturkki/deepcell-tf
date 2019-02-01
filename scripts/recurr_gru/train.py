@@ -348,6 +348,7 @@ def train_model(model,
 # ==============================================================================
 
 fgbg_model = model_zoo.bn_feature_net_3D(
+    input_shape =(3, 216, 256, 1),
     n_features=2,  # segmentation mask (is_cell, is_not_cell)
     n_frames=frames_per_batch,
     n_conv_filters=32,
@@ -377,6 +378,7 @@ fgbg_model = train_model(
 # ==============================================================================
 
 conv_gru_model = feature_net_3D(
+    input_shape=(3, 216, 256, 1),
     receptive_field=receptive_field,
     n_features=4, 
     n_frames=frames_per_batch,
