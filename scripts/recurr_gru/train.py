@@ -29,6 +29,7 @@ from tensorflow.python.keras.utils.data_utils import get_file
 import deepcell
 from deepcell import losses
 from deepcell import image_generators
+from deepcell import model_zoo
 from deepcell.utils import train_utils
 from deepcell.utils.data_utils import get_data
 from deepcell.utils.train_utils import rate_scheduler
@@ -111,6 +112,8 @@ train_dict, test_dict = get_data(data_filename, test_size=0.2)
 
 
 conv_gru_model_name = 'conv_gru_model'
+fgbg_model_name = 'conv_fgbg_model'
+
 
 n_epoch = 10  # Number of training epochs
 test_size = .10  # % of data saved as test
@@ -219,40 +222,31 @@ def feature_net_3D(receptive_field=61,
     return model
 
 
-conv_gru_model = feature_net_3D(
-    receptive_field=receptive_field,
-    n_features=2,  # segmentation mask (is_cell, is_not_cell)
-    n_frames=frames_per_batch,
-    n_conv_filters=32,
-    n_dense_filters=128,
-    input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
-    norm_method=norm_method)
-
 # ==============================================================================
 # Train model
 # ==============================================================================
 
-def train_conv_gru_model(model,
-                     data_filename,
-                     expt='',
-                     test_size=.1,
-                     n_epoch=10,
-                     batch_size=1,
-                     num_gpus=None,
-                     frames_per_batch=5,
-                     transform=None,
-                     optimizer=SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True),
-                     log_dir='/data/tensorboard_logs',
-                     model_dir='/data/models',
-                     model_name=None,
-                     focal=False,
-                     gamma=0.5,
-                     lr_sched=rate_scheduler(lr=0.01, decay=0.95),
-                     rotation_range=0,
-                     flip=True,
-                     shear=0,
-                     zoom_range=0,
-                     **kwargs):
+def train_model(model,
+                data_filename,
+                expt='',
+                test_size=.1,
+                n_epoch=10,
+                batch_size=1,
+                num_gpus=None,
+                frames_per_batch=5,
+                transform=None,
+                optimizer=SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True),
+                log_dir='/data/tensorboard_logs',
+                model_dir='/data/models',
+                model_name=None,
+                focal=False,
+                gamma=0.5,
+                lr_sched=rate_scheduler(lr=0.01, decay=0.95),
+                rotation_range=0,
+                flip=True,
+                shear=0,
+                zoom_range=0,
+                **kwargs):
     is_channels_first = K.image_data_format() == 'channels_first'
 
     if model_name is None:
@@ -376,10 +370,53 @@ def train_conv_gru_model(model,
 
     return model
 
+# ==============================================================================
+# Create and train foreground/background separation model
+# ==============================================================================
+
+fgbg_model = model_zoo.bn_feature_net_2D(
+    n_features=2,  # segmentation mask (is_cell, is_not_cell)
+    n_frames=frames_per_batch,
+    n_skips=n_skips,
+    n_conv_filters=32,
+    n_dense_filters=128,
+    input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
+    multires=False,
+    last_only=False,
+    norm_method=norm_method)
+
+fgbg_model = train_model(
+    model=fgbg_model,
+    data_filename=data_filename,  # full path to npz file
+    model_name=fgbg_model_name,
+    transform='fgbg',
+    optimizer=optimizer,
+    batch_size=batch_size,
+    frames_per_batch=frames_per_batch,
+    n_epoch=n_epoch,
+    model_dir=MODEL_DIR,
+    lr_sched=lr_sched,
+    rotation_range=180,
+    flip=True,
+    shear=False,
+    zoom_range=(0.8, 1.2))
+
+# ==============================================================================
+# Create a segmentation model
+# ==============================================================================
+
+conv_gru_model = feature_net_3D(
+    receptive_field=receptive_field,
+    n_features=2,  # segmentation mask (is_cell, is_not_cell)
+    n_frames=frames_per_batch,
+    n_conv_filters=32,
+    n_dense_filters=128,
+    input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
+    norm_method=norm_method)
 
 conv_gru_model = train_model(
     model=conv_gru_model,
-    data_filename = 'nuclear_movie_hela0-7_same.npz',
+    data_filename = data_filename,
     model_name=conv_gru_model_name,
     optimizer=optimizer,
     transform=transform,
@@ -392,8 +429,15 @@ conv_gru_model = train_model(
     shear=False,
     zoom_range=(0.8, 1.2))
 
+# ==============================================================================
+# Save weights of trained models
+# ==============================================================================
 
+fgbg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_model_name))
+fgbg_model.save_weights(fgbg_weights_file)
 
+conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
+conv_gru_model.save_weights(conv_gru_weights_file)
 
 
 
