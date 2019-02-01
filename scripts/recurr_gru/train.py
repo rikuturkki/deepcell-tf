@@ -374,10 +374,9 @@ def train_model(model,
 # Create and train foreground/background separation model
 # ==============================================================================
 
-fgbg_model = model_zoo.bn_feature_net_2D(
+fgbg_model = model_zoo.bn_feature_net_3D(
     n_features=2,  # segmentation mask (is_cell, is_not_cell)
     n_frames=frames_per_batch,
-    n_skips=n_skips,
     n_conv_filters=32,
     n_dense_filters=128,
     input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
@@ -407,7 +406,7 @@ fgbg_model = train_model(
 
 conv_gru_model = feature_net_3D(
     receptive_field=receptive_field,
-    n_features=2,  # segmentation mask (is_cell, is_not_cell)
+    n_features=4, 
     n_frames=frames_per_batch,
     n_conv_filters=32,
     n_dense_filters=128,
