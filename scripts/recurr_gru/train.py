@@ -179,22 +179,22 @@ def feature_net_3D(receptive_field=61,
         rf_counter = rf_counter // 2
 
 
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(1, filter_size, filter_size), 
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(filter_size, filter_size), 
                     kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
 
 
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(1, filter_size, filter_size), 
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(filter_size, filter_size), 
                     kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
 
 
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(1, filter_size, filter_size), 
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(filter_size, filter_size), 
                     kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
 
 
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(1, filter_size, filter_size), 
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(filter_size, filter_size), 
                     kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
 
