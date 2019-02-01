@@ -113,8 +113,8 @@ train_dict, test_dict = get_data(data_filename, test_size=0.2)
 conv_gru_model_name = 'conv_gru_model'
 
 n_epoch = 10  # Number of training epochs
-test_size = .20  # % of data saved as test
-receptive_field = 41  # should be adjusted for the scale of the data
+test_size = .10  # % of data saved as test
+receptive_field = 61  # should be adjusted for the scale of the data
 
 optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 
@@ -122,8 +122,8 @@ lr_sched = rate_scheduler(lr=0.01, decay=0.99)
 
 
 # Transformation settings
-transform = 'deepcell'
-n_features = 2  # (cell-background edge, cell-cell edge, cell interior, background)
+transform = None
+n_features = 4  # (cell-background edge, cell-cell edge, cell interior, background)
 
 # 3D Settings
 frames_per_batch = 3
