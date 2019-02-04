@@ -43,6 +43,7 @@ from tensorflow.python.keras.layers import Conv3D
 from tensorflow.python.keras.regularizers import l2
 from deepcell.layers import ImageNormalization3D
 from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.layers import Activation, Softmax
 
 
 from sklearn.model_selection import train_test_split
@@ -203,14 +204,14 @@ def feature_net_3D(input_shape,
                        padding='same', return_sequences=True))
     seq.add(BatchNormalization())
 
-    # seq.add(Conv3D(filters=1, kernel_size=(3, 3, 3),
-    #                activation='sigmoid',
-    #                padding='same', data_format='channels_last'))
+    seq.add(Conv3D(filters=1, kernel_size=(3, 3, 3),
+                   activation='sigmoid',
+                   padding='same', data_format='channels_last'))
     # seq.add(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg)))
-    # seq.add(BatchNormalization(axis=channel_axis))
+    # seq.add(BatchNormalization())
     # seq.add(Activation('relu'))
-    seq.add(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg)))
-    seq.add(Activation('sigmoid'))
+    # seq.add(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg)))
+    # seq.add(Activation('sigmoid'))
     seq.compile(loss='binary_crossentropy', optimizer='adadelta')
 
     return seq
