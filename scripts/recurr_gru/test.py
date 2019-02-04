@@ -109,6 +109,7 @@ print('argmax shape:', argmax_images.shape)
 # and remove back ground from edge transform
 threshold = 0.9
 
+pdb.set_trace()
 fg_thresh = test_images_fgbg[:, 1] > threshold
 fg_thresh = np.expand_dims(fg_thresh, axis=-1)
 
