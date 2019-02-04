@@ -23,7 +23,9 @@ from deepcell import losses
 from deepcell import image_generators
 from deepcell import model_zoo
 from deepcell.utils.data_utils import get_data
-from deepcell.scripts.recurr_gru.train import feature_net_3D
+from deepcell.utils.plot_utils import get_js_video
+
+from scripts.recurr_gru.train import feature_net_3D
 
 import numpy as np
 from skimage.measure import label
@@ -67,7 +69,7 @@ run_fgbg_model = feature_net_3D(
 run_fgbg_model.load_weights(fgbg_weights_file)
 
 
-run_conv_model = model_zoo.feature_net_3D(
+run_conv_model = feature_net_3D(
     input_shape=tuple(X_test.shape[1:]),
     model=run_fgbg_model,
     receptive_field=receptive_field,
@@ -150,7 +152,24 @@ fig.tight_layout()
 plt.show()
 plt.savefig('predictions.png')
 
+def get_video(images, batch=0, channel=0, cmap='jet'):
+    """Create a JavaScript video as HTML for visualizing 3D data as a movie"""
+    fig = plt.figure()
 
+    ims = []
+    for i in range(images.shape[1]):
+        im = plt.imshow(images[batch, i, :, :, channel], animated=True, cmap=cmap)
+        ims.append([im])
+
+    ani = animation.ArtistAnimation(fig, ims, interval=150, repeat_delay=1000)
+    plt.close()
+    return ani
+
+Writer = animation.writers['ffmpeg']
+writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+
+vid = get_video(labeled_images, batch=0)
+vid.save('predictions.mp4', writer=writer)
 
 
 
