@@ -54,8 +54,8 @@ print(device_lib.list_local_devices())
 # Set up file paths
 # ==============================================================================
 
-MODEL_DIR = os.path.join(sys.path[0], 'models')
-LOG_DIR = os.path.join(sys.path[0], 'logs')
+MODEL_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/models')
+LOG_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/logs')
 
 # create directories if they do not exist
 for d in (MODEL_DIR, LOG_DIR):
@@ -368,7 +368,7 @@ def train_model(model,
 # ==============================================================================
 # Create and train foreground/background separation model
 # ==============================================================================
-
+'''
 fgbg_model = feature_net_3D(
     input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
     n_features=2,  # segmentation mask (is_cell, is_not_cell)
@@ -392,10 +392,12 @@ fgbg_model = train_model(
     flip=True,
     shear=False,
     zoom_range=(0.8, 1.2))
+'''
 
 # ==============================================================================
 # Create a segmentation model
 # ==============================================================================
+
 
 conv_gru_model = feature_net_3D(
     input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
@@ -425,8 +427,8 @@ conv_gru_model = train_model(
 # Save weights of trained models
 # ==============================================================================
 
-fgbg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_model_name))
-fgbg_model.save_weights(fgbg_weights_file)
+# fgbg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_model_name))
+# fgbg_model.save_weights(fgbg_weights_file)
 
 conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
 conv_gru_model.save_weights(conv_gru_weights_file)
