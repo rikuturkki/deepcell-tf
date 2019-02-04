@@ -30,6 +30,7 @@ import deepcell
 from deepcell import losses
 from deepcell import image_generators
 from deepcell import model_zoo
+from deepcell.layers import TensorProduct
 from deepcell.utils import train_utils
 from deepcell.utils.data_utils import get_data
 from deepcell.utils.train_utils import rate_scheduler
@@ -202,9 +203,14 @@ def feature_net_3D(input_shape,
                        padding='same', return_sequences=True))
     seq.add(BatchNormalization())
 
-    seq.add(Conv3D(filters=n_features, kernel_size=(3, 3, 3),
-                   activation='sigmoid',
-                   padding='same', data_format='channels_last'))
+    # seq.add(Conv3D(filters=1, kernel_size=(3, 3, 3),
+    #                activation='sigmoid',
+    #                padding='same', data_format='channels_last'))
+    seq.add(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg)))
+    seq.add(BatchNormalization(axis=channel_axis))
+    seq.add(Activation('relu'))
+    seq.add(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg)))
+
     seq.compile(loss='binary_crossentropy', optimizer='adadelta')
 
     return seq
