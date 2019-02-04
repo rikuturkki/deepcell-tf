@@ -48,6 +48,9 @@ receptive_field = 61  # should be adjusted for the scale of the data
 
 data_filename = 'nuclear_movie_hela0-7_same.npz'
 train_dict, test_dict = get_data(data_filename, test_size=0.2)
+X_test, y_test = test_dict['X'][:4], test_dict['y'][:4]
+print("X_test.shape: ", X_test.shape)
+
 
 MODEL_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/models')
 
@@ -56,6 +59,9 @@ fgbg_model_name = 'conv_fgbg_model'
 
 fgbg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_model_name))
 conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
+
+frames_per_batch = 3
+norm_method = 'whole_image'  # data normalization - `whole_image` for 3d conv
 
 
 run_fgbg_model = feature_net_3D(
@@ -71,19 +77,14 @@ run_fgbg_model.load_weights(fgbg_weights_file)
 
 run_conv_model = feature_net_3D(
     input_shape=tuple(X_test.shape[1:]),
-    model=run_fgbg_model,
     receptive_field=receptive_field,
-    n_skips=n_skips,
     n_features=4,  # (background edge, interior edge, cell interior, background)
     n_frames=frames_per_batch,
     n_conv_filters=32,
     n_dense_filters=128,
     norm_method=norm_method)
-run_conv_model.load_weights(conv_weights_file)
+run_conv_model.load_weights(conv_gru_weights_file)
 
-
-X_test, y_test = test_dict['X'][:4], test_dict['y'][:4]
-print("X_test.shape: ", X_test.shape)
 
 test_images = run_conv_model.predict(X_test)[-1]
 test_images_fgbg = run_fgbg_model.predict(X_test)[-1]
@@ -94,6 +95,15 @@ print('fgbg mask shape:', test_images_fgbg.shape)
 # ==============================================================================
 # Post processing
 # ==============================================================================
+
+argmax_images = []
+for i in range(test_images.shape[0]):
+    max_image = np.argmax(test_images[i], axis=-1)
+    argmax_images.append(max_image)
+argmax_images = np.array(argmax_images)
+argmax_images = np.expand_dims(argmax_images, axis=-1)
+
+print('argmax shape:', argmax_images.shape)
 
 # threshold the foreground/background
 # and remove back ground from edge transform

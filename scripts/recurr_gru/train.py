@@ -398,7 +398,7 @@ fgbg_model = train_model(
 # Create a segmentation model
 # ==============================================================================
 
-
+'''
 conv_gru_model = feature_net_3D(
     input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
     receptive_field=receptive_field,
@@ -422,6 +422,7 @@ conv_gru_model = train_model(
     flip=True,
     shear=False,
     zoom_range=(0.8, 1.2))
+'''
 
 # ==============================================================================
 # Save weights of trained models
@@ -430,8 +431,8 @@ conv_gru_model = train_model(
 # fgbg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_model_name))
 # fgbg_model.save_weights(fgbg_weights_file)
 
-conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
-conv_gru_model.save_weights(conv_gru_weights_file)
+# conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
+# conv_gru_model.save_weights(conv_gru_weights_file)
 
 
 
