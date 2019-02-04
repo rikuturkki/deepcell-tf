@@ -109,7 +109,7 @@ print('argmax shape:', argmax_images.shape)
 # and remove back ground from edge transform
 threshold = 0.9
 
-fg_thresh = test_images_fgbg[..., 1] > threshold
+fg_thresh = test_images_fgbg[:, 1] > threshold
 fg_thresh = np.expand_dims(fg_thresh, axis=-1)
 
 test_images_post_fgbg = test_images * fg_thresh
@@ -119,7 +119,7 @@ test_images_post_fgbg = test_images * fg_thresh
 
 labeled_images = []
 for i in range(test_images_post_fgbg.shape[0]):
-    interior = test_images_post_fgbg[i, ..., 2] > .2
+    interior = test_images_post_fgbg[i, :, 2] > .2
     labeled_image = label(interior)
     labeled_image = morphology.remove_small_objects(
         labeled_image, min_size=50, connectivity=1)
@@ -140,22 +140,22 @@ frame = np.random.randint(low=0, high=labeled_images.shape[1])
 fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(15, 15), sharex=True, sharey=True)
 ax = axes.ravel()
 
-ax[0].imshow(X_test[index, frame, ..., 0])
+ax[0].imshow(X_test[index, frame, :, 0])
 ax[0].set_title('Source Image')
 
-ax[1].imshow(test_images_fgbg[index, frame, ..., 1])
+ax[1].imshow(test_images_fgbg[index, frame, :, 1])
 ax[1].set_title('FGBG Prediction')
 
-ax[2].imshow(fg_thresh[index, frame, ..., 0], cmap='jet')
+ax[2].imshow(fg_thresh[index, frame, :, 0], cmap='jet')
 ax[2].set_title('FGBG Threshold {}%'.format(threshold * 100))
 
-ax[3].imshow(test_images[index, frame, ..., 0] + test_images[index, frame, ..., 1], cmap='jet')
+ax[3].imshow(test_images[index, frame, :, 0] + test_images[index, frame, :, 1], cmap='jet')
 ax[3].set_title('Edge Prediction')
 
-ax[4].imshow(test_images[index, frame, ..., 2], cmap='jet')
+ax[4].imshow(test_images[index, frame, :, 2], cmap='jet')
 ax[4].set_title('Interior Prediction')
 
-ax[5].imshow(labeled_images[index, frame, ..., 0], cmap='jet')
+ax[5].imshow(labeled_images[index, frame, :, 0], cmap='jet')
 ax[5].set_title('Instance Segmentation')
 
 fig.tight_layout()
