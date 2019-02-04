@@ -206,11 +206,11 @@ def feature_net_3D(input_shape,
     # seq.add(Conv3D(filters=1, kernel_size=(3, 3, 3),
     #                activation='sigmoid',
     #                padding='same', data_format='channels_last'))
-    seq.add(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg)))
-    seq.add(BatchNormalization(axis=channel_axis))
-    seq.add(Activation('relu'))
+    # seq.add(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg)))
+    # seq.add(BatchNormalization(axis=channel_axis))
+    # seq.add(Activation('relu'))
     seq.add(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg)))
-
+    seq.add(Activation('sigmoid'))
     seq.compile(loss='binary_crossentropy', optimizer='adadelta')
 
     return seq
