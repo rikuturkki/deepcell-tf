@@ -35,6 +35,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+import pdb 
+
 from tensorflow.python.client import device_lib
 print(device_lib.list_local_devices())
 
@@ -65,7 +67,7 @@ norm_method = 'whole_image'  # data normalization - `whole_image` for 3d conv
 
 
 run_fgbg_model = feature_net_3D(
-    input_shape=tuple(X_test.shape[1:]),
+    input_shape=tuple([frames_per_batch] + list(X_test.shape[2:])),
     receptive_field=receptive_field,
     n_features=2, 
     n_frames=frames_per_batch,
@@ -76,7 +78,7 @@ run_fgbg_model.load_weights(fgbg_weights_file)
 
 
 run_conv_model = feature_net_3D(
-    input_shape=tuple(X_test.shape[1:]),
+    input_shape=tuple([frames_per_batch] + list(X_test.shape[2:])),
     receptive_field=receptive_field,
     n_features=4,  # (background edge, interior edge, cell interior, background)
     n_frames=frames_per_batch,
@@ -110,7 +112,7 @@ print('argmax shape:', argmax_images.shape)
 threshold = 0.9
 
 pdb.set_trace()
-fg_thresh = test_images_fgbg[:, 1] > threshold
+fg_thresh = test_images_fgbg[..., 1] > threshold
 fg_thresh = np.expand_dims(fg_thresh, axis=-1)
 
 test_images_post_fgbg = test_images * fg_thresh
@@ -120,7 +122,7 @@ test_images_post_fgbg = test_images * fg_thresh
 
 labeled_images = []
 for i in range(test_images_post_fgbg.shape[0]):
-    interior = test_images_post_fgbg[i, :, 2] > .2
+    interior = test_images_post_fgbg[i, ..., 2] > .2
     labeled_image = label(interior)
     labeled_image = morphology.remove_small_objects(
         labeled_image, min_size=50, connectivity=1)
@@ -136,27 +138,27 @@ print('labeled_images shape:', labeled_images.shape)
 # ==============================================================================
 
 index = np.random.randint(low=0, high=labeled_images.shape[0])
-frame = np.random.randint(low=0, high=labeled_images.shape[1])
+print('Image number:', index)
 
 fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(15, 15), sharex=True, sharey=True)
 ax = axes.ravel()
 
-ax[0].imshow(X_test[index, frame, :, 0])
+ax[0].imshow(X_test[0,index, ..., 0])
 ax[0].set_title('Source Image')
 
-ax[1].imshow(test_images_fgbg[index, frame, :, 1])
-ax[1].set_title('FGBG Prediction')
+ax[1].imshow(test_images_fgbg[index, ..., 1])
+ax[1].set_title('Segmentation Prediction')
 
-ax[2].imshow(fg_thresh[index, frame, :, 0], cmap='jet')
+ax[2].imshow(fg_thresh[index, ..., 0], cmap='jet')
 ax[2].set_title('FGBG Threshold {}%'.format(threshold * 100))
 
-ax[3].imshow(test_images[index, frame, :, 0] + test_images[index, frame, :, 1], cmap='jet')
+ax[3].imshow(test_images[index, ..., 0] + test_images[index, ..., 1], cmap='jet')
 ax[3].set_title('Edge Prediction')
 
-ax[4].imshow(test_images[index, frame, :, 2], cmap='jet')
+ax[4].imshow(test_images[index, ..., 2], cmap='jet')
 ax[4].set_title('Interior Prediction')
 
-ax[5].imshow(labeled_images[index, frame, :, 0], cmap='jet')
+ax[5].imshow(labeled_images[index, ..., 0], cmap='jet')
 ax[5].set_title('Instance Segmentation')
 
 fig.tight_layout()
@@ -168,8 +170,8 @@ def get_video(images, batch=0, channel=0, cmap='jet'):
     fig = plt.figure()
 
     ims = []
-    for i in range(images.shape[1]):
-        im = plt.imshow(images[batch, i, :, :, channel], animated=True, cmap=cmap)
+    for i in range(images.shape[0]):
+        im = plt.imshow(images[i, :, :, channel], animated=True, cmap=cmap)
         ims.append([im])
 
     ani = animation.ArtistAnimation(fig, ims, interval=150, repeat_delay=1000)
