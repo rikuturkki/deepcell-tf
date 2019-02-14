@@ -120,7 +120,8 @@ def feature_net_3D(input_shape,
                     norm_method='std',
                     include_top=True):
     # Create layers list (x) to store all of the layers.
-    
+    # We need to use the functional API to enable the multiresolution mode
+    '''
     win = (receptive_field - 1) // 2
     win_z = (n_frames - 1) // 2
 
@@ -138,47 +139,82 @@ def feature_net_3D(input_shape,
     model = Sequential()
     model.add(ImageNormalization3D(norm_method=norm_method, 
         filter_size=receptive_field, input_shape=input_shape))
+    
     rf_counter = receptive_field
     block_counter = 0
     d = 1
 
     while rf_counter > 4:
         filter_size = 3 if rf_counter % 2 == 0 else 4
-        model.add(ConvGRU2D(n_conv_filters, kernel_size=(filter_size, filter_size), 
-            padding='same', 
-            kernel_initializer=init,
-            kernel_regularizer=l2(reg), 
-            activation='relu', 
-            return_sequences=True))
+        model.add(Conv3D(n_conv_filters, kernel_size=(1, filter_size, filter_size), 
+            dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', 
+            kernel_regularizer=l2(reg), activation='relu'))
         model.add(BatchNormalization(axis=channel_axis))
 
         block_counter += 1
         rf_counter -= filter_size - 1
 
+        if block_counter % 2 == 0:
+            model.add(MaxPool3D(pool_size=(1, 2, 2)))
+
         rf_counter = rf_counter // 2
 
-    model.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                       padding='same',
-                       kernel_initializer=init,
-                       kernel_regularizer=l2(reg), return_sequences=True))
-    model.add(BatchNormalization(axis=channel_axis))
-    model.add(Activation('relu'))
 
-    model.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                       padding='same',
-                       kernel_initializer=init,
-                       kernel_regularizer=l2(reg),
-                       return_sequences=True))
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(filter_size, filter_size), 
+                    kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
-    model.add(Activation('relu'))
 
-    model.add(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg)))
+
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(filter_size, filter_size), 
+                    kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
-    model.add(Activation('relu'))
-    model.add(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg)))
-    model.add(Activation('sigmoid'))
 
-    return model
+
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(filter_size, filter_size), 
+                    kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
+    model.add(BatchNormalization(axis=channel_axis))
+
+
+    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(filter_size, filter_size), 
+                    kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
+    model.add(BatchNormalization(axis=channel_axis))
+
+
+    model.add(Conv3D(filters=n_dense_filters, kernel_size=(1, filter_size, filter_size), 
+                    kernel_initializer=init, 
+                    kernel_regularizer=l2(reg), activation='relu',
+                   padding='same', data_format='channels_last'))
+    model.compile(loss='binary_crossentropy', optimizer='adadelta')
+    '''
+    seq = Sequential()
+    seq.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                       input_shape=input_shape,
+                       padding='same', return_sequences=True))
+    seq.add(BatchNormalization())
+
+    seq.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                       padding='same', return_sequences=True))
+    seq.add(BatchNormalization())
+
+    seq.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                       padding='same', return_sequences=True))
+    seq.add(BatchNormalization())
+
+    seq.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                       padding='same', return_sequences=True))
+    seq.add(BatchNormalization())
+
+    seq.add(Conv3D(filters=1, kernel_size=(3, 3, 3),
+                   activation='sigmoid',
+                   padding='same', data_format='channels_last'))
+    # seq.add(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg)))
+    # seq.add(BatchNormalization())
+    # seq.add(Activation('relu'))
+    # seq.add(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg)))
+    # seq.add(Activation('sigmoid'))
+    seq.compile(loss='binary_crossentropy', optimizer='adadelta')
+
+    return seq
 
 
 # ==============================================================================
@@ -315,6 +351,7 @@ def train_model(model,
         raise ValueError('Expected `X` to have ndim 5. Got',
                          train_dict['X'].ndim)
 
+    print("Shape of train_data: ", train_data)
 
     # fit the model on the batches generated by datagen.flow()
     loss_history = model.fit_generator(
@@ -339,7 +376,6 @@ def train_model(model,
 # ==============================================================================
 # Create and train foreground/background separation model
 # ==============================================================================
-
 '''
 fgbg_model = feature_net_3D(
     input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
@@ -348,8 +384,6 @@ fgbg_model = feature_net_3D(
     n_conv_filters=32,
     n_dense_filters=128,
     norm_method=norm_method)
-
-print(fgbg_model.summary())
 
 fgbg_model = train_model(
     model=fgbg_model,
@@ -368,12 +402,11 @@ fgbg_model = train_model(
     zoom_range=(0.8, 1.2))
 '''
 
-
 # ==============================================================================
 # Create a segmentation model
 # ==============================================================================
 
-'''
+
 conv_gru_model = feature_net_3D(
     input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
     receptive_field=receptive_field,
@@ -382,8 +415,6 @@ conv_gru_model = feature_net_3D(
     n_conv_filters=32,
     n_dense_filters=128,
     norm_method=norm_method)
-
-print(conv_gru_model.summary())
 
 conv_gru_model = train_model(
     model=conv_gru_model,
@@ -400,7 +431,6 @@ conv_gru_model = train_model(
     shear=False,
     zoom_range=(0.8, 1.2))
 
-'''
 
 # ==============================================================================
 # Save weights of trained models
@@ -409,8 +439,8 @@ conv_gru_model = train_model(
 # fgbg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_model_name))
 # fgbg_model.save_weights(fgbg_weights_file)
 
-# conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
-# conv_gru_model.save_weights(conv_gru_weights_file)
+conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
+conv_gru_model.save_weights(conv_gru_weights_file)
 
 
 

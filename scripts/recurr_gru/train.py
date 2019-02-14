@@ -12,6 +12,7 @@ from __future__ import division
 import datetime
 import os
 import sys
+import getopt
 import errno
 
 path = sys.path[0]
@@ -52,9 +53,7 @@ from tensorflow.python.client import device_lib
 print(device_lib.list_local_devices())
 
 
-# ==============================================================================
 # Set up file paths
-# ==============================================================================
 
 MODEL_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/models')
 LOG_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/logs')
@@ -69,42 +68,7 @@ for d in (MODEL_DIR, LOG_DIR):
 
 
 # ==============================================================================
-# Load data
-# ==============================================================================
-
-data_filename = 'nuclear_movie_hela0-7_same.npz'
-train_dict, test_dict = get_data(data_filename, test_size=0.2)
-
-# ==============================================================================
-# Set up training parameters
-# ==============================================================================
-
-
-conv_gru_model_name = 'conv_gru_model'
-fgbg_model_name = 'conv_fgbg_model'
-
-
-n_epoch = 10  # Number of training epochs
-test_size = .10  # % of data saved as test
-receptive_field = 61  # should be adjusted for the scale of the data
-
-optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-
-lr_sched = rate_scheduler(lr=0.01, decay=0.99)
-batch_size = 1  # FC training uses 1 image per batch
-
-
-# Transformation settings
-transform = None
-n_features = 4  # (cell-background edge, cell-cell edge, cell interior, background)
-
-# 3D Settings
-frames_per_batch = 3
-norm_method = 'whole_image'  # data normalization - `whole_image` for 3d conv
-
-
-# ==============================================================================
-# Get model
+# Models
 # ==============================================================================
 
 
@@ -120,8 +84,7 @@ def feature_net_3D(input_shape,
                     norm_method='std',
                     include_top=True):
     # Create layers list (x) to store all of the layers.
-    # We need to use the functional API to enable the multiresolution mode
-    '''
+    
     win = (receptive_field - 1) // 2
     win_z = (n_frames - 1) // 2
 
@@ -139,82 +102,47 @@ def feature_net_3D(input_shape,
     model = Sequential()
     model.add(ImageNormalization3D(norm_method=norm_method, 
         filter_size=receptive_field, input_shape=input_shape))
-    
     rf_counter = receptive_field
     block_counter = 0
     d = 1
 
     while rf_counter > 4:
         filter_size = 3 if rf_counter % 2 == 0 else 4
-        model.add(Conv3D(n_conv_filters, kernel_size=(1, filter_size, filter_size), 
-            dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', 
-            kernel_regularizer=l2(reg), activation='relu'))
+        model.add(ConvGRU2D(n_conv_filters, kernel_size=(filter_size, filter_size), 
+            padding='same', 
+            kernel_initializer=init,
+            kernel_regularizer=l2(reg), 
+            activation='relu', 
+            return_sequences=True))
         model.add(BatchNormalization(axis=channel_axis))
 
         block_counter += 1
         rf_counter -= filter_size - 1
 
-        if block_counter % 2 == 0:
-            model.add(MaxPool3D(pool_size=(1, 2, 2)))
-
         rf_counter = rf_counter // 2
 
-
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(filter_size, filter_size), 
-                    kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
+    model.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                       padding='same',
+                       kernel_initializer=init,
+                       kernel_regularizer=l2(reg), return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
+    model.add(Activation('relu'))
 
-
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(filter_size, filter_size), 
-                    kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
+    model.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                       padding='same',
+                       kernel_initializer=init,
+                       kernel_regularizer=l2(reg),
+                       return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
+    model.add(Activation('relu'))
 
-
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(filter_size, filter_size), 
-                    kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
+    model.add(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg)))
     model.add(BatchNormalization(axis=channel_axis))
+    model.add(Activation('relu'))
+    model.add(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg)))
+    model.add(Activation('sigmoid'))
 
-
-    model.add(ConvGRU2D(filters=n_dense_filters, kernel_size=(filter_size, filter_size), 
-                    kernel_regularizer=l2(reg), padding='valid', return_sequences=True))
-    model.add(BatchNormalization(axis=channel_axis))
-
-
-    model.add(Conv3D(filters=n_dense_filters, kernel_size=(1, filter_size, filter_size), 
-                    kernel_initializer=init, 
-                    kernel_regularizer=l2(reg), activation='relu',
-                   padding='same', data_format='channels_last'))
-    model.compile(loss='binary_crossentropy', optimizer='adadelta')
-    '''
-    seq = Sequential()
-    seq.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                       input_shape=input_shape,
-                       padding='same', return_sequences=True))
-    seq.add(BatchNormalization())
-
-    seq.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                       padding='same', return_sequences=True))
-    seq.add(BatchNormalization())
-
-    seq.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                       padding='same', return_sequences=True))
-    seq.add(BatchNormalization())
-
-    seq.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                       padding='same', return_sequences=True))
-    seq.add(BatchNormalization())
-
-    seq.add(Conv3D(filters=1, kernel_size=(3, 3, 3),
-                   activation='sigmoid',
-                   padding='same', data_format='channels_last'))
-    # seq.add(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg)))
-    # seq.add(BatchNormalization())
-    # seq.add(Activation('relu'))
-    # seq.add(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg)))
-    # seq.add(Activation('sigmoid'))
-    seq.compile(loss='binary_crossentropy', optimizer='adadelta')
-
-    return seq
+    return model
 
 
 # ==============================================================================
@@ -351,7 +279,6 @@ def train_model(model,
         raise ValueError('Expected `X` to have ndim 5. Got',
                          train_dict['X'].ndim)
 
-    print("Shape of train_data: ", train_data)
 
     # fit the model on the batches generated by datagen.flow()
     loss_history = model.fit_generator(
@@ -376,71 +303,137 @@ def train_model(model,
 # ==============================================================================
 # Create and train foreground/background separation model
 # ==============================================================================
-'''
-fgbg_model = feature_net_3D(
-    input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
-    n_features=2,  # segmentation mask (is_cell, is_not_cell)
-    n_frames=frames_per_batch,
-    n_conv_filters=32,
-    n_dense_filters=128,
-    norm_method=norm_method)
 
-fgbg_model = train_model(
-    model=fgbg_model,
-    data_filename=data_filename,  # full path to npz file
-    model_name=fgbg_model_name,
-    transform='fgbg',
-    optimizer=optimizer,
-    batch_size=batch_size,
-    frames_per_batch=frames_per_batch,
-    n_epoch=n_epoch,
-    model_dir=MODEL_DIR,
-    lr_sched=lr_sched,
-    rotation_range=180,
-    flip=True,
-    shear=False,
-    zoom_range=(0.8, 1.2))
-'''
+def create_and_train_fgbg(data_filename, train_dict):
+    fgbg_model = feature_net_3D(
+        input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
+        n_features=2,  # segmentation mask (is_cell, is_not_cell)
+        n_frames=frames_per_batch,
+        n_conv_filters=32,
+        n_dense_filters=128,
+        norm_method=norm_method)
+
+    # print(fgbg_model.summary())
+
+    fgbg_model = train_model(
+        model=fgbg_model,
+        data_filename=data_filename,  # full path to npz file
+        model_name=fgbg_model_name,
+        transform='fgbg',
+        optimizer=optimizer,
+        batch_size=batch_size,
+        frames_per_batch=frames_per_batch,
+        n_epoch=n_epoch,
+        model_dir=MODEL_DIR,
+        lr_sched=lr_sched,
+        rotation_range=180,
+        flip=True,
+        shear=False,
+        zoom_range=(0.8, 1.2))
+
+    # Save model
+    fgbg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_model_name))
+    fgbg_model.save_weights(fgbg_weights_file)
+
 
 # ==============================================================================
 # Create a segmentation model
 # ==============================================================================
 
+def create_and_train_conv_gru(data_filename, train_dict):
+    conv_gru_model = feature_net_3D(
+        input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
+        receptive_field=receptive_field,
+        n_features=4, 
+        n_frames=frames_per_batch,
+        n_conv_filters=32,
+        n_dense_filters=128,
+        norm_method=norm_method)
 
-conv_gru_model = feature_net_3D(
-    input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
-    receptive_field=receptive_field,
-    n_features=4, 
-    n_frames=frames_per_batch,
-    n_conv_filters=32,
-    n_dense_filters=128,
-    norm_method=norm_method)
+    # print(conv_gru_model.summary())
 
-conv_gru_model = train_model(
-    model=conv_gru_model,
-    data_filename = data_filename,
-    model_name=conv_gru_model_name,
-    optimizer=optimizer,
-    transform='deepcell',
-    frames_per_batch=frames_per_batch,
-    n_epoch=n_epoch,
-    model_dir=MODEL_DIR,
-    lr_sched=lr_sched,
-    rotation_range=180,
-    flip=True,
-    shear=False,
-    zoom_range=(0.8, 1.2))
+    conv_gru_model = train_model(
+        model=conv_gru_model,
+        data_filename = data_filename,
+        model_name=conv_gru_model_name,
+        optimizer=optimizer,
+        transform='deepcell',
+        frames_per_batch=frames_per_batch,
+        n_epoch=n_epoch,
+        model_dir=MODEL_DIR,
+        lr_sched=lr_sched,
+        rotation_range=180,
+        flip=True,
+        shear=False,
+        zoom_range=(0.8, 1.2))
+
+    # Save model
+    conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
+    conv_gru_model.save_weights(conv_gru_weights_file)
+
 
 
 # ==============================================================================
-# Save weights of trained models
+# Main loop
 # ==============================================================================
 
-# fgbg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_model_name))
-# fgbg_model.save_weights(fgbg_weights_file)
 
-conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
-conv_gru_model.save_weights(conv_gru_weights_file)
+def main(argv):
+    data_filename = None
+    model_name = None
+    try:
+        opts, args = getopt.getopt(argv,"hf:m:",["file=","model="])
+    except getopt.GetoptError:
+        print('train.py -f <full data file path> -m <model name>\n model name is conv-gru or fgbg')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print('train.py -f <full data file path> -m <model name>')
+            sys.exit()
+        elif opt in ("-f", "--file"):
+            data_filename = arg
+        elif opt in ("-m", "--model"):
+            model_name = arg
 
+    if data_filename == None:
+        data_filename = 'nuclear_movie_hela0-7_same.npz'
+
+    #  Load data
+    print("Loading data from " + data_filename)
+    train_dict, test_dict = get_data(data_filename, test_size=0.2)
+
+    print("Training " + model_name)
+    if model_name == 'fgbg':
+        create_and_train_fgbg(data_filename, train_dict)
+    elif model_name == 'conv-gru':
+        create_and_train_conv_gru(data_filename, train_dict)
+    else:
+        print("Model not supported, please choose fgbg or conv-gru")
+        sys.exit()
+
+  
+if __name__== "__main__":
+    # Set up training parameters
+    conv_gru_model_name = 'conv_gru_model'
+    fgbg_model_name = 'conv_fgbg_model'
+
+    n_epoch = 10  # Number of training epochs
+    test_size = .10  # % of data saved as test
+    receptive_field = 61  # should be adjusted for the scale of the data
+
+    optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+
+    lr_sched = rate_scheduler(lr=0.01, decay=0.99)
+    batch_size = 1  # FC training uses 1 image per batch
+
+    # Transformation settings
+    transform = None
+    n_features = 4  # (cell-background edge, cell-cell edge, cell interior, background)
+
+    # 3D Settings
+    frames_per_batch = 3
+    norm_method = 'whole_image'  # data normalization - `whole_image` for 3d conv
+
+    main(sys.argv[1:])
 
 
