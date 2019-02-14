@@ -378,7 +378,7 @@ def main(argv):
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('train.py -f <full data file path> -m <model name>')
+            print('train.py -f <full data file path> -m <model name>\n model name is conv-gru or fgbg')
             sys.exit()
         elif opt in ("-f", "--file"):
             data_filename = arg
