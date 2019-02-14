@@ -46,25 +46,15 @@ from deepcell.layers import ImageNormalization3D
 from tensorflow.python.keras.models import Sequential
 from tensorflow.python.keras.layers import Activation, Softmax
 
-
 from sklearn.model_selection import train_test_split
 
 from tensorflow.python.client import device_lib
-print(device_lib.list_local_devices())
+
 
 
 # Set up file paths
-
 MODEL_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/models')
 LOG_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/logs')
-
-# create directories if they do not exist
-for d in (MODEL_DIR, LOG_DIR):
-    try:
-        os.makedirs(d)
-    except OSError as exc:  # Guard against race condition
-        if exc.errno != errno.EEXIST:
-            raise
 
 
 # ==============================================================================
@@ -402,7 +392,10 @@ def main(argv):
     print("Loading data from " + data_filename)
     train_dict, test_dict = get_data(data_filename, test_size=0.2)
 
+    # Train model and get GPU info
     print("Training " + model_name)
+    print(device_lib.list_local_devices())
+
     if model_name == 'fgbg':
         create_and_train_fgbg(data_filename, train_dict)
     elif model_name == 'conv-gru':
@@ -413,6 +406,15 @@ def main(argv):
 
   
 if __name__== "__main__":
+
+    # create directories if they do not exist
+    for d in (MODEL_DIR, LOG_DIR):
+        try:
+            os.makedirs(d)
+        except OSError as exc:  # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
+
     # Set up training parameters
     conv_gru_model_name = 'conv_gru_model'
     fgbg_model_name = 'conv_fgbg_model'
