@@ -54,7 +54,7 @@ from tensorflow.python.keras.utils import to_categorical
 from tensorflow.python.keras.preprocessing.image import array_to_img
 from tensorflow.python.keras.preprocessing.image import Iterator
 from tensorflow.python.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.python.ops import resize_image_with_crop_or_pad
+import tensorflow as tf
 
 try:
     from tensorflow.python.keras.utils import conv_utils
@@ -67,8 +67,6 @@ if not hasattr(ImageDataGenerator, 'apply_transform'):
     from keras_preprocessing.image import Iterator
     from keras_preprocessing.image import ImageDataGenerator
 
-from keras_retinanet.preprocessing.generator import Generator as _RetinaNetGenerator
-from keras_maskrcnn.preprocessing.generator import Generator as _MaskRCNNGenerator
 
 from deepcell.utils.data_utils import sample_label_movie
 from deepcell.utils.data_utils import sample_label_matrix
@@ -604,7 +602,7 @@ class MovieDataGenerator(ImageDataGenerator):
         """
         # TODO: standardize each image, not all frames at once
         width = max(x.shape[1], x.shape[2])
-        x = resize_image_with_crop_or_pad(x, width, width)
+        x = tf.image.resize_image_with_crop_or_pad(x, width, width)
         print("x.shape", x.shape)
         if self.preprocessing_function:
             x = self.preprocessing_function(x)
