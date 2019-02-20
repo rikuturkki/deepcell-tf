@@ -338,6 +338,7 @@ def create_and_train_fgbg(data_filename, train_dict):
         n_dense_filters=128,
         norm_method=norm_method)'''
     fgbg_model = model_zoo.bn_feature_net_3D(
+        input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         receptive_field=receptive_field,
         n_features=2,
         norm_method=norm_method,
