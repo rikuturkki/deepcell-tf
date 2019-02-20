@@ -89,49 +89,52 @@ def feature_net_3D(input_shape,
         row_axis = 2
         col_axis = 3
 
-    model = Sequential()
-    model.add(ImageNormalization3D(norm_method=norm_method, 
-        filter_size=receptive_field, input_shape=input_shape))
+    x = []
+    x.append(Input(shape=input_shape))
+    x.append(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(x[-1]))
+
+
     rf_counter = receptive_field
     block_counter = 0
     d = 1
 
     while rf_counter > 4:
         filter_size = 3 if rf_counter % 2 == 0 else 4
-        model.add(ConvGRU2D(n_conv_filters, kernel_size=(filter_size, filter_size), 
-            padding='same', 
+        x.append(ConvGRU2D(n_conv_filters, kernel_size=(filter_size, filter_size), 
+            dilation_rate=(d, d), padding='valid', 
             kernel_initializer=init,
             kernel_regularizer=l2(reg), 
             activation='relu', 
-            return_sequences=True))
-        model.add(BatchNormalization(axis=channel_axis))
+            return_sequences=True)(x[-1]))
+        x.append(BatchNormalization(axis=channel_axis)(x[-1]))
 
         block_counter += 1
         rf_counter -= filter_size - 1
 
-        rf_counter = rf_counter // 2
+        if block_counter % 2 == 0:
+            x.append(MaxPool3D(pool_size=(1, 2, 2))(x[-1]))
+            rf_counter = rf_counter // 2
 
-    model.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                       padding='same',
+
+    x.append(ConvGRU2D(filters=n_conv_filters, kernel_size=(rf_counter, rf_counter),
+                        dilation_rate=(d, d), padding='valid',
                        kernel_initializer=init,
-                       kernel_regularizer=l2(reg), return_sequences=True))
-    model.add(BatchNormalization(axis=channel_axis))
-    model.add(Activation('relu'))
+                       kernel_regularizer=l2(reg), return_sequences=True)(x[-1]))
+    x.append(BatchNormalization(axis=channel_axis)(x[-1]))
+    x.append(Activation('relu')(x[-1]))
 
-    model.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                       padding='same',
-                       kernel_initializer=init,
-                       kernel_regularizer=l2(reg),
-                       return_sequences=True))
-    model.add(BatchNormalization(axis=channel_axis))
-    model.add(Activation('relu'))
+    x.append(Conv3D(n_dense_filters, (1, 1), dilation_rate=(d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
+    x.append(BatchNormalization(axis=channel_axis)(x[-1]))
+    x.append(Activation('relu')(x[-1]))
 
-    model.add(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg)))
-    model.add(BatchNormalization(axis=channel_axis))
-    model.add(Activation('relu'))
-    model.add(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg)))
-    model.add(Activation('sigmoid'))
+    x.append(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
+    x.append(BatchNormalization(axis=channel_axis)(x[-1]))
+    x.append(Activation('relu')(x[-1]))
 
+    x.append(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
+
+    model = Model(inputs=x[0], outputs=x[-1])
+    
     return model
 
 
