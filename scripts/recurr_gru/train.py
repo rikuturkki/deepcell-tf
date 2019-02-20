@@ -29,7 +29,7 @@ from tensorflow.python.keras.utils.data_utils import get_file
 
 import deepcell
 from deepcell import losses
-from deepcell import image_generators
+from scripts.recurr_gru import image_gen
 from deepcell import model_zoo
 from deepcell.layers import TensorProduct
 from deepcell.utils import train_utils
@@ -246,7 +246,7 @@ def train_model(model,
         skip = None
 
     if train_dict['X'].ndim == 5:
-        DataGenerator = image_generators.MovieDataGenerator
+        DataGenerator = image_gen.MovieDataGenerator
     else:
         raise ValueError('Expected `X` to have ndim 5. Got',
                          train_dict['X'].ndim)
