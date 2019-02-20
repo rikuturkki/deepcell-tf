@@ -55,6 +55,8 @@ from tensorflow.python.keras.preprocessing.image import array_to_img
 from tensorflow.python.keras.preprocessing.image import Iterator
 from tensorflow.python.keras.preprocessing.image import ImageDataGenerator
 
+from tensorflow.python.keras.backend import spatial_3d_padding
+
 try:
     from tensorflow.python.keras.utils import conv_utils
 except ImportError:  # tf v1.9 moves conv_utils from _impl to keras.utils
@@ -600,6 +602,11 @@ class MovieDataGenerator(ImageDataGenerator):
             The normalized inputs.
         """
         # TODO: standardize each image, not all frames at once
+        axis1_pad = 0
+        axis2_pad = max(0, x.shape[2] - x.shape[1])//2
+        axis3_pad = max(0, x.shape[1] - x.shape[2])//2
+        print((axis1_pad, axis2_pad, axis3_pad))
+
 
         if self.preprocessing_function:
             x = self.preprocessing_function(x)

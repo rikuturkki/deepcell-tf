@@ -137,7 +137,7 @@ def feature_net_3D(input_shape,
         col_axis = 3
 
     model = Sequential()
-    model.add(ImageNormalization3D(norm_method=norm_method, 
+    model.add(ConvGRU2D(norm_method=norm_method, 
         filter_size=receptive_field, input_shape=input_shape))
     rf_counter = receptive_field
     block_counter = 0

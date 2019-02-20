@@ -30,6 +30,7 @@ from tensorflow.python.keras.utils.data_utils import get_file
 import deepcell
 from deepcell import losses
 from scripts.recurr_gru import image_gen
+from deepcell import image_generators
 from deepcell import model_zoo
 from deepcell.layers import TensorProduct
 from deepcell.utils import train_utils
@@ -82,9 +83,6 @@ def feature_net_3D(input_shape,
     win = (receptive_field - 1) // 2
     win_z = (n_frames - 1) // 2
 
-    axis1_pad = 1
-    axis2_pad = max(1, input_shape[2] - input_shape[1])
-    axis3_pad = max(1, input_shape[1] - input_shape[2])
 
     if K.image_data_format() == 'channels_first':
         channel_axis = 1
@@ -100,7 +98,7 @@ def feature_net_3D(input_shape,
     x = []
     x.append(Input(shape=input_shape))
     x.append(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(x[-1]))
-    x.append(ZeroPadding3D(padding=(axis1_pad, axis2_pad, axis3_pad))([-1]))
+    # x.append(ZeroPadding3D(padding=(axis1_pad, axis2_pad, axis3_pad))([-1]), data_format="channels_last")
 
     rf_counter = receptive_field
     block_counter = 0
@@ -250,7 +248,7 @@ def train_model(model,
         skip = None
 
     if train_dict['X'].ndim == 5:
-        DataGenerator = image_gen.MovieDataGenerator
+        DataGenerator = image_generators.MovieDataGenerator
     else:
         raise ValueError('Expected `X` to have ndim 5. Got',
                          train_dict['X'].ndim)
@@ -422,7 +420,7 @@ def main(argv):
             model_name = arg
 
     if data_filename == None:
-        data_filename = 'nuclear_movie_hela0-7_same.npz'
+        data_filename = 'gradient.npz'
 
     #  Load data
     print("Loading data from " + data_filename)
