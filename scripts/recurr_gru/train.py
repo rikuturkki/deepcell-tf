@@ -41,6 +41,8 @@ from tensorflow.python.keras.layers import MaxPool3D
 from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
 from tensorflow.python.keras.layers import BatchNormalization
 from tensorflow.python.keras.layers import Conv3D
+from tensorflow.python.keras.layers import Input, Concatenate, Flatten
+
 from tensorflow.python.keras.regularizers import l2
 from deepcell.layers import ImageNormalization3D
 from tensorflow.python.keras.models import Sequential
@@ -134,7 +136,7 @@ def feature_net_3D(input_shape,
     x.append(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
 
     model = Model(inputs=x[0], outputs=x[-1])
-    
+
     return model
 
 
