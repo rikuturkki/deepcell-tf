@@ -337,17 +337,12 @@ def create_and_train_fgbg(data_filename, train_dict):
         n_conv_filters=32,
         n_dense_filters=128,
         norm_method=norm_method)'''
-    fgbg_model = model_zoo.bn_feature_net_skip_3D(
+    fgbg_model = model_zoo.bn_feature_net_3D(
         receptive_field=receptive_field,
-        n_features=2,  # segmentation mask (is_cell, is_not_cell)
+        n_features=2,
+        norm_method=norm_method,
         n_frames=frames_per_batch,
-        n_skips=n_skips,
-        n_conv_filters=32,
-        n_dense_filters=128,
-        input_shape=tuple([frames_per_batch] + list(X_train.shape[2:])),
-        multires=False,
-        last_only=False,
-        norm_method=norm_method)
+        n_channels=train_dict['X'].shape[-1])
 
     # print(fgbg_model.summary())
 
@@ -432,7 +427,7 @@ def main(argv):
             model_name = arg
 
     if data_filename == None:
-        data_filename = 'gradient.npz'
+        data_filename = 'mousebrain.npz'
 
     #  Load data
     print("Loading data from " + data_filename)
