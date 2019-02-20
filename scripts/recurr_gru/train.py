@@ -40,8 +40,8 @@ from deepcell.training import train_model_conv
 from tensorflow.python.keras.layers import MaxPool3D
 from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
 from tensorflow.python.keras.layers import BatchNormalization
-from tensorflow.python.keras.layers import Conv3D
-from tensorflow.python.keras.layers import Input, Concatenate, Flatten
+from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D
+from tensorflow.python.keras.layers import Input
 from tensorflow.python.keras.models import Model
 
 
@@ -82,9 +82,9 @@ def feature_net_3D(input_shape,
     win = (receptive_field - 1) // 2
     win_z = (n_frames - 1) // 2
 
-    axis1_pad = 0
-    axis_2_pad = max(0, input_shape[2] - input_shape[1])
-    axis_3_pad = max(0, input_shape[1] - input_shape[2])
+    axis1_pad = 1
+    axis2_pad = max(1, input_shape[2] - input_shape[1])
+    axis3_pad = max(1, input_shape[1] - input_shape[2])
 
     if K.image_data_format() == 'channels_first':
         channel_axis = 1
@@ -99,9 +99,8 @@ def feature_net_3D(input_shape,
 
     x = []
     x.append(Input(shape=input_shape))
-    x.append(ZeroPadding3D(padding=(axis1_pad, axis2_pad, axis3_pad))([-1]))
     x.append(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(x[-1]))
-
+    x.append(ZeroPadding3D(padding=(axis1_pad, axis2_pad, axis3_pad))([-1]))
 
     rf_counter = receptive_field
     block_counter = 0
