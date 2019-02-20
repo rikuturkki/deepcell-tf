@@ -167,7 +167,7 @@ def feature_net_3D(input_shape,
     x.append(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
 
     model = Model(inputs=x[0], outputs=x[-1])
-    # model.summary()
+    model.summary()
 
     return model
 

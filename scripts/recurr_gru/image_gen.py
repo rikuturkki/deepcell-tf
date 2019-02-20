@@ -54,7 +54,6 @@ from tensorflow.python.keras.utils import to_categorical
 from tensorflow.python.keras.preprocessing.image import array_to_img
 from tensorflow.python.keras.preprocessing.image import Iterator
 from tensorflow.python.keras.preprocessing.image import ImageDataGenerator
-import tensorflow as tf
 
 try:
     from tensorflow.python.keras.utils import conv_utils
@@ -601,9 +600,7 @@ class MovieDataGenerator(ImageDataGenerator):
             The normalized inputs.
         """
         # TODO: standardize each image, not all frames at once
-        width = max(x.shape[1], x.shape[2])
-        x = tf.image.resize_image_with_crop_or_pad(x, width, width)
-        print("x.shape", x.shape)
+
         if self.preprocessing_function:
             x = self.preprocessing_function(x)
         if self.rescale:
