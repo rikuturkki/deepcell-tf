@@ -42,6 +42,8 @@ from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
 from tensorflow.python.keras.layers import BatchNormalization
 from tensorflow.python.keras.layers import Conv3D
 from tensorflow.python.keras.layers import Input, Concatenate, Flatten
+from tensorflow.python.keras.models import Model
+
 
 from tensorflow.python.keras.regularizers import l2
 from deepcell.layers import ImageNormalization3D
@@ -100,6 +102,7 @@ def feature_net_3D(input_shape,
     block_counter = 0
     d = 1
 
+    '''
     while rf_counter > 4:
         filter_size = 3 if rf_counter % 2 == 0 else 4
         x.append(ConvGRU2D(n_conv_filters, kernel_size=(filter_size, filter_size), 
@@ -109,6 +112,7 @@ def feature_net_3D(input_shape,
             activation='relu', 
             return_sequences=True)(x[-1]))
         x.append(BatchNormalization(axis=channel_axis)(x[-1]))
+        x.append(Activation('relu')(x[-1]))
 
         block_counter += 1
         rf_counter -= filter_size - 1
@@ -125,9 +129,31 @@ def feature_net_3D(input_shape,
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
 
-    x.append(Conv3D(n_dense_filters, (1, 1), dilation_rate=(d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
+    x.append(ConvGRU2D(n_dense_filters, (1, 1), dilation_rate=(d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
+    x.append(BatchNormalization(axis=channel_axis)(x[-1]))
+    x.append(Activation('relu')(x[-1]))'''
+    while rf_counter > 4:
+        filter_size = 3 if rf_counter % 2 == 0 else 4
+        x.append(Conv3D(n_conv_filters, (1, filter_size, filter_size), dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
+        x.append(BatchNormalization(axis=channel_axis)(x[-1]))
+        x.append(Activation('relu')(x[-1]))
+
+        block_counter += 1
+        rf_counter -= filter_size - 1
+
+        if block_counter % 2 == 0:
+            x.append(MaxPool3D(pool_size=(1, 2, 2))(x[-1]))
+            rf_counter = rf_counter // 2
+
+
+    x.append(Conv3D(n_dense_filters, (1, rf_counter, rf_counter), dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
+
+    x.append(Conv3D(n_dense_filters, (n_frames, 1, 1), dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
+    x.append(BatchNormalization(axis=channel_axis)(x[-1]))
+    x.append(Activation('relu')(x[-1]))
+
 
     x.append(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
@@ -136,6 +162,7 @@ def feature_net_3D(input_shape,
     x.append(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
 
     model = Model(inputs=x[0], outputs=x[-1])
+    # model.summary()
 
     return model
 
