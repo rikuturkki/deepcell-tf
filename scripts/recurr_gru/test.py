@@ -151,14 +151,15 @@ def post_process(test_images, test_images_fgbg):
 
     print('labeled_images shape:', labeled_images.shape)
 
-    return labeled_images
+    return labeled_images, fg_thresh
 
 
 # ==============================================================================
 # Plot the results
 # ==============================================================================
 
-def plot_results(X_test, labeled_images, model_name):
+def plot_results(X_test, test_images_fgbg, fg_thresh, 
+    test_images, labeled_images, model_name):
     index = np.random.randint(low=0, high=labeled_images.shape[0])
     print('Image number:', index)
 
@@ -258,9 +259,9 @@ def main(argv):
         print("Model not supported, please choose fgbg or conv-gru")
         sys.exit()
 
-    labeled_images = post_process(test_images, test_images_fgbg)
+    labeled_images, fg_thresh = post_process(test_images, test_images_fgbg)
 
-    plot_results(X_test, labeled_images, model_name)
+    plot_results(X_test, test_images_fgbg, fg_thresh, test_images, labeled_images, model_name)
     get_video_prediction(labeled_images, model_name)
 
 
