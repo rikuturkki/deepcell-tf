@@ -49,12 +49,6 @@ MODEL_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/models')
 # ==============================================================================
 
 
-fgbg_lstm_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_lstm_model_name))
-fgbg_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_gru_model_name))
-conv_lstm_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_lstm_model_name))
-conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
-
-
 def test_lstm(X_test, fgbg_lstm_weights_file, conv_lstm_weights_file):
     run_fgbg_model = feature_net_LSTM(
         input_shape=tuple([frames_per_batch] + list(X_test.shape[2:])),
