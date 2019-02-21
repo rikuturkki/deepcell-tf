@@ -237,7 +237,9 @@ def main(argv):
 
     #  Load data
     print("Loading data from " + data_filename)
-    train_dict, test_dict = get_data(data_filename, test_size=0.1)
+    train_dict, test_dict = get_data(data_filename, test_size=0.2)
+    X_test, y_test = test_dict['X'][:4], test_dict['y'][:4]
+
 
     # Train model and get GPU info
     print("Testing " + model_name)
@@ -245,12 +247,12 @@ def main(argv):
     if model_name == 'lstm':
         fgbg_lstm_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_lstm_model_name))
         conv_lstm_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_lstm_model_name))
-        test_images, test_images_fgbg = test_lstm(test_dict['X'], fgbg_lstm_weights_file, conv_lstm_weights_file)
+        test_images, test_images_fgbg = test_lstm(X_test, fgbg_lstm_weights_file, conv_lstm_weights_file)
 
     elif model_name == 'gru':
         fgbg_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_gru_model_name))
         conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
-        test_images, test_images_fgbg = test_gru(test_dict['X'], fgbg_gru_weights_file, conv_gru_weights_file)
+        test_images, test_images_fgbg = test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file)
 
     else:
         print("Model not supported, please choose fgbg or conv-gru")
