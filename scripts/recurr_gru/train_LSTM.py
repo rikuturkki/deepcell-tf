@@ -142,7 +142,8 @@ def feature_net_3D(input_shape,
     model.add(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg)))
     model.add(Activation('sigmoid'))
 
-    model = seq.compile(loss='binary_crossentropy', optimizer='adadelta')
+    model.compile(loss='binary_crossentropy', optimizer='adadelta')
+    model.summary()
     return model
 
 
