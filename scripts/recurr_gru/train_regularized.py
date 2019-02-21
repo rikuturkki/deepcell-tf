@@ -178,6 +178,12 @@ def feature_net_3D(input_shape,
     x.append(Activation('relu')(x[-1]))
 
     x.append(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
+    
+    if not dilated:
+        x.append(Flatten()(x[-1]))
+
+    if include_top:
+        x.append(Softmax(axis=channel_axis)(x[-1]))
 
     model = Model(inputs=x[0], outputs=x[-1])
     # model.summary()
