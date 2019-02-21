@@ -42,7 +42,7 @@ from deepcell.training import train_model_conv
 from tensorflow.python.keras.layers import MaxPool3D
 from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
 from tensorflow.python.keras.layers import BatchNormalization
-from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D, ReflectionPadding3D
+from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D
 from tensorflow.python.keras.layers import Input, Concatenate, Flatten
 from tensorflow.python.keras.models import Model
 
@@ -198,7 +198,7 @@ def feature_net_skip(receptive_field=61,
         channel_axis = -1
 
     inputs = Input(shape=input_shape)
-    # img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
+    img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
 
     models = []
     model_outputs = []
