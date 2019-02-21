@@ -158,7 +158,7 @@ def post_process(test_images, test_images_fgbg):
 # Plot the results
 # ==============================================================================
 
-def plot_results(labeled_images, model_name):
+def plot_results(X_test, labeled_images, model_name):
     index = np.random.randint(low=0, high=labeled_images.shape[0])
     print('Image number:', index)
 
@@ -260,7 +260,7 @@ def main(argv):
 
     labeled_images = post_process(test_images, test_images_fgbg)
 
-    plot_results(labeled_images, model_name)
+    plot_results(X_test, labeled_images, model_name)
     get_video_prediction(labeled_images, model_name)
 
 
