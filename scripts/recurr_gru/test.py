@@ -264,7 +264,7 @@ def main(argv):
 if __name__== "__main__":
 
     # create directories if they do not exist
-    for d in (MODEL_DIR, LOG_DIR):
+    for d in MODEL_DIR:
         try:
             os.makedirs(d)
         except OSError as exc:  # Guard against race condition
