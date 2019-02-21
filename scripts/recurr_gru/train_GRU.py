@@ -100,7 +100,8 @@ def feature_net_GRU(input_shape,
     model = Sequential()
 
     model.add(InputLayer(input_shape=input_shape))
-    model.add(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field))
+
+    # model.add(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field))
 
     rf_counter = receptive_field
     block_counter = 0

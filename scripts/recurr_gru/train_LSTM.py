@@ -99,8 +99,16 @@ def feature_net_LSTM(input_shape,
 
     model = Sequential()
 
-    model.add(InputLayer(input_shape=input_shape))
+    # model.add(InputLayer(input_shape=input_shape))
     # model.add(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field))
+    model.add(ConvGRU2D(n_conv_filters, 
+            input_shape=input_shape,
+            kernel_size=(filter_size, filter_size), 
+            padding='same', 
+            kernel_initializer=init,
+            kernel_regularizer=l2(reg), 
+            activation='relu', 
+            return_sequences=True))
 
     rf_counter = receptive_field
     block_counter = 0
