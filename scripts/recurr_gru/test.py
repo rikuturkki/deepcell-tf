@@ -84,7 +84,7 @@ def test_lstm(X_test, fgbg_lstm_weights_file, conv_lstm_weights_file):
 
 def test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file):
     run_fgbg_model = feature_net_GRU(
-        input_shape=tuple([frames_per_batch] + list(X_test.shape[2:])),
+        input_shape=tuple(X_test.shape[1:]),
         receptive_field=receptive_field,
         n_features=2, 
         n_frames=frames_per_batch,
@@ -95,7 +95,7 @@ def test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file):
 
 
     run_conv_model = feature_net_GRU(
-        input_shape=tuple([frames_per_batch] + list(X_test.shape[2:])),
+        input_shape=tuple(X_test.shape[1:]),
         receptive_field=receptive_field,
         n_features=4,  # (background edge, interior edge, cell interior, background)
         n_frames=frames_per_batch,
@@ -237,7 +237,7 @@ def main(argv):
 
     #  Load data
     print("Loading data from " + data_filename)
-    train_dict, test_dict = get_data(data_filename, test_size=0.2)
+    train_dict, test_dict = get_data(data_filename, test_size=0.1)
 
     # Train model and get GPU info
     print("Testing " + model_name)
