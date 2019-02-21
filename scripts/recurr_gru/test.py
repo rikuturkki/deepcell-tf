@@ -55,7 +55,7 @@ conv_lstm_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_lstm_model_
 conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
 
 
-def test_lstm(X_test, fgbg_lstm_weights_file, conv_lstm_weights_file)
+def test_lstm(X_test, fgbg_lstm_weights_file, conv_lstm_weights_file):
     run_fgbg_model = feature_net_LSTM(
         input_shape=tuple([frames_per_batch] + list(X_test.shape[2:])),
         receptive_field=receptive_field,
@@ -87,7 +87,7 @@ def test_lstm(X_test, fgbg_lstm_weights_file, conv_lstm_weights_file)
     return test_images, test_images_fgbg
 
 
-def test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file)
+def test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file):
     run_fgbg_model = feature_net_GRU(
         input_shape=tuple([frames_per_batch] + list(X_test.shape[2:])),
         receptive_field=receptive_field,
