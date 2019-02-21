@@ -73,6 +73,9 @@ def feature_net_3D(input_shape,
                     n_features=3,
                     n_channels=1,
                     reg=1e-5,
+                    dilated = False,
+                    padding = False,
+                    padding_mode='reflect',
                     n_conv_filters=40,
                     n_dense_filters=200,
                     init='he_normal',
@@ -95,10 +98,19 @@ def feature_net_3D(input_shape,
         row_axis = 2
         col_axis = 3
 
+    if dilated:
+        padding = True
+
     x = []
     x.append(Input(shape=input_shape))
     x.append(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(x[-1]))
     # x.append(ZeroPadding3D(padding=(axis1_pad, axis2_pad, axis3_pad))([-1]), data_format="channels_last")
+
+    if padding:
+        if padding_mode == 'reflect':
+            x.append(ReflectionPadding3D(padding=(win_z, win, win))(x[-1]))
+        elif padding_mode == 'zero':
+            x.append(ZeroPadding3D(padding=(win_z, win, win))([-1]))
 
     rf_counter = receptive_field
     block_counter = 0
@@ -205,7 +217,12 @@ def feature_net_skip(receptive_field=61,
         else:
             model_input = img
         new_input_shape = model_input.get_shape().as_list()[1:]
-        models.append(feature_net_3D(receptive_field=receptive_field, input_shape=new_input_shape, norm_method=None, dilated=True, padding=True, padding_mode=padding_mode, **kwargs))
+        models.append(feature_net_3D(receptive_field=receptive_field, 
+                                    input_shape=new_input_shape, norm_method=None, 
+                                    dilated=True, 
+                                    padding=True, 
+                                    padding_mode=padding_mode, 
+                                    **kwargs))
         model_outputs.append(models[-1](model_input))
 
     if last_only:
