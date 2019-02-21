@@ -207,12 +207,12 @@ def get_video(images, batch=0, channel=0, cmap='jet'):
     return ani
 
 
-def get_video_prediction(labeled_images):
+def get_video_prediction(labeled_images, model_name):
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
 
     vid = get_video(labeled_images, batch=0)
-    vid.save('predictions.mp4', writer=writer)
+    vid.save(model_name + '_predictions.mp4', writer=writer)
     print("Done predictions video.")
     return
 # ==============================================================================
@@ -264,7 +264,7 @@ def main(argv):
     labeled_images = post_process(test_images, test_images_fgbg)
 
     plot_results(labeled_images, model_name)
-    get_video_prediction(labeled_images)
+    get_video_prediction(labeled_images, model_name)
 
 
 if __name__== "__main__":
