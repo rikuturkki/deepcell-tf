@@ -69,7 +69,7 @@ LOG_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/logs')
 # ==============================================================================
 
 
-def feature_net_3D(input_shape,
+def feature_net_GRU(input_shape,
                     receptive_field=61,
                     n_frames=5,
                     n_features=3,
@@ -308,7 +308,7 @@ def train_model(model,
 
 def create_and_train_fgbg(data_filename, train_dict):
     
-    fgbg_model = feature_net_3D(
+    fgbg_model = feature_net_GRU(
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         n_features=2,  # segmentation mask (is_cell, is_not_cell)
         n_frames=frames_per_batch,
@@ -335,8 +335,8 @@ def create_and_train_fgbg(data_filename, train_dict):
         zoom_range=(0.8, 1.2))
 
     # Save model
-    fgbg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_gru_model_name))
-    fgbg_model.save_weights(fgbg_weights_file)
+    fgbg_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_gru_model_name))
+    fgbg_model.save_weights(fgbg_gru_weights_file)
 
 
 # ==============================================================================
@@ -344,7 +344,7 @@ def create_and_train_fgbg(data_filename, train_dict):
 # ==============================================================================
 
 def create_and_train_conv_gru(data_filename, train_dict):
-    conv_gru_model = feature_net_3D(
+    conv_gru_model = feature_net_GRU(
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         receptive_field=receptive_field,
         n_features=4, 
