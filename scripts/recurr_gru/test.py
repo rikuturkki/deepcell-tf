@@ -13,6 +13,7 @@ import datetime
 import os
 import sys
 import errno
+import getopt
 
 path = sys.path[0]
 parentdir = path.replace("scripts/recurr_gru","")
@@ -244,12 +245,12 @@ def main(argv):
     if model_name == 'lstm':
         fgbg_lstm_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_lstm_model_name))
         conv_lstm_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_lstm_model_name))
-        test_images, test_images_fgbg = test_lstm(X_test, fgbg_lstm_weights_file, conv_lstm_weights_file)
+        test_images, test_images_fgbg = test_lstm(test_dict['X'], fgbg_lstm_weights_file, conv_lstm_weights_file)
 
     elif model_name == 'gru':
         fgbg_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_gru_model_name))
         conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
-        test_images, test_images_fgbg = test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file)
+        test_images, test_images_fgbg = test_gru(test_dict['X'], fgbg_gru_weights_file, conv_gru_weights_file)
 
     else:
         print("Model not supported, please choose fgbg or conv-gru")
