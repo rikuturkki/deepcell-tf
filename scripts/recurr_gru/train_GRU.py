@@ -102,12 +102,12 @@ def feature_net_GRU(input_shape,
     model.add(InputLayer(input_shape=input_shape))
 
     # model.add(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field))
-    model.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                       padding='same',
-                       kernel_initializer=init,
-                       kernel_regularizer=l2(reg), return_sequences=True))
+    # model.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+    #                    padding='same',
+    #                    kernel_initializer=init,
+    #                    kernel_regularizer=l2(reg), return_sequences=True))
 
-    '''
+    
     rf_counter = receptive_field
     block_counter = 0
     d = 1
@@ -126,7 +126,7 @@ def feature_net_GRU(input_shape,
         rf_counter -= filter_size - 1
 
         rf_counter = rf_counter // 2
-    '''
+    
 
     model.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                        padding='same',

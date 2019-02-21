@@ -151,6 +151,54 @@ def feature_net_LSTM(input_shape,
     model.summary()
     return model
 
+def feature_net_skip_LSTM(receptive_field=61,
+                           input_shape=(5, 256, 256, 1),
+                           fgbg_model=None,
+                           last_only=True,
+                           n_skips=2,
+                           norm_method='std',
+                           padding_mode='reflect',
+                           **kwargs):
+    if K.image_data_format() == 'channels_first':
+        channel_axis = 1
+    else:
+        channel_axis = -1
+
+    inputs = Input(shape=input_shape)
+    img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
+
+    models = []
+    model_outputs = []
+
+    if fgbg_model is not None:
+        for layer in fgbg_model.layers:
+            layer.trainable = False
+        models.append(fgbg_model)
+        fgbg_output = fgbg_model(inputs)
+        if isinstance(fgbg_output, list):
+            fgbg_output = fgbg_output[-1]
+        model_outputs.append(fgbg_output)
+
+    for _ in range(n_skips + 1):
+        if model_outputs:
+            model_input = Concatenate(axis=channel_axis)([img, model_outputs[-1]])
+        else:
+            model_input = img
+        new_input_shape = model_input.get_shape().as_list()[1:]
+        models.append(feature_net_LSTM(receptive_field=receptive_field, input_shape=new_input_shape, norm_method=None, dilated=True, padding=True, padding_mode=padding_mode, **kwargs))
+        model_outputs.append(models[-1](model_input))
+
+    if last_only:
+        model = Model(inputs=inputs, outputs=model_outputs[-1])
+    else:
+        if fgbg_model is None:
+            model = Model(inputs=inputs, outputs=model_outputs)
+        else:
+            model = Model(inputs=inputs, outputs=model_outputs[1:])
+
+    return model
+
+
 
 # ==============================================================================
 # Train model

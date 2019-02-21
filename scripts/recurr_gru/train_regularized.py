@@ -104,7 +104,7 @@ def feature_net_3D(input_shape,
     block_counter = 0
     d = 1
 
-    '''
+    
     while rf_counter > 4:
         filter_size = 3 if rf_counter % 2 == 0 else 4
         x.append(ConvGRU2D(n_conv_filters, kernel_size=(filter_size, filter_size), 
@@ -133,7 +133,9 @@ def feature_net_3D(input_shape,
 
     x.append(ConvGRU2D(n_dense_filters, (1, 1), dilation_rate=(d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
-    x.append(Activation('relu')(x[-1]))'''
+    x.append(Activation('relu')(x[-1]))
+
+    '''
     while rf_counter > 4:
         filter_size = 3 if rf_counter % 2 == 0 else 4
         x.append(Conv3D(n_conv_filters, (1, filter_size, filter_size), dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
@@ -155,6 +157,7 @@ def feature_net_3D(input_shape,
     x.append(Conv3D(n_dense_filters, (n_frames, 1, 1), dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
+    '''
 
 
     x.append(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
@@ -164,10 +167,57 @@ def feature_net_3D(input_shape,
     x.append(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
 
     model = Model(inputs=x[0], outputs=x[-1])
-    model.summary()
+    # model.summary()
 
     return model
 
+def feature_net_skip(receptive_field=61,
+                           input_shape=(5, 256, 256, 1),
+                           fgbg_model=None,
+                           last_only=True,
+                           n_skips=2,
+                           norm_method='std',
+                           padding_mode='reflect',
+                           **kwargs):
+    if K.image_data_format() == 'channels_first':
+        channel_axis = 1
+    else:
+        channel_axis = -1
+
+    inputs = Input(shape=input_shape)
+    # img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
+
+    models = []
+    model_outputs = []
+
+    if fgbg_model is not None:
+        for layer in fgbg_model.layers:
+            layer.trainable = False
+        models.append(fgbg_model)
+        fgbg_output = fgbg_model(inputs)
+        if isinstance(fgbg_output, list):
+            fgbg_output = fgbg_output[-1]
+        model_outputs.append(fgbg_output)
+
+    for _ in range(n_skips + 1):
+        if model_outputs:
+            model_input = Concatenate(axis=channel_axis)([img, model_outputs[-1]])
+        else:
+            model_input = img
+        new_input_shape = model_input.get_shape().as_list()[1:]
+        models.append(feature_net_3D(receptive_field=receptive_field, input_shape=new_input_shape, norm_method=None, dilated=True, padding=True, padding_mode=padding_mode, **kwargs))
+        model_outputs.append(models[-1](model_input))
+
+    if last_only:
+        model = Model(inputs=inputs, outputs=model_outputs[-1])
+    else:
+        if fgbg_model is None:
+            model = Model(inputs=inputs, outputs=model_outputs)
+        else:
+            model = Model(inputs=inputs, outputs=model_outputs[1:])
+
+    model.summary()
+    return model
 
 # ==============================================================================
 # Train model
@@ -337,7 +387,7 @@ def create_and_train_fgbg(data_filename, train_dict):
         n_conv_filters=32,
         n_dense_filters=128,
         norm_method=norm_method)'''
-    fgbg_model = model_zoo.bn_feature_net_3D(
+    fgbg_model = model_zoo.feature_net_skip(
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         receptive_field=receptive_field,
         n_features=2,
@@ -373,7 +423,7 @@ def create_and_train_fgbg(data_filename, train_dict):
 # ==============================================================================
 
 def create_and_train_conv_gru(data_filename, train_dict):
-    conv_gru_model = feature_net_3D(
+    conv_gru_model = feature_net_skip(
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         receptive_field=receptive_field,
         n_features=4, 
@@ -458,8 +508,8 @@ if __name__== "__main__":
                 raise
 
     # Set up training parameters
-    conv_gru_model_name = 'conv_gru_model'
-    fgbg_model_name = 'conv_fgbg_model'
+    conv_gru_model_name = 'conv_reg_model'
+    fgbg_model_name = 'fgbg_reg_model'
 
     n_epoch = 10  # Number of training epochs
     test_size = .10  # % of data saved as test
