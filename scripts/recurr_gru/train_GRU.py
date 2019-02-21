@@ -108,7 +108,7 @@ def feature_net_3D(input_shape,
 
     while rf_counter > 4:
         filter_size = 3 if rf_counter % 2 == 0 else 4
-        model.add(ConvLSTM2D(n_conv_filters, kernel_size=(filter_size, filter_size), 
+        model.add(ConvGRU2D(n_conv_filters, kernel_size=(filter_size, filter_size), 
             padding='same', 
             kernel_initializer=init,
             kernel_regularizer=l2(reg), 
@@ -121,14 +121,14 @@ def feature_net_3D(input_shape,
 
         rf_counter = rf_counter // 2
 
-    model.add(ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+    model.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                        padding='same',
                        kernel_initializer=init,
                        kernel_regularizer=l2(reg), return_sequences=True))
     model.add(BatchNormalization(axis=channel_axis))
     model.add(Activation('relu'))
 
-    model.add(ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+    model.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                        padding='same',
                        kernel_initializer=init,
                        kernel_regularizer=l2(reg),
@@ -321,7 +321,7 @@ def create_and_train_fgbg(data_filename, train_dict):
     fgbg_model = train_model(
         model=fgbg_model,
         data_filename=data_filename,  # full path to npz file
-        model_name=fgbg_lstm_model_name,
+        model_name=fgbg_gru_model_name,
         transform='fgbg',
         optimizer=optimizer,
         batch_size=batch_size,
@@ -335,7 +335,7 @@ def create_and_train_fgbg(data_filename, train_dict):
         zoom_range=(0.8, 1.2))
 
     # Save model
-    fgbg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_lstm_model_name))
+    fgbg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_gru_model_name))
     fgbg_model.save_weights(fgbg_weights_file)
 
 
@@ -343,8 +343,8 @@ def create_and_train_fgbg(data_filename, train_dict):
 # Create a segmentation model
 # ==============================================================================
 
-def create_and_train_conv_lstm(data_filename, train_dict):
-    conv_lstm_model = feature_net_3D(
+def create_and_train_conv_gru(data_filename, train_dict):
+    conv_gru_model = feature_net_3D(
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         receptive_field=receptive_field,
         n_features=4, 
@@ -353,10 +353,12 @@ def create_and_train_conv_lstm(data_filename, train_dict):
         n_dense_filters=128,
         norm_method=norm_method)
 
-    conv_lstm_model = train_model(
-        model=conv_lstm_model,
+    # print(conv_gru_model.summary())
+
+    conv_gru_model = train_model(
+        model=conv_gru_model,
         data_filename = data_filename,
-        model_name=conv_lstm_model_name,
+        model_name=conv_gru_model_name,
         optimizer=optimizer,
         transform='deepcell',
         frames_per_batch=frames_per_batch,
@@ -369,8 +371,8 @@ def create_and_train_conv_lstm(data_filename, train_dict):
         zoom_range=(0.8, 1.2))
 
     # Save model
-    conv_lstm_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_lstm_model_name))
-    conv_lstm_model.save_weights(conv_lstm_weights_file)
+    conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
+    conv_gru_model.save_weights(conv_gru_weights_file)
 
 
 
@@ -410,7 +412,7 @@ def main(argv):
     if model_name == 'fgbg':
         create_and_train_fgbg(data_filename, train_dict)
     elif model_name == 'conv-gru':
-        create_and_train_conv_lstm(data_filename, train_dict)
+        create_and_train_conv_gru(data_filename, train_dict)
     else:
         print("Model not supported, please choose fgbg or conv-gru")
         sys.exit()
@@ -427,8 +429,8 @@ if __name__== "__main__":
                 raise
 
     # Set up training parameters
-    conv_lstm_model_name = 'conv_lstm_model'
-    fgbg_lstm_model_name = 'lstm_fgbg_model'
+    conv_gru_model_name = 'conv_gru_model'
+    fgbg_gru_model_name = 'fgbg_gru_model'
 
     n_epoch = 10  # Number of training epochs
     test_size = .10  # % of data saved as test
