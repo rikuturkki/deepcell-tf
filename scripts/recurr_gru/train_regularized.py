@@ -379,21 +379,16 @@ def train_model(model,
 # ==============================================================================
 
 def create_and_train_fgbg(data_filename, train_dict):
-    '''
-    fgbg_model = feature_net_3D(
+    
+    fgbg_model = feature_net_skip(
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         n_features=2,  # segmentation mask (is_cell, is_not_cell)
+        n_skips=n_skips,
         n_frames=frames_per_batch,
         n_conv_filters=32,
         n_dense_filters=128,
-        norm_method=norm_method)'''
-    fgbg_model = model_zoo.feature_net_skip(
-        input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
-        receptive_field=receptive_field,
-        n_features=2,
-        norm_method=norm_method,
-        n_frames=frames_per_batch,
-        n_channels=train_dict['X'].shape[-1])
+        norm_method=norm_method)
+
 
     # print(fgbg_model.summary())
 
@@ -490,7 +485,7 @@ def main(argv):
 
     if model_name == 'fgbg':
         create_and_train_fgbg(data_filename, train_dict)
-    elif model_name == 'conv-gru':
+    elif model_name == 'conv':
         create_and_train_conv_gru(data_filename, train_dict)
     else:
         print("Model not supported, please choose fgbg or conv-gru")
@@ -518,6 +513,8 @@ if __name__== "__main__":
     optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
+
+    n_skips = 3
     batch_size = 1  # FC training uses 1 image per batch
 
     # Transformation settings
