@@ -316,8 +316,6 @@ def create_and_train_fgbg(data_filename, train_dict):
         n_dense_filters=128,
         norm_method=norm_method)
 
-    # print(fgbg_model.summary())
-
     fgbg_model = train_model(
         model=fgbg_model,
         data_filename=data_filename,  # full path to npz file

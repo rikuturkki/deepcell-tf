@@ -52,7 +52,7 @@ MODEL_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/models')
 
 def test_lstm(X_test, fgbg_lstm_weights_file, conv_lstm_weights_file):
     run_fgbg_model = feature_net_LSTM(
-        input_shape=tuple([frames_per_batch] + list(X_test.shape[2:])),
+        input_shape=tuple(list(X_test.shape[1:])),
         receptive_field=receptive_field,
         n_features=2, 
         n_frames=frames_per_batch,
