@@ -32,7 +32,8 @@ from deepcell import losses
 from scripts.recurr_gru import image_gen
 from deepcell import image_generators
 from deepcell import model_zoo
-from deepcell.layers import TensorProduct
+from deepcell.layers import TensorProduct, ReflectionPadding3D
+
 from deepcell.utils import train_utils
 from deepcell.utils.data_utils import get_data
 from deepcell.utils.train_utils import rate_scheduler
@@ -41,8 +42,8 @@ from deepcell.training import train_model_conv
 from tensorflow.python.keras.layers import MaxPool3D
 from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
 from tensorflow.python.keras.layers import BatchNormalization
-from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D
-from tensorflow.python.keras.layers import Input
+from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D, ReflectionPadding3D
+from tensorflow.python.keras.layers import Input, Concatenate, Flatten
 from tensorflow.python.keras.models import Model
 
 
