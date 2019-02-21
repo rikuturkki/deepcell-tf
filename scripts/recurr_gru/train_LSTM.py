@@ -43,6 +43,8 @@ from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
 from tensorflow.python.keras.layers import BatchNormalization
 from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D, ConvLSTM2D
 from tensorflow.python.keras.layers import Input
+from tensorflow.python.keras.engine.input_layer import InputLayer
+
 from tensorflow.python.keras.models import Model
 
 
@@ -97,7 +99,7 @@ def feature_net_3D(input_shape,
 
     model = Sequential()
 
-    model.add(Input(shape=input_shape))
+    model.add(InputLayer(input_shape=input_shape))
     model.add(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field))
 
     rf_counter = receptive_field
