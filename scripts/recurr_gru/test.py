@@ -129,7 +129,6 @@ def post_process(test_images, test_images_fgbg):
 
     # threshold the foreground/background
     # and remove back ground from edge transform
-    threshold = 0.9
 
     fg_thresh = test_images_fgbg[..., 1] > threshold
     fg_thresh = np.expand_dims(fg_thresh, axis=-1)
@@ -287,6 +286,7 @@ if __name__== "__main__":
     receptive_field = 61  # should be adjusted for the scale of the data
 
     batch_size = 1  # FC training uses 1 image per batch
+    threshold = 0.9
 
     # Transformation settings
     transform = None
