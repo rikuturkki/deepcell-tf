@@ -162,26 +162,35 @@ def plot_results(X_test, test_images_fgbg, fg_thresh,
     index = np.random.randint(low=0, high=labeled_images.shape[0])
     print('Image number:', index)
 
-    fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(15, 15), sharex=True, sharey=True)
+    fig, axes = plt.subplots(ncols=3, nrows=3, figsize=(15, 15), sharex=True, sharey=True)
     ax = axes.ravel()
 
     ax[0].imshow(X_test[0,index, ..., 0])
     ax[0].set_title('Source Image')
 
-    ax[1].imshow(test_images_fgbg[index, ..., 1])
-    ax[1].set_title('Segmentation Prediction')
+    ax[1].imshow(X_test[1,index, ..., 0])
+    ax[1].set_title('Source Image')
 
-    ax[2].imshow(fg_thresh[index, ..., 0], cmap='jet')
-    ax[2].set_title('FGBG Threshold {}%'.format(threshold * 100))
+    ax[2].imshow(X_test[2,index, ..., 0])
+    ax[2].set_title('Source Image')
 
-    ax[3].imshow(test_images[index, ..., 0] + test_images[index, ..., 1], cmap='jet')
-    ax[3].set_title('Edge Prediction')
+    ax[3].imshow(X_test[3,index, ..., 0])
+    ax[3].set_title('Source Image')
 
-    ax[4].imshow(test_images[index, ..., 2], cmap='jet')
-    ax[4].set_title('Interior Prediction')
+    ax[4].imshow(test_images_fgbg[index, ..., 1])
+    ax[4].set_title('Segmentation Prediction')
 
-    ax[5].imshow(labeled_images[index, ..., 0], cmap='jet')
-    ax[5].set_title('Instance Segmentation')
+    ax[5].imshow(fg_thresh[index, ..., 0], cmap='jet')
+    ax[5].set_title('FGBG Threshold {}%'.format(threshold * 100))
+
+    ax[6].imshow(test_images[index, ..., 0] + test_images[index, ..., 1], cmap='jet')
+    ax[6].set_title('Edge Prediction')
+
+    ax[7].imshow(test_images[index, ..., 2], cmap='jet')
+    ax[7].set_title('Interior Prediction')
+
+    ax[8].imshow(labeled_images[index, ..., 0], cmap='jet')
+    ax[8].set_title('Instance Segmentation')
 
     fig.tight_layout()
     plt.show()
