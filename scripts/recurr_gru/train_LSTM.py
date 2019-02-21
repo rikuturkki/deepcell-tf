@@ -385,11 +385,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"hf:m:",["file=","model="])
     except getopt.GetoptError:
-        print('train.py -f <full data file path> -m <model name>\n model name is conv-gru or fgbg')
+        print('train_LSTM.py -f <full data file path> -m <model name>\n model name is conv or fgbg')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('train.py -f <full data file path> -m <model name>\n model name is conv-gru or fgbg')
+            print('train_LSTM.py -f <full data file path> -m <model name>\n model name is conv or fgbg')
             sys.exit()
         elif opt in ("-f", "--file"):
             data_filename = arg
@@ -409,7 +409,7 @@ def main(argv):
 
     if model_name == 'fgbg':
         create_and_train_fgbg(data_filename, train_dict)
-    elif model_name == 'conv-gru':
+    elif model_name == 'conv':
         create_and_train_conv_lstm(data_filename, train_dict)
     else:
         print("Model not supported, please choose fgbg or conv-gru")
