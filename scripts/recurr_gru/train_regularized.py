@@ -38,6 +38,8 @@ from deepcell.utils import train_utils
 from deepcell.utils.data_utils import get_data
 from deepcell.utils.train_utils import rate_scheduler
 from deepcell.training import train_model_conv
+from deepcell.layers import DilatedMaxPool2D, DilatedMaxPool3D
+
 
 from tensorflow.python.keras.layers import MaxPool3D
 from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
@@ -134,10 +136,12 @@ def feature_net_3D(input_shape,
 
         if block_counter % 2 == 0:
             if dilated:
-                x.append(DilatedMaxPool2D(dilation_rate=d, pool_size=(2, 2))(x[-1]))
+                x.append(DilatedMaxPool3D(dilation_rate=(1, d, d), pool_size=(1, 2, 2))(x[-1]))
                 d *= 2
             else:
-                x.append(MaxPool2D(pool_size=(2, 2))(x[-1]))
+                x.append(MaxPool3D(pool_size=(1, 2, 2))(x[-1]))
+
+
             rf_counter = rf_counter // 2
 
 
