@@ -171,9 +171,6 @@ def feature_net_3D(receptive_field=61,
             else:
                 x.append(MaxPool3D(pool_size=(1, 2, 2))(x[-1]))
 
-            if VGG_mode:
-                n_conv_filters *= 2
-
             rf_counter = rf_counter // 2
 
 
