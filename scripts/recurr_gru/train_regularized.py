@@ -204,8 +204,8 @@ def feature_net_skip(receptive_field=61,
         channel_axis = -1
 
     inputs = Input(shape=input_shape)
-    img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
-
+    # img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
+    img = inputs
     models = []
     model_outputs = []
 
