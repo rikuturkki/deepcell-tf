@@ -121,7 +121,7 @@ def feature_net_3D(receptive_field=61,
     rf_counter = receptive_field
     block_counter = 0
     d = 1
-
+    '''
     while rf_counter > 4:
         filter_size = 3 if rf_counter % 2 == 0 else 4
         x.append(ConvGRU2D(filters=n_conv_filters, kernel_size=(filter_size, filter_size), 
@@ -141,7 +141,7 @@ def feature_net_3D(receptive_field=61,
                 x.append(MaxPool3D(pool_size=(1, 2, 2))(x[-1]))
 
             rf_counter = rf_counter // 2
-
+    
 
     x.append(ConvGRU2D(filters=n_dense_filters, kernel_size=(rf_counter, rf_counter), 
         dilation_rate=(d, d), kernel_initializer=init, padding='valid', 
@@ -152,6 +152,36 @@ def feature_net_3D(receptive_field=61,
     x.append(ConvGRU2D(filters=n_dense_filters, kernel_size=(1, 1), 
         dilation_rate=(d, d), kernel_initializer=init, padding='valid', 
         kernel_regularizer=l2(reg))(x[-1]))
+    x.append(BatchNormalization(axis=channel_axis)(x[-1]))
+    x.append(Activation('relu')(x[-1]))
+    ''' 
+    while rf_counter > 4:
+        filter_size = 3 if rf_counter % 2 == 0 else 4
+        x.append(Conv3D(n_conv_filters, (1, filter_size, filter_size), dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
+        x.append(BatchNormalization(axis=channel_axis)(x[-1]))
+        x.append(Activation('relu')(x[-1]))
+
+        block_counter += 1
+        rf_counter -= filter_size - 1
+
+        if block_counter % 2 == 0:
+            if dilated:
+                x.append(DilatedMaxPool3D(dilation_rate=(1, d, d), pool_size=(1, 2, 2))(x[-1]))
+                d *= 2
+            else:
+                x.append(MaxPool3D(pool_size=(1, 2, 2))(x[-1]))
+
+            if VGG_mode:
+                n_conv_filters *= 2
+
+            rf_counter = rf_counter // 2
+
+
+    x.append(Conv3D(n_dense_filters, (1, rf_counter, rf_counter), dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
+    x.append(BatchNormalization(axis=channel_axis)(x[-1]))
+    x.append(Activation('relu')(x[-1]))
+
+    x.append(Conv3D(n_dense_filters, (n_frames, 1, 1), dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
 
