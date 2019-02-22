@@ -70,48 +70,51 @@ LOG_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/logs')
 # ==============================================================================
 
 
-def feature_net_3D(input_shape,
-                    receptive_field=61,
-                    n_frames=5,
-                    n_features=3,
-                    n_channels=1,
-                    reg=1e-5,
-                    dilated = False,
-                    padding = False,
-                    padding_mode='reflect',
-                    n_conv_filters=40,
-                    n_dense_filters=200,
-                    init='he_normal',
-                    norm_method='std',
-                    include_top=True):
+def feature_net_3D(receptive_field=61,
+                      n_frames=5,
+                      input_shape=(5, 256, 256, 1),
+                      n_features=3,
+                      n_channels=1,
+                      reg=1e-5,
+                      n_conv_filters=64,
+                      n_dense_filters=200,
+                      init='he_normal',
+                      norm_method='std',
+                      dilated=False,
+                      padding=False,
+                      padding_mode='reflect',
+                      include_top=True):
     # Create layers list (x) to store all of the layers.
-    
+    # We need to use the functional API to enable the multiresolution mode
+    x = []
+
     win = (receptive_field - 1) // 2
     win_z = (n_frames - 1) // 2
 
+    if dilated:
+        padding = True
 
     if K.image_data_format() == 'channels_first':
         channel_axis = 1
         time_axis = 2
         row_axis = 3
         col_axis = 4
+        if not dilated:
+            input_shape = (n_channels, n_frames, receptive_field, receptive_field)
     else:
         channel_axis = -1
         time_axis = 1
         row_axis = 2
         col_axis = 3
+        if not dilated:
+            input_shape = (n_frames, receptive_field, receptive_field, n_channels)
 
-    if dilated:
-        padding = True
-
-    x = []
     x.append(Input(shape=input_shape))
     x.append(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(x[-1]))
 
     if padding:
         if padding_mode == 'reflect':
             x.append(ReflectionPadding3D(padding=(win_z, win, win))(x[-1]))
-
         elif padding_mode == 'zero':
             x.append(ZeroPadding3D(padding=(win_z, win, win))([-1]))
 
@@ -119,15 +122,9 @@ def feature_net_3D(input_shape,
     block_counter = 0
     d = 1
 
-    
     while rf_counter > 4:
         filter_size = 3 if rf_counter % 2 == 0 else 4
-        x.append(ConvGRU2D(n_conv_filters, kernel_size=(filter_size, filter_size), 
-            dilation_rate=(d, d), padding='valid', 
-            kernel_initializer=init,
-            kernel_regularizer=l2(reg), 
-            activation='relu', 
-            return_sequences=True)(x[-1]))
+        x.append(ConvGRU2D(n_conv_filters, (filter_size, filter_size), dilation_rate=(d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
         x.append(BatchNormalization(axis=channel_axis)(x[-1]))
         x.append(Activation('relu')(x[-1]))
 
@@ -141,14 +138,10 @@ def feature_net_3D(input_shape,
             else:
                 x.append(MaxPool3D(pool_size=(1, 2, 2))(x[-1]))
 
-
             rf_counter = rf_counter // 2
 
 
-    x.append(ConvGRU2D(filters=n_conv_filters, kernel_size=(rf_counter, rf_counter),
-                        dilation_rate=(d, d), padding='valid',
-                       kernel_initializer=init,
-                       kernel_regularizer=l2(reg), return_sequences=True)(x[-1]))
+    x.append(ConvGRU2D(n_dense_filters, (rf_counter, rf_counter), dilation_rate=(d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
 
@@ -156,37 +149,12 @@ def feature_net_3D(input_shape,
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
 
-    '''
-    while rf_counter > 4:
-        filter_size = 3 if rf_counter % 2 == 0 else 4
-        x.append(Conv3D(n_conv_filters, (1, filter_size, filter_size), dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
-        x.append(BatchNormalization(axis=channel_axis)(x[-1]))
-        x.append(Activation('relu')(x[-1]))
-
-        block_counter += 1
-        rf_counter -= filter_size - 1
-
-        if block_counter % 2 == 0:
-            x.append(MaxPool3D(pool_size=(1, 2, 2))(x[-1]))
-            rf_counter = rf_counter // 2
-
-
-    x.append(Conv3D(n_dense_filters, (1, rf_counter, rf_counter), dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
-    x.append(BatchNormalization(axis=channel_axis)(x[-1]))
-    x.append(Activation('relu')(x[-1]))
-
-    x.append(Conv3D(n_dense_filters, (n_frames, 1, 1), dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
-    x.append(BatchNormalization(axis=channel_axis)(x[-1]))
-    x.append(Activation('relu')(x[-1]))
-    '''
-
-
     x.append(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
 
     x.append(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
-    
+
     if not dilated:
         x.append(Flatten()(x[-1]))
 
@@ -194,11 +162,11 @@ def feature_net_3D(input_shape,
         x.append(Softmax(axis=channel_axis)(x[-1]))
 
     model = Model(inputs=x[0], outputs=x[-1])
-    # model.summary()
 
     return model
 
-def feature_net_skip(receptive_field=61,
+
+def feature_net_skip_3D(receptive_field=61,
                            input_shape=(5, 256, 256, 1),
                            fgbg_model=None,
                            last_only=True,
@@ -212,8 +180,8 @@ def feature_net_skip(receptive_field=61,
         channel_axis = -1
 
     inputs = Input(shape=input_shape)
-    # img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
-    img = inputs
+    img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
+
     models = []
     model_outputs = []
 
@@ -232,12 +200,7 @@ def feature_net_skip(receptive_field=61,
         else:
             model_input = img
         new_input_shape = model_input.get_shape().as_list()[1:]
-        models.append(feature_net_3D(receptive_field=receptive_field, 
-                                    input_shape=new_input_shape, norm_method=None, 
-                                    dilated=True, 
-                                    padding=True, 
-                                    padding_mode=padding_mode, 
-                                    **kwargs))
+        models.append(feature_net_3D(receptive_field=receptive_field, input_shape=new_input_shape, norm_method=None, dilated=True, padding=True, padding_mode=padding_mode, **kwargs))
         model_outputs.append(models[-1](model_input))
 
     if last_only:
@@ -248,7 +211,6 @@ def feature_net_skip(receptive_field=61,
         else:
             model = Model(inputs=inputs, outputs=model_outputs[1:])
 
-    model.summary()
     return model
 
 # ==============================================================================
@@ -412,7 +374,7 @@ def train_model(model,
 
 def create_and_train_fgbg(data_filename, train_dict):
     
-    fgbg_model = feature_net_skip(
+    fgbg_model = feature_net_skip_3D(
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         n_features=2,  # segmentation mask (is_cell, is_not_cell)
         n_skips=n_skips,
@@ -448,7 +410,7 @@ def create_and_train_fgbg(data_filename, train_dict):
 # ==============================================================================
 
 def create_and_train_conv_gru(data_filename, train_dict):
-    conv_gru_model = feature_net_skip(
+    conv_gru_model = feature_net_skip_3D(
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         receptive_field=receptive_field,
         n_features=4, 
