@@ -105,11 +105,11 @@ def feature_net_3D(input_shape,
     x = []
     x.append(Input(shape=input_shape))
     x.append(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(x[-1]))
-    # x.append(ZeroPadding3D(padding=(axis1_pad, axis2_pad, axis3_pad))([-1]), data_format="channels_last")
 
     if padding:
         if padding_mode == 'reflect':
             x.append(ReflectionPadding3D(padding=(win_z, win, win))(x[-1]))
+
         elif padding_mode == 'zero':
             x.append(ZeroPadding3D(padding=(win_z, win, win))([-1]))
 
@@ -133,7 +133,11 @@ def feature_net_3D(input_shape,
         rf_counter -= filter_size - 1
 
         if block_counter % 2 == 0:
-            x.append(MaxPool3D(pool_size=(1, 2, 2))(x[-1]))
+            if dilated:
+                x.append(DilatedMaxPool2D(dilation_rate=d, pool_size=(2, 2))(x[-1]))
+                d *= 2
+            else:
+                x.append(MaxPool2D(pool_size=(2, 2))(x[-1]))
             rf_counter = rf_counter // 2
 
 
@@ -413,8 +417,6 @@ def create_and_train_fgbg(data_filename, train_dict):
         n_dense_filters=128,
         norm_method=norm_method)
 
-
-    # print(fgbg_model.summary())
 
     fgbg_model = train_model(
         model=fgbg_model,
