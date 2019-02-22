@@ -124,7 +124,9 @@ def feature_net_3D(receptive_field=61,
 
     while rf_counter > 4:
         filter_size = 3 if rf_counter % 2 == 0 else 4
-        x.append(ConvGRU2D(n_conv_filters, (filter_size, filter_size), dilation_rate=(d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
+        x.append(ConvGRU2D(filters=n_conv_filters, kernel_size=(filter_size, filter_size), 
+            dilation_rate=(d, d), kernel_initializer=init, padding='valid', 
+            kernel_regularizer=l2(reg))(x[-1]))
         x.append(BatchNormalization(axis=channel_axis)(x[-1]))
         x.append(Activation('relu')(x[-1]))
 
@@ -141,11 +143,15 @@ def feature_net_3D(receptive_field=61,
             rf_counter = rf_counter // 2
 
 
-    x.append(ConvGRU2D(n_dense_filters, (rf_counter, rf_counter), dilation_rate=(d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
+    x.append(ConvGRU2D(filters=n_dense_filters, kernel_size=(rf_counter, rf_counter), 
+        dilation_rate=(d, d), kernel_initializer=init, padding='valid', 
+        kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
 
-    x.append(ConvGRU2D(n_dense_filters, (1, 1), dilation_rate=(d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
+    x.append(ConvGRU2D(filters=n_dense_filters, kernel_size=(1, 1), 
+        dilation_rate=(d, d), kernel_initializer=init, padding='valid', 
+        kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
 
@@ -162,6 +168,8 @@ def feature_net_3D(receptive_field=61,
         x.append(Softmax(axis=channel_axis)(x[-1]))
 
     model = Model(inputs=x[0], outputs=x[-1])
+
+    model.summary()
 
     return model
 
@@ -200,6 +208,7 @@ def feature_net_skip_3D(receptive_field=61,
         else:
             model_input = img
         new_input_shape = model_input.get_shape().as_list()[1:]
+
         models.append(feature_net_3D(receptive_field=receptive_field, input_shape=new_input_shape, norm_method=None, dilated=True, padding=True, padding_mode=padding_mode, **kwargs))
         model_outputs.append(models[-1](model_input))
 
