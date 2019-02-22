@@ -99,15 +99,15 @@ def feature_net_3D(receptive_field=61,
         time_axis = 2
         row_axis = 3
         col_axis = 4
-        if not dilated:
-            input_shape = (n_channels, n_frames, receptive_field, receptive_field)
+        # if not dilated:
+        #     input_shape = (n_channels, n_frames, receptive_field, receptive_field)
     else:
         channel_axis = -1
         time_axis = 1
         row_axis = 2
         col_axis = 3
-        if not dilated:
-            input_shape = (n_frames, receptive_field, receptive_field, n_channels)
+        # if not dilated:
+        #     input_shape = (n_frames, receptive_field, receptive_field, n_channels)
 
     x.append(Input(shape=input_shape))
     x.append(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(x[-1]))
