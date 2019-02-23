@@ -174,9 +174,7 @@ def feature_net_3D(receptive_field=61,
             rf_counter = rf_counter // 2
 
 
-    x.append(ConvGRU2D(filters=n_dense_filters, kernel_size=(rf_counter, rf_counter), 
-        dilation_rate=(d, d), kernel_initializer=init, padding='valid', 
-        kernel_regularizer=l2(reg))(x[-1]))
+    x.append(Conv3D(n_dense_filters, (1, rf_counter, rf_counter), dilation_rate=(1, d, d), kernel_initializer=init, padding='valid', kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
 
