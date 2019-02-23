@@ -40,7 +40,7 @@ from deepcell.training import train_model_conv
 
 from tensorflow.python.keras.layers import MaxPool3D, Conv3DTranspose, UpSampling3D
 from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
-from tensorflow.python.keras.layers import BatchNormalization
+from tensorflow.python.keras.layers import BatchNormalization, Dropout
 from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D, ConvLSTM2D
 from tensorflow.python.keras.layers import Input, Add, Concatenate
 from tensorflow.python.keras.engine.input_layer import InputLayer
