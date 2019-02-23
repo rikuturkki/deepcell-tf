@@ -83,7 +83,7 @@ def test_lstm(X_test, fgbg_lstm_weights_file, conv_lstm_weights_file):
 
 
 def test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file):
-    run_fgbg_model = feature_net_GRU(
+    run_fgbg_model = feature_net_skip_GRU(
         input_shape=tuple(X_test.shape[1:]),
         receptive_field=receptive_field,
         n_features=2, 
@@ -94,7 +94,7 @@ def test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file):
     run_fgbg_model.load_weights(fgbg_gru_weights_file)
 
 
-    run_conv_model = feature_net_GRU(
+    run_conv_model = feature_net_skip_GRU(
         input_shape=tuple(X_test.shape[1:]),
         receptive_field=receptive_field,
         n_features=4,  # (background edge, interior edge, cell interior, background)
