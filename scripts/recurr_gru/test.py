@@ -26,9 +26,8 @@ from deepcell import model_zoo
 from deepcell.utils.data_utils import get_data
 from deepcell.utils.plot_utils import get_js_video
 
-from scripts.recurr_gru.train_GRU import feature_net_GRU
-from scripts.recurr_gru.train_LSTM import feature_net_LSTM
-from scripts.recurr_gru.train_regularized import  feature_net_skip
+from scripts.recurr_gru.train_GRU import feature_net_GRU, feature_net_skip_GRU
+from scripts.recurr_gru.train_LSTM import feature_net_LSTM, feature_net_skip_LSTM
 
 import numpy as np
 from skimage.measure import label
@@ -52,7 +51,7 @@ MODEL_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/models')
 
 
 def test_lstm(X_test, fgbg_lstm_weights_file, conv_lstm_weights_file):
-    run_fgbg_model = feature_net_LSTM(
+    run_fgbg_model = feature_net_skip_LSTM(
         input_shape=tuple(X_test.shape[1:]),
         receptive_field=receptive_field,
         n_features=2, 
@@ -63,7 +62,7 @@ def test_lstm(X_test, fgbg_lstm_weights_file, conv_lstm_weights_file):
     run_fgbg_model.load_weights(fgbg_lstm_weights_file)
 
 
-    run_conv_model = feature_net_LSTM(
+    run_conv_model = feature_net_skip_LSTM(
         input_shape=tuple(X_test.shape[1:]),
         receptive_field=receptive_field,
         n_features=4,  # (background edge, interior edge, cell interior, background)
@@ -104,37 +103,6 @@ def test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file):
         n_dense_filters=128,
         norm_method=norm_method)
     run_conv_model.load_weights(conv_gru_weights_file)
-
-
-    test_images = run_conv_model.predict(X_test)[-1]
-    test_images_fgbg = run_fgbg_model.predict(X_test)[-1]
-
-    print('edge/interior prediction shape:', test_images.shape)
-    print('fgbg mask shape:', test_images_fgbg.shape)
-
-    return test_images, test_images_fgbg
-
-def test_reg(X_test, fgbg_reg_weights_file, conv_reg_weights_file):
-    run_fgbg_model = feature_net_skip(
-        input_shape=tuple(X_test.shape[1:]),
-        receptive_field=receptive_field,
-        n_features=2, 
-        n_frames=frames_per_batch,
-        n_conv_filters=32,
-        n_dense_filters=128,
-        norm_method=norm_method)
-    run_fgbg_model.load_weights(fgbg_reg_weights_file)
-
-
-    run_conv_model = feature_net_skip(
-        input_shape=tuple(X_test.shape[1:]),
-        receptive_field=receptive_field,
-        n_features=4,  # (background edge, interior edge, cell interior, background)
-        n_frames=frames_per_batch,
-        n_conv_filters=32,
-        n_dense_filters=128,
-        norm_method=norm_method)
-    run_conv_model.load_weights(conv_reg_weights_file)
 
 
     test_images = run_conv_model.predict(X_test)[-1]
@@ -296,13 +264,8 @@ def main(argv):
         conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
         test_images, test_images_fgbg = test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file)
 
-    elif model_name == 'reg':
-        fgbg_reg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_reg_model_name))
-        conv_reg_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_reg_model_name))
-        test_images, test_images_fgbg = test_reg(X_test, fgbg_reg_weights_file, conv_reg_weights_file)
-
     else:
-        print("Model not supported, please choose fgbg or conv-gru")
+        print("Model not supported, please choose gru or lstm")
         sys.exit()
 
     labeled_images, fg_thresh = post_process(test_images, test_images_fgbg)
@@ -327,9 +290,6 @@ if __name__== "__main__":
 
     conv_gru_model_name = 'conv_gru_model'
     fgbg_gru_model_name = 'fgbg_gru_model'
-
-    conv_reg_weights_file = 'conv_reg_model'
-    fgbg_reg_model_name = 'fgbg_reg_model'
 
     n_epoch = 10  # Number of training epochs
     test_size = .10  # % of data saved as test

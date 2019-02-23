@@ -153,6 +153,118 @@ def feature_net_GRU(input_shape,
     model.summary()
     return model
 
+def feature_net_skip_GRU(input_shape,
+                        receptive_field=61,
+                        n_frames=5,
+                        n_features=3,
+                        n_channels=1,
+                        reg=1e-5,
+                        n_conv_filters=40,
+                        n_dense_filters=200,
+                        init='he_normal',
+                        norm_method='std',
+                        include_top=True):
+
+    if K.image_data_format() == 'channels_first':
+        channel_axis = 1
+    else:
+        channel_axis = -1
+
+    inputs = Input(shape=input_shape)
+    img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
+
+
+
+    x1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(img)
+    x = BatchNormalization(axis=channel_axis)(x1)
+    x2 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(x)
+    x = BatchNormalization(axis=channel_axis)(x2)
+    x = MaxPool3D(pool_size=(1, 2, 2))(x)
+
+    x3 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(x)
+    x = BatchNormalization(axis=channel_axis)(x3)
+    x4 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(x)
+    x = BatchNormalization(axis=channel_axis)(x4)
+    x = MaxPool3D(pool_size=(1, 2, 2))(x)
+
+    x5 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(x)
+    x = BatchNormalization(axis=channel_axis)(x5)
+    x6 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(x)
+    x = BatchNormalization(axis=channel_axis)(x6)
+    x = MaxPool3D(pool_size=(1, 2, 2))(x)
+
+
+    x7 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(x)
+    x = BatchNormalization(axis=channel_axis)(x7)                
+    x8 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(x)
+    x = BatchNormalization(axis=channel_axis)(x8)
+    x = UpSampling3D(size=(1, 2, 2))(x)
+
+    joinedTensor1 = Add()([x, x6])
+
+    x7 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor1)
+    x = BatchNormalization(axis=channel_axis)(x7)
+    x8 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(x)
+    x = BatchNormalization(axis=channel_axis)(x8)
+    x = UpSampling3D(size=(1, 2, 2))(x)
+
+
+    joinedTensor2 = Add()([x, x4])
+
+    x9 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor2)
+    x = BatchNormalization(axis=channel_axis)(x9)
+    x10 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(x)
+    x = BatchNormalization(axis=channel_axis)(x10)
+    x = UpSampling3D(size=(1, 2, 2))(x)
+
+    joinedTensor3 = Add()([x, x2])
+
+    x11 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor3)
+    x = BatchNormalization(axis=channel_axis)(x11)
+    x = Activation('relu')(x)
+    x12 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(x)
+    x = BatchNormalization(axis=channel_axis)(x12)
+    x = Activation('relu')(x)
+
+    y1 = TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg))(x)
+    y1 = BatchNormalization(axis=channel_axis)(y1)
+    y1 = Activation('relu')(y1)
+    y2 = TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(y1)
+    output = Activation('sigmoid')(y2)
+
+    model = Model(inputs,output)
+
+    print(model.summary())
+
+    return model
 
 # ==============================================================================
 # Train model
@@ -315,7 +427,7 @@ def train_model(model,
 
 def create_and_train_fgbg(data_filename, train_dict):
     
-    fgbg_model = feature_net_GRU(
+    fgbg_model = feature_net_skip_GRU(
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         n_features=2,  # segmentation mask (is_cell, is_not_cell)
         n_frames=frames_per_batch,
@@ -351,7 +463,7 @@ def create_and_train_fgbg(data_filename, train_dict):
 # ==============================================================================
 
 def create_and_train_conv_gru(data_filename, train_dict):
-    conv_gru_model = feature_net_GRU(
+    conv_gru_model = feature_net_skip_GRU(
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         receptive_field=receptive_field,
         n_features=4, 
