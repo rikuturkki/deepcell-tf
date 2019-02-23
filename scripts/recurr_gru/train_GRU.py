@@ -169,105 +169,10 @@ def feature_net_skip_GRU(input_shape,
         channel_axis = 1
     else:
         channel_axis = -1
-    '''
-    inputs = Input(shape=input_shape)
-    # img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
 
-
-
-    x1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(inputs)
-    x = BatchNormalization(axis=channel_axis)(x1)
-    x2 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x2)
-    x = MaxPool3D(pool_size=(1, 2, 2))(x)
-
-    x3 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x3)
-    x4 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x4)
-    x = MaxPool3D(pool_size=(1, 2, 2))(x)
-
-    x5 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x5)
-    x6 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x6)
-    x = MaxPool3D(pool_size=(1, 2, 2))(x)
-
-
-    x7 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x7)                
-    x8 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x8)
-    x = UpSampling3D(size=(1, 2, 2))(x)
-
-    joinedTensor1 = Add()([x, x6])
-
-    x7 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor1)
-    x = BatchNormalization(axis=channel_axis)(x7)
-    x8 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x8)
-    x = UpSampling3D(size=(1, 2, 2))(x)
-
-
-    joinedTensor2 = Add()([x, x4])
-
-    x9 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor2)
-    x = BatchNormalization(axis=channel_axis)(x9)
-    x10 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x10)
-    x = UpSampling3D(size=(1, 2, 2))(x)
-
-    joinedTensor3 = Add()([x, x2])
-
-    x11 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor3)
-    x = BatchNormalization(axis=channel_axis)(x11)
-    x = Activation('relu')(x)
-    x12 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x12)
-    x = Activation('relu')(x)
-
-    y1 = TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg))(x)
-    y1 = BatchNormalization(axis=channel_axis)(y1)
-    y1 = Activation('relu')(y1)
-    y2 = TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(y1)
-    output = Activation('sigmoid')(y2)
-
-    model = Model(inputs,output)
-
-    print(model.summary())
-
-    return model
-    '''
     inputs = Input(shape=input_shape)
     conv1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(inputs)
     conv1 = BatchNormalization(axis=channel_axis)(conv1)
@@ -279,6 +184,7 @@ def feature_net_skip_GRU(input_shape,
     pool1 = MaxPool3D(pool_size=(1, 2, 2))(conv1)
 
     conv2 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool1)
     conv2 = BatchNormalization(axis=channel_axis)(conv2)
@@ -290,6 +196,7 @@ def feature_net_skip_GRU(input_shape,
     pool2 = MaxPool3D(pool_size=(1, 2, 2))(conv2)
 
     conv3 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool2)
     conv3 = BatchNormalization(axis=channel_axis)(conv3)
@@ -302,6 +209,7 @@ def feature_net_skip_GRU(input_shape,
 
 
     conv4 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool3)
     conv4 = BatchNormalization(axis=channel_axis)(conv4)
@@ -315,6 +223,7 @@ def feature_net_skip_GRU(input_shape,
 
 
     conv5 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool4)
     conv5 = BatchNormalization(axis=channel_axis)(conv5)  
@@ -330,6 +239,7 @@ def feature_net_skip_GRU(input_shape,
     joinedTensor1 = Concatenate(axis=channel_axis)([conv4, up1])
 
     conv6 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor1)
     conv6 = BatchNormalization(axis=channel_axis)(conv6)
@@ -344,6 +254,7 @@ def feature_net_skip_GRU(input_shape,
     joinedTensor2 = Concatenate(axis=channel_axis)([conv3, up2])
 
     conv7 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor2)
     conv7 = BatchNormalization(axis=channel_axis)(conv7)
@@ -357,6 +268,7 @@ def feature_net_skip_GRU(input_shape,
     joinedTensor3 = Concatenate(axis=channel_axis)([conv2, up3])
 
     conv8 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor3)
     conv8 = BatchNormalization(axis=channel_axis)(conv8)
