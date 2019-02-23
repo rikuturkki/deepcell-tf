@@ -265,7 +265,7 @@ def feature_net_skip_LSTM(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv7)
-    # x = BatchNormalization(axis=channel_axis)(x10)
+    conv7 = BatchNormalization(axis=channel_axis)(conv7)
     up3 = UpSampling3D(size=(1, 2, 2))(conv7)
 
     joinedTensor3 = Concatenate(axis=channel_axis)([conv2, up3])
@@ -279,7 +279,7 @@ def feature_net_skip_LSTM(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv8)
-
+    conv8 = BatchNormalization(axis=channel_axis)(conv8)
     up4 = UpSampling3D(size=(1, 2, 2))(conv8)
 
     joinedTensor4 = Concatenate(axis=channel_axis)([conv1, up4])
@@ -289,13 +289,11 @@ def feature_net_skip_LSTM(input_shape,
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor4)
     conv9 = BatchNormalization(axis=channel_axis)(conv9)
-    # x = Activation('relu')(x)
     conv9 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv9)
-    # x = BatchNormalization(axis=channel_axis)(x12)
-    # x = Activation('relu')(x)
+    conv9 = BatchNormalization(axis=channel_axis)(conv9)
 
     y1 = TensorProduct(n_dense_filters, kernel_initializer=init,
                         activation='relu',  kernel_regularizer=l2(reg))(conv9)
