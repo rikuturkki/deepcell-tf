@@ -232,7 +232,7 @@ def feature_net_skip_GRU(input_shape,
     up1 = Conv3DTranspose(n_conv_filters=n_conv_filters, 
                         strides=(1, 2, 2), padding='same')(norm5)
 
-    joinedTensor1 = Concatenate(axis=channel_axis)([conv4, up1])
+    joinedTensor1 = Concatenate(axis=channel_axis)([norm4, up1])
 
     conv6 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
@@ -250,7 +250,7 @@ def feature_net_skip_GRU(input_shape,
                         strides=(1, 2, 2), padding='same')(norm6)
 
 
-    joinedTensor2 = Concatenate(axis=channel_axis)([conv3, up2])
+    joinedTensor2 = Concatenate(axis=channel_axis)([norm3, up2])
 
     conv7 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
@@ -268,7 +268,7 @@ def feature_net_skip_GRU(input_shape,
     up3 = Conv3DTranspose(n_conv_filters=n_conv_filters, 
                         strides=(1, 2, 2), padding='same')(norm7)
 
-    joinedTensor3 = Concatenate(axis=channel_axis)([conv2, up3])
+    joinedTensor3 = Concatenate(axis=channel_axis)([norm2, up3])
 
     conv8 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
@@ -286,7 +286,7 @@ def feature_net_skip_GRU(input_shape,
     up4 = Conv3DTranspose(n_conv_filters=n_conv_filters, 
                         strides=(1, 2, 2), padding='same')(norm8)
 
-    joinedTensor4 = Concatenate(axis=channel_axis)([conv1, up4])
+    joinedTensor4 = Concatenate(axis=channel_axis)([norm1, up4])
 
     conv9 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
