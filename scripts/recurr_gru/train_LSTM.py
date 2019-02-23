@@ -301,7 +301,7 @@ def feature_net_skip_LSTM(input_shape,
                         activation='sigmoid', kernel_regularizer=l2(reg))(y1)
 
     model = Model(inputs,output)
-    model.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
+    # model.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
 
     print(model.summary())
 

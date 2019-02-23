@@ -299,7 +299,7 @@ def feature_net_skip_GRU(input_shape,
                         activation='sigmoid', kernel_regularizer=l2(reg))(y1)
 
     model = Model(inputs,output)
-    model.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
+    # model.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
 
     print(model.summary())
     return model
