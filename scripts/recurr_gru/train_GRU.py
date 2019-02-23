@@ -550,7 +550,7 @@ def main(argv):
             model_name = arg
 
     if data_filename == None:
-        data_filename = 'nuclear_movie_hela0-7_same.npz'
+        data_filename = 'mousebrain.npz'
 
     #  Load data
     print("Loading data from " + data_filename)
