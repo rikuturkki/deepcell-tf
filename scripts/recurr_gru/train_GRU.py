@@ -101,13 +101,6 @@ def feature_net_GRU(input_shape,
 
     model.add(InputLayer(input_shape=input_shape))
 
-    # model.add(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field))
-    # model.add(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-    #                    padding='same',
-    #                    kernel_initializer=init,
-    #                    kernel_regularizer=l2(reg), return_sequences=True))
-
-    
     rf_counter = receptive_field
     block_counter = 0
     d = 1
@@ -299,7 +292,7 @@ def feature_net_skip_GRU(input_shape,
                         activation='sigmoid', kernel_regularizer=l2(reg))(y1)
 
     model = Model(inputs,output)
-    # model.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
 
     print(model.summary())
     return model
@@ -557,7 +550,7 @@ def main(argv):
             model_name = arg
 
     if data_filename == None:
-        data_filename = 'mousebrain.npz'
+        data_filename = 'nuclear_movie_hela0-7_same.npz'
 
     #  Load data
     print("Loading data from " + data_filename)
