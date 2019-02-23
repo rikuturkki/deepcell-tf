@@ -39,7 +39,7 @@ from deepcell.utils.train_utils import rate_scheduler
 from deepcell.training import train_model_conv
 
 from tensorflow.python.keras.layers import MaxPool3D, Conv3DTranspose, UpSampling3D
-from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
+from scripts.recurr_gru.conv_gru_layer import ConvLSTM2D
 from tensorflow.python.keras.layers import BatchNormalization, Dropout
 from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D, ConvLSTM2D
 from tensorflow.python.keras.layers import Input, Add, Concatenate
@@ -169,73 +169,78 @@ def feature_net_skip_LSTM(input_shape,
         channel_axis = -1
 
     inputs = Input(shape=input_shape)
-    # img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
-
-
-
     conv1 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(inputs)
-    # conv1 = BatchNormalization(axis=channel_axis)(conv1)
+    conv1 = BatchNormalization(axis=channel_axis)(conv1)
     conv1 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv1)
-    conv1 = BatchNormalization(axis=channel_axis)(conv1)
-    pool1 = MaxPool3D(pool_size=(1, 2, 2))(conv1)
+    norm1 = BatchNormalization(axis=channel_axis)(conv1)
+    pool1 = MaxPool3D(pool_size=(1, 2, 2))(norm1)
 
     conv2 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool1)
-    # conv2 = BatchNormalization(axis=channel_axis)(conv2)
+    conv2 = BatchNormalization(axis=channel_axis)(conv2)
     conv2 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv2)
-    conv2 = BatchNormalization(axis=channel_axis)(conv2)
-    pool2 = MaxPool3D(pool_size=(1, 2, 2))(conv2)
+    norm2 = BatchNormalization(axis=channel_axis)(conv2)
+    pool2 = MaxPool3D(pool_size=(1, 2, 2))(norm2)
 
     conv3 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool2)
-    # conv3 = BatchNormalization(axis=channel_axis)(conv3)
+    conv3 = BatchNormalization(axis=channel_axis)(conv3)
     conv3 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv3)
-    conv3 = BatchNormalization(axis=channel_axis)(conv3)
-    pool3 = MaxPool3D(pool_size=(1, 2, 2))(conv3)
+    norm3 = BatchNormalization(axis=channel_axis)(conv3)
+    pool3 = MaxPool3D(pool_size=(1, 2, 2))(norm3)
 
 
     conv4 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool3)
-    # conv4 = BatchNormalization(axis=channel_axis)(conv4)
+    conv4 = BatchNormalization(axis=channel_axis)(conv4)
     conv4 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv4)
-    conv4 = BatchNormalization(axis=channel_axis)(conv4)
-    pool4 = MaxPool3D(pool_size=(1, 2, 2))(conv4)
+    norm4 = BatchNormalization(axis=channel_axis)(conv4)
+    pool4 = MaxPool3D(pool_size=(1, 2, 2))(norm4)
 
 
 
     conv5 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool4)
-    # conv5 = BatchNormalization(axis=channel_axis)(conv5)  
+    conv5 = BatchNormalization(axis=channel_axis)(conv5)  
     conv5 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv5)
-    conv5 = BatchNormalization(axis=channel_axis)(conv5)
+    norm5 = BatchNormalization(axis=channel_axis)(conv5)
 
 
-    up1 = UpSampling3D(size=(1, 2, 2))(conv5)
+    # up1 = UpSampling3D(size=(1, 2, 2))(norm5)
 
-    joinedTensor1 = Concatenate(axis=channel_axis)([conv4, up1])
+    up1 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3,3),
+                        strides=(1, 2, 2), padding='same')(norm5)
+
+    joinedTensor1 = Concatenate(axis=channel_axis)([norm4, up1])
 
     conv6 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor1)
     conv6 = BatchNormalization(axis=channel_axis)(conv6)
@@ -243,11 +248,14 @@ def feature_net_skip_LSTM(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv6)
-    conv6 = BatchNormalization(axis=channel_axis)(conv6)
-    up2 = UpSampling3D(size=(1, 2, 2))(conv6)
+    norm6 = BatchNormalization(axis=channel_axis)(conv6)
+
+    # up2 = UpSampling3D(size=(1, 2, 2))(norm6)
+    up2 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3,3),
+                        strides=(1, 2, 2), padding='same')(norm6)
 
 
-    joinedTensor2 = Concatenate(axis=channel_axis)([conv3, up2])
+    joinedTensor2 = Concatenate(axis=channel_axis)([norm3, up2])
 
     conv7 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
@@ -258,10 +266,14 @@ def feature_net_skip_LSTM(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv7)
-    conv7 = BatchNormalization(axis=channel_axis)(conv7)
-    up3 = UpSampling3D(size=(1, 2, 2))(conv7)
+    norm7 = BatchNormalization(axis=channel_axis)(conv7)
+    
+    # up3 = UpSampling3D(size=(1, 2, 2))(norm7)
 
-    joinedTensor3 = Concatenate(axis=channel_axis)([conv2, up3])
+    up3 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3,3),
+                        strides=(1, 2, 2), padding='same')(norm7)
+
+    joinedTensor3 = Concatenate(axis=channel_axis)([norm2, up3])
 
     conv8 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
@@ -272,10 +284,14 @@ def feature_net_skip_LSTM(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv8)
-    conv8 = BatchNormalization(axis=channel_axis)(conv8)
-    up4 = UpSampling3D(size=(1, 2, 2))(conv8)
+    norm8 = BatchNormalization(axis=channel_axis)(conv8)
+    
+    # up4 = UpSampling3D(size=(1, 2, 2))(norm8)
 
-    joinedTensor4 = Concatenate(axis=channel_axis)([conv1, up4])
+    up4 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3,3),
+                        strides=(1, 2, 2), padding='same')(norm8)
+
+    joinedTensor4 = Concatenate(axis=channel_axis)([norm1, up4])
 
     conv9 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
@@ -288,18 +304,18 @@ def feature_net_skip_LSTM(input_shape,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv9)
     conv9 = BatchNormalization(axis=channel_axis)(conv9)
 
-    y1 = TensorProduct(n_dense_filters, kernel_initializer=init,
-                        activation='relu',  kernel_regularizer=l2(reg))(conv9)
-    y1 = BatchNormalization(axis=channel_axis)(y1)
+    # y1 = TensorProduct(n_dense_filters, kernel_initializer=init,
+    #                     activation='relu',  kernel_regularizer=l2(reg))(conv9)
+    # y1 = BatchNormalization(axis=channel_axis)(y1)
     output = TensorProduct(n_features, kernel_initializer=init, 
-                        activation='sigmoid', kernel_regularizer=l2(reg))(y1)
+                        activation='sigmoid', kernel_regularizer=l2(reg))(conv9)
 
     model = Model(inputs,output)
     model.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
 
     print(model.summary())
-
     return model
+
 
 
 
