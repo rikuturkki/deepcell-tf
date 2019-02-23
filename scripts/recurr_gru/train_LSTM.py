@@ -301,7 +301,7 @@ def feature_net_skip_LSTM(input_shape,
                         activation='sigmoid', kernel_regularizer=l2(reg))(y1)
 
     model = Model(inputs,output)
-    # model.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
 
     print(model.summary())
 
@@ -377,7 +377,7 @@ def train_model(model,
 
     print('Training on {} GPUs'.format(num_gpus))
 
-    model.compile(loss=loss_function, optimizer=optimizer, metrics=['accuracy'])
+    # model.compile(loss=loss_function, optimizer=optimizer, metrics=['accuracy'])
 
     print("Input shape of model: ", model.input_shape)
     print("Output shape of model: ", model.output_shape)
@@ -557,7 +557,7 @@ def main(argv):
             model_name = arg
 
     if data_filename == None:
-        data_filename = 'mousebrain.npz'
+        data_filename = 'nuclear_movie_hela0-7_same.npz'
 
     #  Load data
     print("Loading data from " + data_filename)
