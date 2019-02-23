@@ -373,7 +373,7 @@ def train_model(model,
 
     print('Training on {} GPUs'.format(num_gpus))
 
-    model.compile(loss=loss_function, optimizer='rmsprop', metrics=['accuracy'])
+    model.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
 
     print("Input shape of model: ", model.input_shape)
     print("Output shape of model: ", model.output_shape)
@@ -594,7 +594,8 @@ if __name__== "__main__":
     test_size = .10  # % of data saved as test
     receptive_field = 61  # should be adjusted for the scale of the data
 
-    optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    # optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    optimizer = RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0)
 
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
     batch_size = 1  # FC training uses 1 image per batch
