@@ -220,8 +220,7 @@ def feature_net_skip_LSTM(input_shape,
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv4)
     conv4 = BatchNormalization(axis=channel_axis)(conv4)
-    drop1 = Dropout(0.2)(conv4)
-    pool4 = MaxPool3D(pool_size=(1, 2, 2))(drop1)
+    pool4 = MaxPool3D(pool_size=(1, 2, 2))(conv4)
 
 
 
@@ -235,10 +234,9 @@ def feature_net_skip_LSTM(input_shape,
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv5)
     conv5 = BatchNormalization(axis=channel_axis)(conv5)
-    drop2 = Dropout(0.2)(conv5)
 
 
-    up1 = UpSampling3D(size=(1, 2, 2))(drop2)
+    up1 = UpSampling3D(size=(1, 2, 2))(conv5)
 
     joinedTensor1 = Concatenate(axis=channel_axis)([drop1, up1])
 
