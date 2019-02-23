@@ -310,7 +310,7 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu',
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv4)
-    drop1 = Dropout(0.5)(conv4)
+    drop1 = Dropout(0.2)(conv4)
     pool4 = MaxPool3D(pool_size=(1, 2, 2))(drop1)
 
 
@@ -325,7 +325,7 @@ def feature_net_skip_GRU(input_shape,
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv5)
     # x = BatchNormalization(axis=channel_axis)(x8)
-    drop2 = Dropout(0.5)(conv5)
+    drop2 = Dropout(0.2)(conv5)
 
 
     up1 = UpSampling3D(size=(1, 2, 2))(drop2)
@@ -384,6 +384,7 @@ def feature_net_skip_GRU(input_shape,
                         activation='sigmoid', kernel_regularizer=l2(reg))(y1)
 
     model = Model(inputs,output)
+    model.compile(optimizer = Adam(lr = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
 
     print(model.summary())
 

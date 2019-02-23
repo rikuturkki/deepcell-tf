@@ -177,36 +177,36 @@ def feature_net_skip_LSTM(input_shape,
                     activation = 'relu',
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(inputs)
-    # x = BatchNormalization(axis=channel_axis)(x1)
+    conv1 = BatchNormalization(axis=channel_axis)(conv1)
     conv1 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu',
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv1)
-    # x = BatchNormalization(axis=channel_axis)(x2)
+    conv1 = BatchNormalization(axis=channel_axis)(conv1)
     pool1 = MaxPool3D(pool_size=(1, 2, 2))(conv1)
 
     conv2 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu',
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool1)
-    # x = BatchNormalization(axis=channel_axis)(x3)
+    conv2 = BatchNormalization(axis=channel_axis)(conv2)
     conv2 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu',
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv2)
-    # x = BatchNormalization(axis=channel_axis)(x4)
+    conv2 = BatchNormalization(axis=channel_axis)(conv2)
     pool2 = MaxPool3D(pool_size=(1, 2, 2))(conv2)
 
     conv3 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool2)
-    # x = BatchNormalization(axis=channel_axis)(x5)
+    conv3 = BatchNormalization(axis=channel_axis)(conv3)
     conv3 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv3)
-    # x = BatchNormalization(axis=channel_axis)(x6)
+    conv3 = BatchNormalization(axis=channel_axis)(conv3)
     pool3 = MaxPool3D(pool_size=(1, 2, 2))(conv3)
 
 
@@ -214,11 +214,13 @@ def feature_net_skip_LSTM(input_shape,
                     padding='same', kernel_initializer=init,
                     activation = 'relu',
                     kernel_regularizer=l2(reg), return_sequences=True)(pool3)
+    conv4 = BatchNormalization(axis=channel_axis)(conv4)
     conv4 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu',
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv4)
-    drop1 = Dropout(0.5)(conv4)
+    conv4 = BatchNormalization(axis=channel_axis)(conv4)
+    drop1 = Dropout(0.2)(conv4)
     pool4 = MaxPool3D(pool_size=(1, 2, 2))(drop1)
 
 
@@ -227,13 +229,13 @@ def feature_net_skip_LSTM(input_shape,
                     padding='same', kernel_initializer=init,
                     activation = 'relu',
                     kernel_regularizer=l2(reg), return_sequences=True)(pool4)
-    # x = BatchNormalization(axis=channel_axis)(x7)                
+    conv5 = BatchNormalization(axis=channel_axis)(conv5)  
     conv5 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu',
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv5)
-    # x = BatchNormalization(axis=channel_axis)(x8)
-    drop2 = Dropout(0.5)(conv5)
+    conv5 = BatchNormalization(axis=channel_axis)(conv5)
+    drop2 = Dropout(0.2)(conv5)
 
 
     up1 = UpSampling3D(size=(1, 2, 2))(drop2)
@@ -244,11 +246,11 @@ def feature_net_skip_LSTM(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor1)
-    # x = BatchNormalization(axis=channel_axis)(x7)
+    conv6 = BatchNormalization(axis=channel_axis)(conv6)
     conv6 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv6)
-    # x = BatchNormalization(axis=channel_axis)(x8)
+    conv6 = BatchNormalization(axis=channel_axis)(conv6)
     up2 = UpSampling3D(size=(1, 2, 2))(conv6)
 
 
@@ -258,7 +260,7 @@ def feature_net_skip_LSTM(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor2)
-    # x = BatchNormalization(axis=channel_axis)(x9)
+    conv7 = BatchNormalization(axis=channel_axis)(conv7)
     conv7 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
@@ -272,7 +274,7 @@ def feature_net_skip_LSTM(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor3)
-    # x = BatchNormalization(axis=channel_axis)(x9)
+    conv8 = BatchNormalization(axis=channel_axis)(conv8)
     conv8 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
@@ -286,7 +288,7 @@ def feature_net_skip_LSTM(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor4)
-    # x = BatchNormalization(axis=channel_axis)(x11)
+    conv9 = BatchNormalization(axis=channel_axis)(conv9)
     # x = Activation('relu')(x)
     conv9 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
@@ -297,11 +299,12 @@ def feature_net_skip_LSTM(input_shape,
 
     y1 = TensorProduct(n_dense_filters, kernel_initializer=init,
                         activation='relu',  kernel_regularizer=l2(reg))(conv9)
-    # y1 = BatchNormalization(axis=channel_axis)(y1)
+    y1 = BatchNormalization(axis=channel_axis)(y1)
     output = TensorProduct(n_features, kernel_initializer=init, 
                         activation='sigmoid', kernel_regularizer=l2(reg))(y1)
 
     model = Model(inputs,output)
+    model.compile(optimizer=Adam(lr=1e-4), loss='binary_crossentropy', metrics=['accuracy'])
 
     print(model.summary())
 
