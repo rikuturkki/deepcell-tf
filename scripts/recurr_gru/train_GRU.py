@@ -23,7 +23,7 @@ sys.path.insert(0,parentdir)
 import numpy as np
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras import callbacks
-from tensorflow.python.keras.optimizers import SGD
+from tensorflow.python.keras.optimizers import SGD, RMSprop
 
 from tensorflow.python.keras.utils.data_utils import get_file
 
@@ -373,7 +373,7 @@ def train_model(model,
 
     print('Training on {} GPUs'.format(num_gpus))
 
-    model.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
+    model.compile(loss=loss_function, optimizer=optimizer, metrics=['accuracy'])
 
     print("Input shape of model: ", model.input_shape)
     print("Output shape of model: ", model.output_shape)
@@ -595,7 +595,7 @@ if __name__== "__main__":
     receptive_field = 61  # should be adjusted for the scale of the data
 
     # optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    optimizer = RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0)
+    optimizer = RMSprop()
 
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
     batch_size = 1  # FC training uses 1 image per batch
