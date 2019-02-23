@@ -169,13 +169,13 @@ def feature_net_skip_LSTM(input_shape,
         channel_axis = -1
 
     inputs = Input(shape=input_shape)
-    img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
+    # img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
 
 
 
     x1 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(img)
+                    kernel_regularizer=l2(reg), return_sequences=True)(inputs)
     x = BatchNormalization(axis=channel_axis)(x1)
     x2 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     padding='same', kernel_initializer=init,
