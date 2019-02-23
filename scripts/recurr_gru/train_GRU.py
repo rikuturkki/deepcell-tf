@@ -328,12 +328,11 @@ def feature_net_skip_GRU(input_shape,
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv5)
     conv5 = BatchNormalization(axis=channel_axis)(conv5)
-    drop2 = Dropout(0.2)(conv5)
 
 
-    up1 = UpSampling3D(size=(1, 2, 2))(drop2)
+    up1 = UpSampling3D(size=(1, 2, 2))(conv5)
 
-    joinedTensor1 = Concatenate(axis=channel_axis)([drop1, up1])
+    joinedTensor1 = Concatenate(axis=channel_axis)([conv4, up1])
 
     conv6 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
