@@ -42,7 +42,7 @@ from tensorflow.python.keras.layers import MaxPool3D, Conv3DTranspose, UpSamplin
 from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
 from tensorflow.python.keras.layers import BatchNormalization
 from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D, ConvLSTM2D
-from tensorflow.python.keras.layers import Input, Add
+from tensorflow.python.keras.layers import Input, Add, Concatenate
 from tensorflow.python.keras.engine.input_layer import InputLayer
 
 from tensorflow.python.keras.models import Model
@@ -173,90 +173,133 @@ def feature_net_skip_LSTM(input_shape,
 
 
 
-    x1 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+    conv1 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(inputs)
-    x = BatchNormalization(axis=channel_axis)(x1)
-    x2 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+    # x = BatchNormalization(axis=channel_axis)(x1)
+    conv1 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x2)
-    x = MaxPool3D(pool_size=(1, 2, 2))(x)
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv1)
+    # x = BatchNormalization(axis=channel_axis)(x2)
+    pool1 = MaxPool3D(pool_size=(1, 2, 2))(conv1)
 
-    x3 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+    conv2 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x3)
-    x4 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    kernel_regularizer=l2(reg), return_sequences=True)(pool1)
+    # x = BatchNormalization(axis=channel_axis)(x3)
+    conv2 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x4)
-    x = MaxPool3D(pool_size=(1, 2, 2))(x)
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv2)
+    # x = BatchNormalization(axis=channel_axis)(x4)
+    pool2 = MaxPool3D(pool_size=(1, 2, 2))(conv2)
 
-    x5 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+    conv3 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x5)
-    x6 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    kernel_regularizer=l2(reg), return_sequences=True)(pool2)
+    # x = BatchNormalization(axis=channel_axis)(x5)
+    conv3 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x6)
-    x = MaxPool3D(pool_size=(1, 2, 2))(x)
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv3)
+    # x = BatchNormalization(axis=channel_axis)(x6)
+    pool3 = MaxPool3D(pool_size=(1, 2, 2))(conv3)
 
 
-    x7 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+    conv4 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x7)                
-    x8 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
+                    kernel_regularizer=l2(reg), return_sequences=True)(pool3)
+    conv4 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x8)
-    x = UpSampling3D(size=(1, 2, 2))(x)
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv4)
+    drop1 = Dropout(0.5)(conv4)
+    pool4 = MaxPool3D(pool_size=(1, 2, 2))(drop1)
 
-    joinedTensor1 = Add()([x, x6])
 
-    x7 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+
+    conv5 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    activation = 'relu',
+                    kernel_regularizer=l2(reg), return_sequences=True)(pool4)
+    # x = BatchNormalization(axis=channel_axis)(x7)                
+    conv5 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv5)
+    # x = BatchNormalization(axis=channel_axis)(x8)
+    drop2 = Dropout(0.5)(conv5)
+
+
+    up1 = UpSampling3D(size=(1, 2, 2))(drop2)
+
+    joinedTensor1 = Concatenate(axis=channel_axis)([drop1, up1])
+
+    conv6 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor1)
-    x = BatchNormalization(axis=channel_axis)(x7)
-    x8 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+    # x = BatchNormalization(axis=channel_axis)(x7)
+    conv6 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x8)
-    x = UpSampling3D(size=(1, 2, 2))(x)
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv6)
+    # x = BatchNormalization(axis=channel_axis)(x8)
+    up2 = UpSampling3D(size=(1, 2, 2))(conv6)
 
 
-    joinedTensor2 = Add()([x, x4])
+    joinedTensor2 = Concatenate(axis=channel_axis)([conv3, up2])
 
-    x9 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+    conv7 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor2)
-    x = BatchNormalization(axis=channel_axis)(x9)
-    x10 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+    # x = BatchNormalization(axis=channel_axis)(x9)
+    conv7 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x10)
-    x = UpSampling3D(size=(1, 2, 2))(x)
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv7)
+    # x = BatchNormalization(axis=channel_axis)(x10)
+    up3 = UpSampling3D(size=(1, 2, 2))(conv7)
 
-    joinedTensor3 = Add()([x, x2])
+    joinedTensor3 = Concatenate(axis=channel_axis)([conv2, up3])
 
-    x11 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+    conv8 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor3)
-    x = BatchNormalization(axis=channel_axis)(x11)
-    x = Activation('relu')(x)
-    x12 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+    # x = BatchNormalization(axis=channel_axis)(x9)
+    conv8 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(x)
-    x = BatchNormalization(axis=channel_axis)(x12)
-    x = Activation('relu')(x)
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv8)
 
-    y1 = TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg))(x)
-    y1 = BatchNormalization(axis=channel_axis)(y1)
-    y1 = Activation('relu')(y1)
-    y2 = TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(y1)
-    output = Activation('sigmoid')(y2)
+    up4 = UpSampling3D(size=(1, 2, 2))(conv8)
+
+    joinedTensor4 = Concatenate(axis=channel_axis)([conv1, up4])
+
+    conv9 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor4)
+    # x = BatchNormalization(axis=channel_axis)(x11)
+    # x = Activation('relu')(x)
+    conv9 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv9)
+    # x = BatchNormalization(axis=channel_axis)(x12)
+    # x = Activation('relu')(x)
+
+    y1 = TensorProduct(n_dense_filters, kernel_initializer=init,
+                        activation='relu',  kernel_regularizer=l2(reg))(conv9)
+    # y1 = BatchNormalization(axis=channel_axis)(y1)
+    output = TensorProduct(n_features, kernel_initializer=init, 
+                        activation='sigmoid', kernel_regularizer=l2(reg))(y1)
 
     model = Model(inputs,output)
 
