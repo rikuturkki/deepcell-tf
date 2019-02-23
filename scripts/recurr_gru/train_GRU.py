@@ -175,7 +175,7 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(inputs)
-    # conv1 = BatchNormalization(axis=channel_axis)(conv1)
+    conv1 = BatchNormalization(axis=channel_axis)(conv1)
     conv1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
@@ -187,7 +187,7 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool1)
-    # conv2 = BatchNormalization(axis=channel_axis)(conv2)
+    conv2 = BatchNormalization(axis=channel_axis)(conv2)
     conv2 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
@@ -199,7 +199,7 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool2)
-    # conv3 = BatchNormalization(axis=channel_axis)(conv3)
+    conv3 = BatchNormalization(axis=channel_axis)(conv3)
     conv3 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
@@ -212,7 +212,7 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool3)
-    # conv4 = BatchNormalization(axis=channel_axis)(conv4)
+    conv4 = BatchNormalization(axis=channel_axis)(conv4)
     conv4 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
@@ -226,7 +226,7 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool4)
-    # conv5 = BatchNormalization(axis=channel_axis)(conv5)  
+    conv5 = BatchNormalization(axis=channel_axis)(conv5)  
     conv5 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
@@ -242,7 +242,7 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor1)
-    # conv6 = BatchNormalization(axis=channel_axis)(conv6)
+    conv6 = BatchNormalization(axis=channel_axis)(conv6)
     conv6 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
@@ -257,7 +257,7 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor2)
-    # conv7 = BatchNormalization(axis=channel_axis)(conv7)
+    conv7 = BatchNormalization(axis=channel_axis)(conv7)
     conv7 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
@@ -271,7 +271,7 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor3)
-    # conv8 = BatchNormalization(axis=channel_axis)(conv8)
+    conv8 = BatchNormalization(axis=channel_axis)(conv8)
     conv8 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
