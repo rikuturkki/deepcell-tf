@@ -147,7 +147,7 @@ def feature_net_LSTM(input_shape,
     model.add(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg)))
     model.add(Activation('sigmoid'))
 
-    model.compile(loss='binary_crossentropy', optimizer='adadelta')
+    # model.compile(loss='binary_crossentropy', optimizer='adadelta')
     model.summary()
     return model
 
@@ -377,7 +377,7 @@ def train_model(model,
 
     print('Training on {} GPUs'.format(num_gpus))
 
-    # model.compile(loss=loss_function, optimizer=optimizer, metrics=['accuracy'])
+    model.compile(loss=loss_function, optimizer=optimizer, metrics=['accuracy'])
 
     print("Input shape of model: ", model.input_shape)
     print("Output shape of model: ", model.output_shape)

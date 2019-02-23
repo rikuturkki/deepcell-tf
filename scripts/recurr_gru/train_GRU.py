@@ -373,8 +373,7 @@ def train_model(model,
 
     print('Training on {} GPUs'.format(num_gpus))
 
-    model.compile(loss=losses.categorical_crossentropy(y_true, y_pred), 
-        optimizer=optimizer, metrics=['accuracy'])
+    model.compile(loss=loss_function, optimizer='adadelta', metrics=['accuracy'])
 
     print("Input shape of model: ", model.input_shape)
     print("Output shape of model: ", model.output_shape)
