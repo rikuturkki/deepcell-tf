@@ -227,7 +227,10 @@ def feature_net_skip_GRU(input_shape,
     norm5 = BatchNormalization(axis=channel_axis)(conv5)
 
 
-    up1 = UpSampling3D(size=(1, 2, 2))(norm5)
+    # up1 = UpSampling3D(size=(1, 2, 2))(norm5)
+
+    up1 = Conv3DTranspose(n_conv_filters=n_conv_filters, 
+                        strides=(1, 2, 2), padding='same')(norm5)
 
     joinedTensor1 = Concatenate(axis=channel_axis)([conv4, up1])
 
@@ -241,7 +244,10 @@ def feature_net_skip_GRU(input_shape,
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv6)
     norm6 = BatchNormalization(axis=channel_axis)(conv6)
-    up2 = UpSampling3D(size=(1, 2, 2))(norm6)
+
+    # up2 = UpSampling3D(size=(1, 2, 2))(norm6)
+    up2 = Conv3DTranspose(n_conv_filters=n_conv_filters, 
+                        strides=(1, 2, 2), padding='same')(norm6)
 
 
     joinedTensor2 = Concatenate(axis=channel_axis)([conv3, up2])
@@ -256,7 +262,11 @@ def feature_net_skip_GRU(input_shape,
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv7)
     norm7 = BatchNormalization(axis=channel_axis)(conv7)
-    up3 = UpSampling3D(size=(1, 2, 2))(norm7)
+    
+    # up3 = UpSampling3D(size=(1, 2, 2))(norm7)
+
+    up3 = Conv3DTranspose(n_conv_filters=n_conv_filters, 
+                        strides=(1, 2, 2), padding='same')(norm7)
 
     joinedTensor3 = Concatenate(axis=channel_axis)([conv2, up3])
 
@@ -270,7 +280,11 @@ def feature_net_skip_GRU(input_shape,
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv8)
     norm8 = BatchNormalization(axis=channel_axis)(conv8)
-    up4 = UpSampling3D(size=(1, 2, 2))(norm8)
+    
+    # up4 = UpSampling3D(size=(1, 2, 2))(norm8)
+
+    up4 = Conv3DTranspose(n_conv_filters=n_conv_filters, 
+                        strides=(1, 2, 2), padding='same')(norm8)
 
     joinedTensor4 = Concatenate(axis=channel_axis)([conv1, up4])
 
