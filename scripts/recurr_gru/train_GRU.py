@@ -594,8 +594,8 @@ if __name__== "__main__":
     test_size = .10  # % of data saved as test
     receptive_field = 61  # should be adjusted for the scale of the data
 
-    # optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    optimizer = RMSprop()
+    optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    # optimizer = RMSprop()
 
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
     batch_size = 1  # FC training uses 1 image per batch
