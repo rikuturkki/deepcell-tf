@@ -685,7 +685,7 @@ if __name__== "__main__":
     conv_gru_model_name = 'conv_gru_model'
     fgbg_gru_model_name = 'fgbg_gru_model'
 
-    n_epoch = 10  # Number of training epochs
+    n_epoch = 5  # Number of training epochs
     test_size = .10  # % of data saved as test
     receptive_field = 61  # should be adjusted for the scale of the data
 
