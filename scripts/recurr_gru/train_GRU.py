@@ -229,7 +229,7 @@ def feature_net_skip_GRU(input_shape,
 
     # up1 = UpSampling3D(size=(1, 2, 2))(norm5)
 
-    up1 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(3,3),
+    up1 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3,3),
                         strides=(1, 2, 2), padding='same')(norm5)
 
     joinedTensor1 = Concatenate(axis=channel_axis)([norm4, up1])
@@ -246,7 +246,7 @@ def feature_net_skip_GRU(input_shape,
     norm6 = BatchNormalization(axis=channel_axis)(conv6)
 
     # up2 = UpSampling3D(size=(1, 2, 2))(norm6)
-    up2 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(3,3),
+    up2 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3,3),
                         strides=(1, 2, 2), padding='same')(norm6)
 
 
@@ -265,7 +265,7 @@ def feature_net_skip_GRU(input_shape,
     
     # up3 = UpSampling3D(size=(1, 2, 2))(norm7)
 
-    up3 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(3,3),
+    up3 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3,3),
                         strides=(1, 2, 2), padding='same')(norm7)
 
     joinedTensor3 = Concatenate(axis=channel_axis)([norm2, up3])
@@ -283,7 +283,7 @@ def feature_net_skip_GRU(input_shape,
     
     # up4 = UpSampling3D(size=(1, 2, 2))(norm8)
 
-    up4 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(3,3),
+    up4 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3,3),
                         strides=(1, 2, 2), padding='same')(norm8)
 
     joinedTensor4 = Concatenate(axis=channel_axis)([norm1, up4])
