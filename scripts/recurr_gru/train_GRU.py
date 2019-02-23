@@ -40,7 +40,7 @@ from deepcell.training import train_model_conv
 
 from tensorflow.python.keras.layers import MaxPool3D, Conv3DTranspose, UpSampling3D
 from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
-from tensorflow.python.keras.layers import BatchNormalization
+from tensorflow.python.keras.layers import BatchNormalization, Dropout
 from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D, ConvLSTM2D
 from tensorflow.python.keras.layers import Input, Add, Concatenate
 from tensorflow.python.keras.engine.input_layer import InputLayer
@@ -169,7 +169,7 @@ def feature_net_skip_GRU(input_shape,
         channel_axis = 1
     else:
         channel_axis = -1
-
+    '''
     inputs = Input(shape=input_shape)
     # img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
 
@@ -265,6 +265,130 @@ def feature_net_skip_GRU(input_shape,
     print(model.summary())
 
     return model
+    '''
+    inputs = Input(shape=input_shape)
+    # img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
+
+
+
+    conv1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(inputs)
+    conv1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv1)
+    pool1 = MaxPool3D(pool_size=(1, 2, 2))(conv1)
+
+    conv2 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(pool1)
+    conv2 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv2)
+    pool2 = MaxPool3D(pool_size=(1, 2, 2))(conv2)
+
+    conv3 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(pool2)
+    conv3 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv3)
+    pool3 = MaxPool3D(pool_size=(1, 2, 2))(conv3)
+
+
+    conv4 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    activation = 'relu',
+                    kernel_regularizer=l2(reg), return_sequences=True)(pool3)
+    conv4 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv4)
+    drop1 = Dropout(0.5)(conv4)
+    pool4 = MaxPool3D(pool_size=(1, 2, 2))(drop1)
+
+
+
+    conv5 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    activation = 'relu',
+                    kernel_regularizer=l2(reg), return_sequences=True)(pool4)
+    # x = BatchNormalization(axis=channel_axis)(x7)                
+    conv5 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu',
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv5)
+    # x = BatchNormalization(axis=channel_axis)(x8)
+    drop2 = Dropout(0.5)(conv5)
+
+
+    up1 = UpSampling3D(size=(1, 2, 2))(drop2)
+
+    joinedTensor1 = Concatenate(axis=channel_axis)([drop1, up1])
+
+    conv6 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor1)
+    conv6 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv6)
+    up2 = UpSampling3D(size=(1, 2, 2))(conv6)
+
+
+    joinedTensor2 = Concatenate(axis=channel_axis)([conv3, up2])
+
+    conv7 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor2)
+    conv7 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv7)
+    up3 = UpSampling3D(size=(1, 2, 2))(conv7)
+
+    joinedTensor3 = Concatenate(axis=channel_axis)([conv2, up3])
+
+    conv8 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor3)
+    conv8 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv8)
+
+    up4 = UpSampling3D(size=(1, 2, 2))(conv8)
+
+    joinedTensor4 = Concatenate(axis=channel_axis)([conv1, up4])
+
+    conv9 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor4)
+    conv9 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                    activation = 'relu', 
+                    padding='same', kernel_initializer=init,
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv9)
+
+    y1 = TensorProduct(n_dense_filters, kernel_initializer=init,
+                        activation='relu',  kernel_regularizer=l2(reg))(conv9)
+    output = TensorProduct(n_features, kernel_initializer=init, 
+                        activation='sigmoid', kernel_regularizer=l2(reg))(y1)
+
+    model = Model(inputs,output)
+
+    print(model.summary())
+
+    return model
+
 
 # ==============================================================================
 # Train model
