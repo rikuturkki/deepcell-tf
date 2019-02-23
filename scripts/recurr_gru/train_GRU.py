@@ -173,8 +173,8 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv1)
-    conv1 = BatchNormalization(axis=channel_axis)(conv1)
-    pool1 = MaxPool3D(pool_size=(1, 2, 2))(conv1)
+    norm1 = BatchNormalization(axis=channel_axis)(conv1)
+    pool1 = MaxPool3D(pool_size=(1, 2, 2))(norm1)
 
     conv2 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
@@ -185,8 +185,8 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv2)
-    # conv2 = BatchNormalization(axis=channel_axis)(conv2)
-    pool2 = MaxPool3D(pool_size=(1, 2, 2))(conv2)
+    norm2 = BatchNormalization(axis=channel_axis)(conv2)
+    pool2 = MaxPool3D(pool_size=(1, 2, 2))(norm2)
 
     conv3 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
@@ -197,8 +197,8 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv3)
-    conv3 = BatchNormalization(axis=channel_axis)(conv3)
-    pool3 = MaxPool3D(pool_size=(1, 2, 2))(conv3)
+    norm3 = BatchNormalization(axis=channel_axis)(conv3)
+    pool3 = MaxPool3D(pool_size=(1, 2, 2))(norm3)
 
 
     conv4 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
@@ -210,8 +210,8 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv4)
-    conv4 = BatchNormalization(axis=channel_axis)(conv4)
-    pool4 = MaxPool3D(pool_size=(1, 2, 2))(conv4)
+    norm4 = BatchNormalization(axis=channel_axis)(conv4)
+    pool4 = MaxPool3D(pool_size=(1, 2, 2))(norm4)
 
 
 
@@ -224,10 +224,10 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv5)
-    conv5 = BatchNormalization(axis=channel_axis)(conv5)
+    norm5 = BatchNormalization(axis=channel_axis)(conv5)
 
 
-    up1 = UpSampling3D(size=(1, 2, 2))(conv5)
+    up1 = UpSampling3D(size=(1, 2, 2))(norm5)
 
     joinedTensor1 = Concatenate(axis=channel_axis)([conv4, up1])
 
@@ -240,8 +240,8 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv6)
-    conv6 = BatchNormalization(axis=channel_axis)(conv6)
-    up2 = UpSampling3D(size=(1, 2, 2))(conv6)
+    norm6 = BatchNormalization(axis=channel_axis)(conv6)
+    up2 = UpSampling3D(size=(1, 2, 2))(norm6)
 
 
     joinedTensor2 = Concatenate(axis=channel_axis)([conv3, up2])
@@ -255,8 +255,8 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv7)
-    conv7 = BatchNormalization(axis=channel_axis)(conv7)
-    up3 = UpSampling3D(size=(1, 2, 2))(conv7)
+    norm7 = BatchNormalization(axis=channel_axis)(conv7)
+    up3 = UpSampling3D(size=(1, 2, 2))(norm7)
 
     joinedTensor3 = Concatenate(axis=channel_axis)([conv2, up3])
 
@@ -269,8 +269,8 @@ def feature_net_skip_GRU(input_shape,
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv8)
-    conv8 = BatchNormalization(axis=channel_axis)(conv8)
-    up4 = UpSampling3D(size=(1, 2, 2))(conv8)
+    norm8 = BatchNormalization(axis=channel_axis)(conv8)
+    up4 = UpSampling3D(size=(1, 2, 2))(norm8)
 
     joinedTensor4 = Concatenate(axis=channel_axis)([conv1, up4])
 
