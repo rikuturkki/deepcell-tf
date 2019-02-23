@@ -236,7 +236,6 @@ def feature_net_skip_LSTM(input_shape,
     joinedTensor1 = Concatenate(axis=channel_axis)([conv4, up1])
 
     conv6 = ConvLSTM2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor1)
     conv6 = BatchNormalization(axis=channel_axis)(conv6)
