@@ -301,9 +301,9 @@ def feature_net_skip_GRU(input_shape,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv9)
     conv9 = BatchNormalization(axis=channel_axis)(conv9)
 
-    y1 = TensorProduct(n_dense_filters, kernel_initializer=init,
-                        activation='relu',  kernel_regularizer=l2(reg))(conv9)
-    y1 = BatchNormalization(axis=channel_axis)(y1)
+    # y1 = TensorProduct(n_dense_filters, kernel_initializer=init,
+    #                     activation='relu',  kernel_regularizer=l2(reg))(conv9)
+    # y1 = BatchNormalization(axis=channel_axis)(y1)
     output = TensorProduct(n_features, kernel_initializer=init, 
                         activation='sigmoid', kernel_regularizer=l2(reg))(conv9)
 
@@ -596,8 +596,8 @@ if __name__== "__main__":
                 raise
 
     # Set up training parameters
-    conv_gru_model_name = 'conv_gru_leaky_model'
-    fgbg_gru_model_name = 'fgbg_gru_leaky_model'
+    conv_gru_model_name = 'conv_gru_model'
+    fgbg_gru_model_name = 'fgbg_gru_model'
 
     n_epoch = 5  # Number of training epochs
     test_size = .10  # % of data saved as test
