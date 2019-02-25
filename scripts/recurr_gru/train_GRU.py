@@ -320,7 +320,7 @@ def feature_net_skip_GRU(input_shape,
     conv1 = LeakyReLU(alpha=0.3)(conv1)
     conv1 = BatchNormalization(axis=channel_axis)(conv1)
     conv1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    activation = 'relu', 
+                    # activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv1)
     norm1 = BatchNormalization(axis=channel_axis)(conv1)
@@ -333,7 +333,7 @@ def feature_net_skip_GRU(input_shape,
     conv2 = LeakyReLU(alpha=0.3)(conv2)
     conv2 = BatchNormalization(axis=channel_axis)(conv2)
     conv2 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    activation = 'relu', 
+                    # activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv2)
     norm2 = BatchNormalization(axis=channel_axis)(conv2)
@@ -346,7 +346,7 @@ def feature_net_skip_GRU(input_shape,
     conv3 = LeakyReLU(alpha=0.3)(conv3)
     conv3 = BatchNormalization(axis=channel_axis)(conv3)
     conv3 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    activation = 'relu', 
+                    # activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv3)
     norm3 = BatchNormalization(axis=channel_axis)(conv3)
@@ -360,7 +360,7 @@ def feature_net_skip_GRU(input_shape,
     conv4 = LeakyReLU(alpha=0.3)(conv4)
     conv4 = BatchNormalization(axis=channel_axis)(conv4)
     conv4 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    activation = 'relu', 
+                    # activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv4)
     norm4 = BatchNormalization(axis=channel_axis)(conv4)
@@ -375,7 +375,7 @@ def feature_net_skip_GRU(input_shape,
     conv5 = LeakyReLU(alpha=0.3)(conv5)
     conv5 = BatchNormalization(axis=channel_axis)(conv5)  
     conv5 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    activation = 'relu', 
+                    # activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv5)
     norm5 = BatchNormalization(axis=channel_axis)(conv5)
@@ -395,7 +395,7 @@ def feature_net_skip_GRU(input_shape,
     conv6 = LeakyReLU(alpha=0.3)(conv6)
     conv6 = BatchNormalization(axis=channel_axis)(conv6)
     conv6 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    activation = 'relu', 
+                    # activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv6)
     norm6 = BatchNormalization(axis=channel_axis)(conv6)
@@ -414,7 +414,7 @@ def feature_net_skip_GRU(input_shape,
     conv7 = LeakyReLU(alpha=0.3)(conv7)
     conv7 = BatchNormalization(axis=channel_axis)(conv7)
     conv7 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    activation = 'relu', 
+                    # activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv7)
     norm7 = BatchNormalization(axis=channel_axis)(conv7)
@@ -433,7 +433,7 @@ def feature_net_skip_GRU(input_shape,
     conv8 = LeakyReLU(alpha=0.3)(conv8)
     conv8 = BatchNormalization(axis=channel_axis)(conv8)
     conv8 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                    activation = 'relu', 
+                    # activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv8)
     norm8 = BatchNormalization(axis=channel_axis)(conv8)
