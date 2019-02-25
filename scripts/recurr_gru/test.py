@@ -288,8 +288,8 @@ if __name__== "__main__":
     conv_lstm_model_name = 'conv_lstm_model'
     fgbg_lstm_model_name = 'lstm_fgbg_model'
 
-    conv_gru_model_name = 'conv_gru_norm_model'
-    fgbg_gru_model_name = 'fgbg_gru_norm_model'
+    conv_gru_model_name = 'conv_gru_less_model'
+    fgbg_gru_model_name = 'fgbg_gru_less_model'
 
     n_epoch = 10  # Number of training epochs
     test_size = .10  # % of data saved as test
