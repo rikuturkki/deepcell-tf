@@ -166,10 +166,13 @@ def feature_net_skip_GRU(input_shape,
 
 
     inputs = Input(shape=input_shape)
+
+    conv1 = BatchNormalization(axis=channel_axis)(inputs)
+
     conv1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     # activation = 'relu', 
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(inputs)
+                    kernel_regularizer=l2(reg), return_sequences=True)(conv1)
     conv1 = BatchNormalization(axis=channel_axis)(conv1)
     conv1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
@@ -596,8 +599,8 @@ if __name__== "__main__":
                 raise
 
     # Set up training parameters
-    conv_gru_model_name = 'conv_gru_model'
-    fgbg_gru_model_name = 'fgbg_gru_model'
+    conv_gru_model_name = 'conv_gru_norm_model'
+    fgbg_gru_model_name = 'fgbg_gru_norm_model'
 
     n_epoch = 5  # Number of training epochs
     test_size = .10  # % of data saved as test
