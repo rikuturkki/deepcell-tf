@@ -205,7 +205,7 @@ def feature_net_skip_GRU(input_shape,
     norm3 = BatchNormalization(axis=channel_axis)(conv3)
     pool3 = MaxPool3D(pool_size=(1, 2, 2))(norm3)
 
-    '''
+    
     conv4 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     # activation = 'relu', 
                     padding='same', kernel_initializer=init,
@@ -217,13 +217,13 @@ def feature_net_skip_GRU(input_shape,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv4)
     norm4 = BatchNormalization(axis=channel_axis)(conv4)
     pool4 = MaxPool3D(pool_size=(1, 2, 2))(norm4)
-    '''
+    
 
 
     conv5 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     # activation = 'relu', 
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(pool3)
+                    kernel_regularizer=l2(reg), return_sequences=True)(pool4)
     conv5 = BatchNormalization(axis=channel_axis)(conv5)  
     conv5 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
@@ -232,7 +232,7 @@ def feature_net_skip_GRU(input_shape,
     norm5 = BatchNormalization(axis=channel_axis)(conv5)
 
 
-    '''
+    
 
     up1 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3, 3),
                         strides=(1, 2, 2), padding='same')(norm5)
@@ -250,10 +250,10 @@ def feature_net_skip_GRU(input_shape,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv6)
     norm6 = BatchNormalization(axis=channel_axis)(conv6)
 
-    '''
+    
 
     up2 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3,3),
-                        strides=(1, 2, 2), padding='same')(norm5)
+                        strides=(1, 2, 2), padding='same')(norm6)
 
 
     joinedTensor2 = Concatenate(axis=channel_axis)([norm3, up2])
@@ -286,7 +286,6 @@ def feature_net_skip_GRU(input_shape,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv8)
     norm8 = BatchNormalization(axis=channel_axis)(conv8)
     
-
     up4 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3,3),
                         strides=(1, 2, 2), padding='same')(norm8)
 
@@ -598,10 +597,10 @@ if __name__== "__main__":
                 raise
 
     # Set up training parameters
-    conv_gru_model_name = 'conv_gru_less_model'
-    fgbg_gru_model_name = 'fgbg_gru_less_model'
+    conv_gru_model_name = 'conv_gru_norm_model'
+    fgbg_gru_model_name = 'fgbg_gru_norm_model'
 
-    n_epoch = 5  # Number of training epochs
+    n_epoch = 10 # Number of training epochs
     test_size = .10  # % of data saved as test
     receptive_field = 61  # should be adjusted for the scale of the data
 
