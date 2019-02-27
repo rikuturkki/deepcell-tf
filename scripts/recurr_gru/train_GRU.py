@@ -161,8 +161,14 @@ def feature_net_skip_GRU(input_shape,
 
     if K.image_data_format() == 'channels_first':
         channel_axis = 1
+        time_axis = 2
+        row_axis = 3
+        col_axis = 4
     else:
         channel_axis = -1
+        time_axis = 1
+        row_axis = 2
+        col_axis = 3
 
 
     inputs = Input(shape=input_shape)
