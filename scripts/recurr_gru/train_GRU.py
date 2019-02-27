@@ -230,7 +230,7 @@ def feature_net_skip_GRU(input_shape,
 
 
     time_crop = (0, 0)
-    for layer in layers_to_concat.reversed():
+    for layer in layers_to_concat[::-1]:
         up = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3, 3),
                         strides=(1, 2, 2), padding='same')(norm)
 
