@@ -175,7 +175,7 @@ def feature_net_skip_GRU(input_shape,
 
     norm = BatchNormalization(axis=channel_axis)(inputs)
 
-    layer_shape = conv1.get_shape().as_list()
+    layer_shape = norm.get_shape().as_list()
     row_shape = int(layer_shape[row_axis])
     col_shape = int(layer_shape[col_axis])
 
@@ -199,7 +199,7 @@ def feature_net_skip_GRU(input_shape,
     row_pad = (target_row_dim - row_shape, 0)
     col_pad = (target_col_dim - col_shape, 0)
 
-    pad = ZeroPadding3D(padding=(time_pad, row_pad, col_pad))(conv)
+    pad = ZeroPadding3D(padding=(time_pad, row_pad, col_pad))(norm)
 
     layers_to_concat = []
 
@@ -227,16 +227,14 @@ def feature_net_skip_GRU(input_shape,
                         padding='same', kernel_initializer=init,
                         kernel_regularizer=l2(reg), return_sequences=True)(conv)
         norm = BatchNormalization(axis=channel_axis)(conv)
-        layers_to_concat.append(norm)
 
 
     time_crop = (0, 0)
-    for i in range(target_num_layers):
-        norm = layers_to_concat.pop()
+    for layer in layers_to_concat.reversed():
         up = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3, 3),
                         strides=(1, 2, 2), padding='same')(norm)
 
-        output_shape = norm.get_shape().as_list()
+        output_shape = layer.get_shape().as_list()
         target_shape = up.get_shape().as_list()
         row_crop = int(output_shape[row_axis] - target_shape[row_axis])
 
@@ -252,9 +250,9 @@ def feature_net_skip_GRU(input_shape,
             col_crop = (col_crop // 2, col_crop // 2 + 1)
         cropping = (time_crop, row_crop, col_crop)
 
-        crop = Cropping3D(cropping=cropping)(norm)
+        crop = Cropping3D(cropping=cropping)(layer)
 
-        joinedTensor = Concatenate(axis=channel_axis)([norm, up])
+        joinedTensor = Concatenate(axis=channel_axis)([layer, up])
 
         conv = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                         # activation = 'relu', 
