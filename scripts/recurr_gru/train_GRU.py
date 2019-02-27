@@ -252,7 +252,7 @@ def feature_net_skip_GRU(input_shape,
         row_crop = (row_crop // 2, row_crop // 2)
     else:
         row_crop = (row_crop // 2, row_crop // 2 + 1)
-        col_crop = int(output_shape[col_axis] - target_shape[col_axis])
+    col_crop = int(output_shape[col_axis] - target_shape[col_axis])
 
     if col_crop % 2 == 0:
         col_crop = (col_crop // 2, col_crop // 2)
@@ -292,7 +292,7 @@ def feature_net_skip_GRU(input_shape,
         row_crop = (row_crop // 2, row_crop // 2)
     else:
         row_crop = (row_crop // 2, row_crop // 2 + 1)
-        col_crop = int(output_shape[col_axis] - target_shape[col_axis])
+    col_crop = int(output_shape[col_axis] - target_shape[col_axis])
 
     if col_crop % 2 == 0:
         col_crop = (col_crop // 2, col_crop // 2)
@@ -329,7 +329,7 @@ def feature_net_skip_GRU(input_shape,
         row_crop = (row_crop // 2, row_crop // 2)
     else:
         row_crop = (row_crop // 2, row_crop // 2 + 1)
-        col_crop = int(output_shape[col_axis] - target_shape[col_axis])
+    col_crop = int(output_shape[col_axis] - target_shape[col_axis])
 
     if col_crop % 2 == 0:
         col_crop = (col_crop // 2, col_crop // 2)
@@ -365,7 +365,7 @@ def feature_net_skip_GRU(input_shape,
         row_crop = (row_crop // 2, row_crop // 2)
     else:
         row_crop = (row_crop // 2, row_crop // 2 + 1)
-        col_crop = int(output_shape[col_axis] - target_shape[col_axis])
+    col_crop = int(output_shape[col_axis] - target_shape[col_axis])
 
     if col_crop % 2 == 0:
         col_crop = (col_crop // 2, col_crop // 2)
