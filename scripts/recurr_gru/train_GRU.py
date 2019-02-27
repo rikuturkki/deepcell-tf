@@ -182,7 +182,7 @@ def feature_net_skip_GRU(input_shape,
     col_shape = int(layer_shape[col_axis])
     col_pad = (16 - col_shape%16, 0)
 
-    conv1 = ZeroPadding3D((time_pad, row_pad, col_pad)(conv1)
+    conv1 = ZeroPadding3D(padding=(time_pad, row_pad, col_pad))(conv1)
 
 
     conv1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
