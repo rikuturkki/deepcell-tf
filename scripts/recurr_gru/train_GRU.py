@@ -41,7 +41,7 @@ from deepcell.training import train_model_conv
 from tensorflow.python.keras.layers import MaxPool3D, Conv3DTranspose, UpSampling3D
 from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
 from tensorflow.python.keras.layers import BatchNormalization, Dropout, LeakyReLU
-from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D, ConvLSTM2D
+from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D, ConvLSTM2D, Cropping3D
 from tensorflow.python.keras.layers import Input, Add, Concatenate
 from tensorflow.python.keras.engine.input_layer import InputLayer
 
@@ -288,6 +288,27 @@ def feature_net_skip_GRU(input_shape,
     
     up4 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3,3),
                         strides=(1, 2, 2), padding='same')(norm8)
+
+    output_shape = norm1.get_shape().as_list()
+    target_shape = up4.get_shape().as_list()
+    time_crop = (0, 0)
+
+    row_crop = int(output_shape[row_axis] - target_shape[row_axis])
+
+    if row_crop % 2 == 0:
+        row_crop = (row_crop // 2, row_crop // 2)
+    else:
+        row_crop = (row_crop // 2, row_crop // 2 + 1)
+        col_crop = int(output_shape[col_axis] - target_shape[col_axis])
+
+    if col_crop % 2 == 0:
+        col_crop = (col_crop // 2, col_crop // 2)
+    else:
+        col_crop = (col_crop // 2, col_crop // 2 + 1)
+        cropping = (time_crop, row_crop, col_crop)
+
+    norm1 = Cropping3D(cropping=cropping)(norm1)
+
 
     joinedTensor4 = Concatenate(axis=channel_axis)([norm1, up4])
 
