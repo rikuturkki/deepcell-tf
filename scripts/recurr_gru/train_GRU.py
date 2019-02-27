@@ -231,11 +231,31 @@ def feature_net_skip_GRU(input_shape,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv5)
     norm5 = BatchNormalization(axis=channel_axis)(conv5)
 
-
     
 
     up1 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3, 3),
                         strides=(1, 2, 2), padding='same')(norm5)
+
+    output_shape = norm4.get_shape().as_list()
+    target_shape = up1.get_shape().as_list()
+    time_crop = (0, 0)
+
+    row_crop = int(output_shape[row_axis] - target_shape[row_axis])
+
+    if row_crop % 2 == 0:
+        row_crop = (row_crop // 2, row_crop // 2)
+    else:
+        row_crop = (row_crop // 2, row_crop // 2 + 1)
+        col_crop = int(output_shape[col_axis] - target_shape[col_axis])
+
+    if col_crop % 2 == 0:
+        col_crop = (col_crop // 2, col_crop // 2)
+    else:
+        col_crop = (col_crop // 2, col_crop // 2 + 1)
+        cropping = (time_crop, row_crop, col_crop)
+
+    norm4 = Cropping3D(cropping=cropping)(norm4)
+
 
     joinedTensor1 = Concatenate(axis=channel_axis)([norm4, up1])
 
@@ -256,6 +276,26 @@ def feature_net_skip_GRU(input_shape,
                         strides=(1, 2, 2), padding='same')(norm6)
 
 
+    output_shape = norm3.get_shape().as_list()
+    target_shape = up2.get_shape().as_list()
+    time_crop = (0, 0)
+
+    row_crop = int(output_shape[row_axis] - target_shape[row_axis])
+
+    if row_crop % 2 == 0:
+        row_crop = (row_crop // 2, row_crop // 2)
+    else:
+        row_crop = (row_crop // 2, row_crop // 2 + 1)
+        col_crop = int(output_shape[col_axis] - target_shape[col_axis])
+
+    if col_crop % 2 == 0:
+        col_crop = (col_crop // 2, col_crop // 2)
+    else:
+        col_crop = (col_crop // 2, col_crop // 2 + 1)
+        cropping = (time_crop, row_crop, col_crop)
+
+    norm3 = Cropping3D(cropping=cropping)(norm3)
+
     joinedTensor2 = Concatenate(axis=channel_axis)([norm3, up2])
 
     conv7 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
@@ -272,6 +312,26 @@ def feature_net_skip_GRU(input_shape,
 
     up3 = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3,3),
                         strides=(1, 2, 2), padding='same')(norm7)
+
+    output_shape = norm2.get_shape().as_list()
+    target_shape = up3.get_shape().as_list()
+    time_crop = (0, 0)
+
+    row_crop = int(output_shape[row_axis] - target_shape[row_axis])
+
+    if row_crop % 2 == 0:
+        row_crop = (row_crop // 2, row_crop // 2)
+    else:
+        row_crop = (row_crop // 2, row_crop // 2 + 1)
+        col_crop = int(output_shape[col_axis] - target_shape[col_axis])
+
+    if col_crop % 2 == 0:
+        col_crop = (col_crop // 2, col_crop // 2)
+    else:
+        col_crop = (col_crop // 2, col_crop // 2 + 1)
+        cropping = (time_crop, row_crop, col_crop)
+
+    norm2 = Cropping3D(cropping=cropping)(norm2)
 
     joinedTensor3 = Concatenate(axis=channel_axis)([norm2, up3])
 
