@@ -399,11 +399,13 @@ def feature_net_skip_GRU(input_shape,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv9)
     conv9 = BatchNormalization(axis=channel_axis)(conv9)
 
+    output = Cropping3D(cropping=(time_pad, row_pad, col_pad))(conv9)
+
     # y1 = TensorProduct(n_dense_filters, kernel_initializer=init,
     #                     activation='relu',  kernel_regularizer=l2(reg))(conv9)
     # y1 = BatchNormalization(axis=channel_axis)(y1)
     output = TensorProduct(n_features, kernel_initializer=init, 
-                        activation='sigmoid', kernel_regularizer=l2(reg))(conv9)
+                        activation='sigmoid', kernel_regularizer=l2(reg))(output)
 
     model = Model(inputs,output)
     model.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
