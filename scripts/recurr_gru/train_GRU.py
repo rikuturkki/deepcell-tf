@@ -175,6 +175,16 @@ def feature_net_skip_GRU(input_shape,
 
     conv1 = BatchNormalization(axis=channel_axis)(inputs)
 
+    time_pad = (0, 0)
+    layer_shape = conv1.get_shape().as_list()
+    row_shape = int(layer_shape[row_axis])
+    row_pad = (16 - row_shape%16, 0)
+    col_shape = int(layer_shape[col_axis])
+    col_pad = (16 - col_shape%16, 0)
+
+    conv1 = ZeroPadding3D((time_pad, row_pad, col_pad)(conv1)
+
+
     conv1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     # activation = 'relu', 
                     padding='same', kernel_initializer=init,
