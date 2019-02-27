@@ -19,11 +19,11 @@ path = sys.path[0]
 parentdir = path.replace("scripts/recurr_gru","")
 sys.path.insert(0,parentdir) 
 
-
+import math
 import numpy as np
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras import callbacks
-from tensorflow.python.keras.optimizers import SGD, RMSprop
+from tensorflow.python.keras.optimizers import SGD
 
 from tensorflow.python.keras.utils.data_utils import get_file
 
@@ -173,31 +173,105 @@ def feature_net_skip_GRU(input_shape,
 
     inputs = Input(shape=input_shape)
 
-    conv1 = BatchNormalization(axis=channel_axis)(inputs)
+    norm = BatchNormalization(axis=channel_axis)(inputs)
 
-    time_pad = (0, 0)
     layer_shape = conv1.get_shape().as_list()
     row_shape = int(layer_shape[row_axis])
-    row_pad = (16 - row_shape%16, 0)
     col_shape = int(layer_shape[col_axis])
-    col_pad = (16 - col_shape%16, 0)
 
-    conv1 = ZeroPadding3D(padding=(time_pad, row_pad, col_pad))(conv1)
+    # find the nearest power of 2 that divides input shape
+    log2row = math.frexp(row_shape)[1] - 1
+    log2col = math.frexp(col_shape)[1] - 1
 
+    target_num_layers = min(log2row, log2col) - 4 # smallest matrix in net to be 16 x 16
+
+    if row_shape != 2**log2row:
+        target_row_dim = np.power(2, log2row + 1)
+    else:
+        target_row_dim = np.power(2, log2row)
+
+    if col_shape != 2**log2col:
+        target_col_dim = np.power(2, log2col + 1)
+    else:
+        target_col_dim = np.power(2, log2col)
+
+    time_pad = (0, 0)
+    row_pad = (target_row_dim - row_shape, 0)
+    col_pad = (target_col_dim - col_shape, 0)
+
+    pad = ZeroPadding3D(padding=(time_pad, row_pad, col_pad))(conv)
+
+    layers_to_concat = []
 
     conv1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     # activation = 'relu', 
                     padding='same', kernel_initializer=init,
-                    kernel_regularizer=l2(reg), return_sequences=True)(conv1)
+                    kernel_regularizer=l2(reg), return_sequences=True)(pad)
     conv1 = BatchNormalization(axis=channel_axis)(conv1)
     conv1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv1)
-    norm1 = BatchNormalization(axis=channel_axis)(conv1)
+    norm = BatchNormalization(axis=channel_axis)(conv1)
+
+    for i in range(target_num_layers):
+        layers_to_concat.append(norm)
+        pool = MaxPool3D(pool_size=(1, 2, 2))(norm)
+        conv = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                        # activation = 'relu', 
+                        padding='same', kernel_initializer=init,
+                        kernel_regularizer=l2(reg), return_sequences=True)(pool)
+        conv = BatchNormalization(axis=channel_axis)(conv)
+        conv = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                        activation = 'relu', 
+                        padding='same', kernel_initializer=init,
+                        kernel_regularizer=l2(reg), return_sequences=True)(conv)
+        norm = BatchNormalization(axis=channel_axis)(conv)
+        layers_to_concat.append(norm)
+
+
+    time_crop = (0, 0)
+    for i in range(target_num_layers):
+        norm = layers_to_concat.pop()
+        up = Conv3DTranspose(filters=n_conv_filters, kernel_size=(1, 3, 3),
+                        strides=(1, 2, 2), padding='same')(norm)
+
+        output_shape = norm.get_shape().as_list()
+        target_shape = up.get_shape().as_list()
+        row_crop = int(output_shape[row_axis] - target_shape[row_axis])
+
+        if row_crop % 2 == 0:
+            row_crop = (row_crop // 2, row_crop // 2)
+        else:
+            row_crop = (row_crop // 2, row_crop // 2 + 1)
+        col_crop = int(output_shape[col_axis] - target_shape[col_axis])
+
+        if col_crop % 2 == 0:
+            col_crop = (col_crop // 2, col_crop // 2)
+        else:
+            col_crop = (col_crop // 2, col_crop // 2 + 1)
+        cropping = (time_crop, row_crop, col_crop)
+
+        crop = Cropping3D(cropping=cropping)(norm)
+
+        joinedTensor = Concatenate(axis=channel_axis)([norm, up])
+
+        conv = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                        # activation = 'relu', 
+                        padding='same', kernel_initializer=init,
+                        kernel_regularizer=l2(reg), return_sequences=True)(joinedTensor)
+        conv = BatchNormalization(axis=channel_axis)(conv)
+        conv = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                        activation = 'relu', 
+                        padding='same', kernel_initializer=init,
+                        kernel_regularizer=l2(reg), return_sequences=True)(conv)
+        norm = BatchNormalization(axis=channel_axis)(conv)
+
+
+    '''
     pool1 = MaxPool3D(pool_size=(1, 2, 2))(norm1)
 
-    conv2 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+    conv1 = ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                     # activation = 'relu', 
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(pool1)
@@ -398,8 +472,9 @@ def feature_net_skip_GRU(input_shape,
                     padding='same', kernel_initializer=init,
                     kernel_regularizer=l2(reg), return_sequences=True)(conv9)
     conv9 = BatchNormalization(axis=channel_axis)(conv9)
+    '''
 
-    output = Cropping3D(cropping=(time_pad, row_pad, col_pad))(conv9)
+    output = Cropping3D(cropping=(time_pad, row_pad, col_pad))(norm)
 
     # y1 = TensorProduct(n_dense_filters, kernel_initializer=init,
     #                     activation='relu',  kernel_regularizer=l2(reg))(conv9)
