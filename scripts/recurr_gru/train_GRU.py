@@ -258,7 +258,7 @@ def feature_net_skip_GRU(input_shape,
         col_crop = (col_crop // 2, col_crop // 2)
     else:
         col_crop = (col_crop // 2, col_crop // 2 + 1)
-        cropping = (time_crop, row_crop, col_crop)
+    cropping = (time_crop, row_crop, col_crop)
 
     norm4 = Cropping3D(cropping=cropping)(norm4)
 
@@ -298,7 +298,7 @@ def feature_net_skip_GRU(input_shape,
         col_crop = (col_crop // 2, col_crop // 2)
     else:
         col_crop = (col_crop // 2, col_crop // 2 + 1)
-        cropping = (time_crop, row_crop, col_crop)
+    cropping = (time_crop, row_crop, col_crop)
 
     norm3 = Cropping3D(cropping=cropping)(norm3)
 
@@ -335,7 +335,7 @@ def feature_net_skip_GRU(input_shape,
         col_crop = (col_crop // 2, col_crop // 2)
     else:
         col_crop = (col_crop // 2, col_crop // 2 + 1)
-        cropping = (time_crop, row_crop, col_crop)
+    cropping = (time_crop, row_crop, col_crop)
 
     norm2 = Cropping3D(cropping=cropping)(norm2)
 
@@ -371,7 +371,7 @@ def feature_net_skip_GRU(input_shape,
         col_crop = (col_crop // 2, col_crop // 2)
     else:
         col_crop = (col_crop // 2, col_crop // 2 + 1)
-        cropping = (time_crop, row_crop, col_crop)
+    cropping = (time_crop, row_crop, col_crop)
 
     norm1 = Cropping3D(cropping=cropping)(norm1)
 
