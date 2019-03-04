@@ -213,6 +213,7 @@ def feature_net_3D(receptive_field=61,
         x.append(Softmax(axis=channel_axis)(x[-1]))
 
     model = Model(inputs=x[0], outputs=x[-1])
+    model.summary()
 
     return model
 
@@ -467,7 +468,7 @@ def main(argv):
             model_name = arg
 
     if data_filename == None:
-        data_filename = 'nuclear_movie_hela0-7_same.npz'
+        data_filename = '3T3_NIH-7_same.npz'
 
     #  Load data
     print("Loading data from " + data_filename)
