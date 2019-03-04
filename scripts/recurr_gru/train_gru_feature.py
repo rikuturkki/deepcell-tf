@@ -468,7 +468,7 @@ def main(argv):
             model_name = arg
 
     if data_filename == None:
-        data_filename = '3T3_NIH-7_same.npz'
+        data_filename = '3T3_NIH.npz'
 
     #  Load data
     print("Loading data from " + data_filename)
