@@ -516,17 +516,17 @@ if __name__== "__main__":
     distance_bins = 4  # number of distance classes
     erosion_width = 0  # erode edges
 
-    batch_size = 64  # number of images per batch (should be 2 ^ n)
-    win = (receptive_field - 1) // 2  # sample window size
-    win_z = (frames_per_batch - 1) // 2 # z window size
-    balance_classes = True  # sample each class equally
-    max_class_samples = 1e7  # max number of samples per class.
-
     n_features = 4  # (cell-background edge, cell-cell edge, cell interior, background)
 
     # 3D Settings
     frames_per_batch = 3
     norm_method = 'whole_image'  # data normalization - `whole_image` for 3d conv
+
+    batch_size = 64  # number of images per batch (should be 2 ^ n)
+    win = (receptive_field - 1) // 2  # sample window size
+    win_z = (frames_per_batch - 1) // 2 # z window size
+    balance_classes = True  # sample each class equally
+    max_class_samples = 1e7  # max number of samples per class.
 
     main(sys.argv[1:])
 
