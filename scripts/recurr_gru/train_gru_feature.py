@@ -391,7 +391,7 @@ def create_and_train_fgbg(data_filename, train_dict):
 
     fgbg_model = train_model_sample(
         model=fgbg_model,
-        data_filename=data_filename,  # full path to npz file
+        dataset=data_filename,  # full path to npz file
         model_name=fgbg_gru_model_name,
         window_size=(win, win, win_z),
         optimizer=optimizer,
@@ -399,7 +399,6 @@ def create_and_train_fgbg(data_filename, train_dict):
         balance_classes=balance_classes,
         max_class_samples=max_class_samples,
         transform='fgbg',
-        frames_per_batch=frames_per_batch,
         n_epoch=n_epoch,
         model_dir=MODEL_DIR,
         lr_sched=lr_sched,
@@ -429,12 +428,14 @@ def create_and_train_conv_gru(data_filename, train_dict):
 
     conv_gru_model = train_model_sample(
         model=conv_gru_model,
-        data_filename = data_filename,
+        dataset=data_filename,  # full path to npz file
         model_name=conv_gru_model_name,
+        window_size=(win, win, win_z),
         optimizer=optimizer,
-        transform='watershed',
-        expt='sample_watershed',
-        frames_per_batch=frames_per_batch,
+        batch_size=batch_size,
+        balance_classes=balance_classes,
+        max_class_samples=max_class_samples,
+        transform='fgbg',
         n_epoch=n_epoch,
         model_dir=MODEL_DIR,
         lr_sched=lr_sched,
