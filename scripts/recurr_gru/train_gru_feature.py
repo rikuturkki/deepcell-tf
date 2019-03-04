@@ -519,7 +519,7 @@ def create_and_train_fgbg(data_filename, train_dict):
 
     fgbg_model = train_model(
         model=fgbg_model,
-        dataset=data_filename,  # full path to npz file
+        data_filename=data_filename,  # full path to npz file
         model_name=fgbg_gru_model_name,
         window_size=(win, win, win_z),
         optimizer=optimizer,
@@ -556,7 +556,7 @@ def create_and_train_conv_gru(data_filename, train_dict):
 
     conv_gru_model = train_model(
         model=conv_gru_model,
-        dataset=data_filename,  # full path to npz file
+        data_filename=data_filename,  # full path to npz file
         model_name=conv_gru_model_name,
         window_size=(win, win, win_z),
         transform='watershed',
