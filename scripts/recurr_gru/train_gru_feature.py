@@ -374,7 +374,7 @@ def train_model(model,
 
     return model
 
- def train_model_sample(model,
+def train_model_sample(model,
                        dataset,
                        expt='',
                        test_size=.1,
@@ -385,8 +385,8 @@ def train_model(model,
                        window_size=None,
                        balance_classes=True,
                        max_class_samples=None,
-                       log_dir='/data/tensorboard_logs',
-                       model_dir='/data/models',
+                       log_dir=LOG_DIR,
+                       model_dir=MODEL_DIR,
                        model_name=None,
                        focal=False,
                        gamma=0.5,
@@ -498,6 +498,7 @@ def train_model(model,
         ])
 
     np.savez(loss_path, loss_history=loss_history.history)
+
 
     return model
 
