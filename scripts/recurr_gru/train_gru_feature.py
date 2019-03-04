@@ -36,13 +36,14 @@ from deepcell.layers import TensorProduct
 from deepcell.utils import train_utils
 from deepcell.utils.data_utils import get_data
 from deepcell.utils.train_utils import rate_scheduler
-from deepcell.training import train_model_conv
+from deepcell.training import train_model_conv, train_model_sample
+
 
 from tensorflow.python.keras.layers import MaxPool3D, Conv3DTranspose, UpSampling3D
 from scripts.recurr_gru.conv_gru_layer import ConvGRU2D
 from tensorflow.python.keras.layers import BatchNormalization, Dropout, LeakyReLU
 from tensorflow.python.keras.layers import Conv3D, ZeroPadding3D, ConvLSTM2D, Cropping3D
-from tensorflow.python.keras.layers import Input, Add, Concatenate
+from tensorflow.python.keras.layers import Input, Add, Concatenate, Flatten
 from tensorflow.python.keras.engine.input_layer import InputLayer
 
 from tensorflow.python.keras.models import Model
@@ -388,13 +389,16 @@ def create_and_train_fgbg(data_filename, train_dict):
 
     # print(fgbg_model.summary())
 
-    fgbg_model = train_model(
+    fgbg_model = train_model_sample(
         model=fgbg_model,
         data_filename=data_filename,  # full path to npz file
         model_name=fgbg_gru_model_name,
-        transform='fgbg',
+        window_size=(win, win, win_z),
         optimizer=optimizer,
         batch_size=batch_size,
+        balance_classes=balance_classes,
+        max_class_samples=max_class_samples,
+        transform='fgbg',
         frames_per_batch=frames_per_batch,
         n_epoch=n_epoch,
         model_dir=MODEL_DIR,
@@ -423,7 +427,7 @@ def create_and_train_conv_gru(data_filename, train_dict):
 
     # print(conv_gru_model.summary())
 
-    conv_gru_model = train_model(
+    conv_gru_model = train_model_sample(
         model=conv_gru_model,
         data_filename = data_filename,
         model_name=conv_gru_model_name,
