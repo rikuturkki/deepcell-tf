@@ -604,7 +604,7 @@ def main(argv):
             model_name = arg
 
     if data_filename == None:
-        data_filename = '3T3_NIH.npz'
+        data_filename = 'mousebrain.npz'
 
     #  Load data
     print("Loading data from " + data_filename)
