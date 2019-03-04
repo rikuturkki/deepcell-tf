@@ -431,13 +431,16 @@ def create_and_train_conv_gru(data_filename, train_dict):
         dataset=data_filename,  # full path to npz file
         model_name=conv_gru_model_name,
         window_size=(win, win, win_z),
+        transform='watershed',
+        distance_bins=distance_bins,
+        erosion_width=erosion_width,
         optimizer=optimizer,
         batch_size=batch_size,
         balance_classes=balance_classes,
         max_class_samples=max_class_samples,
-        transform='fgbg',
         n_epoch=n_epoch,
         model_dir=MODEL_DIR,
+        expt='sample_watershed',
         lr_sched=lr_sched,
         rotation_range=180,
         flip=True,
@@ -513,7 +516,6 @@ if __name__== "__main__":
     optimizer = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
-    batch_size = 1  # FC training uses 1 image per batch
 
     # Transformation settings
     # Transformation settings
@@ -527,7 +529,7 @@ if __name__== "__main__":
     frames_per_batch = 3
     norm_method = 'whole_image'  # data normalization - `whole_image` for 3d conv
 
-    batch_size = 64  # number of images per batch (should be 2 ^ n)
+    batch_size = 8  # number of images per batch (should be 2 ^ n)
     win = (receptive_field - 1) // 2  # sample window size
     win_z = (frames_per_batch - 1) // 2 # z window size
     balance_classes = True  # sample each class equally
