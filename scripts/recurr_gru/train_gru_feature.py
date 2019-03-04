@@ -509,11 +509,13 @@ def train_model_sample(model,
 def create_and_train_fgbg(data_filename, train_dict):
     
     fgbg_model = feature_net_3D(
+        input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         receptive_field=receptive_field,
         n_features=2,
         norm_method=norm_method,
         n_frames=frames_per_batch,
-        n_channels=train_dict['X'].shape[-1])
+        n_channels=train_dict['X'].shape[-1],
+        dilated=True)
 
     # print(fgbg_model.summary())
 
@@ -546,11 +548,13 @@ def create_and_train_fgbg(data_filename, train_dict):
 
 def create_and_train_conv_gru(data_filename, train_dict):
     conv_gru_model = feature_net_3D(
+        input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         receptive_field=receptive_field,
         n_features=distance_bins,
         norm_method=norm_method,
         n_frames=frames_per_batch,
-        n_channels=train_dict['X'].shape[-1])
+        n_channels=train_dict['X'].shape[-1],
+        dilated=True)
 
     # print(conv_gru_model.summary())
 
