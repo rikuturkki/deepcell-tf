@@ -61,8 +61,8 @@ from tensorflow.python.client import device_lib
 
 
 # Set up file paths
-MODEL_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/models')
-LOG_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/logs')
+MODEL_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/models/')
+LOG_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/logs/')
 
 
 # ==============================================================================
