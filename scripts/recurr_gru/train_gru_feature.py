@@ -517,7 +517,7 @@ def create_and_train_fgbg(data_filename, train_dict):
 
     # print(fgbg_model.summary())
 
-    fgbg_model = train_model_sample(
+    fgbg_model = train_model(
         model=fgbg_model,
         dataset=data_filename,  # full path to npz file
         model_name=fgbg_gru_model_name,
@@ -554,7 +554,7 @@ def create_and_train_conv_gru(data_filename, train_dict):
 
     # print(conv_gru_model.summary())
 
-    conv_gru_model = train_model_sample(
+    conv_gru_model = train_model(
         model=conv_gru_model,
         dataset=data_filename,  # full path to npz file
         model_name=conv_gru_model_name,
