@@ -384,7 +384,7 @@ def create_and_train_fgbg(data_filename, train_dict):
         n_features=2,
         norm_method=norm_method,
         n_frames=frames_per_batch,
-        n_channels=X_train.shape[-1])
+        n_channels=train_dict['X'].shape[-1])
 
     # print(fgbg_model.summary())
 
@@ -419,7 +419,7 @@ def create_and_train_conv_gru(data_filename, train_dict):
         n_features=distance_bins,
         norm_method=norm_method,
         n_frames=frames_per_batch,
-        n_channels=X_train.shape[-1])
+        n_channels=train_dict['X'].shape[-1])
 
     # print(conv_gru_model.summary())
 
