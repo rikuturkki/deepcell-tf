@@ -32,7 +32,7 @@ from deepcell import losses
 from scripts.recurr_gru import image_gen
 from deepcell import image_generators
 from deepcell import model_zoo
-from deepcell.layers import TensorProduct, ReflectionPadding3D
+from deepcell.layers import TensorProduct, ReflectionPadding3D, DilatedMaxPool3D
 
 from deepcell.utils import train_utils
 from deepcell.utils.data_utils import get_data
