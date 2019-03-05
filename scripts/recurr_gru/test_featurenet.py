@@ -224,8 +224,8 @@ def main(argv):
 
     labeled_images, fg_thresh = post_process(test_images, test_images_fgbg)
 
-    plot_results(X_test, test_images_fgbg, fg_thresh, test_images, labeled_images, model_name)
-    get_video_prediction(labeled_images, model_name)
+    plot_results(X_test, test_images_fgbg, fg_thresh, test_images, labeled_images, conv_gru_model_name)
+    get_video_prediction(labeled_images, conv_gru_model_name)
 
 
 if __name__== "__main__":
