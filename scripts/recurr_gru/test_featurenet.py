@@ -26,12 +26,7 @@ from deepcell import model_zoo
 from deepcell.utils.data_utils import get_data
 from deepcell.utils.plot_utils import get_js_video
 
-from scripts.recurr_gru.train_gru_feature import feature_net_3D
-
-from skimage.measure import label
-from skimage.morphology import watershed
-from skimage.feature import peak_local_max
-
+from scripts.recurr_gru.train_gru_feature import feature_net_skip_3D
 
 import numpy as np
 from skimage.measure import label
@@ -53,31 +48,42 @@ MODEL_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/models')
 # Initialize new model
 # ==============================================================================
 
-
 def test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file):
-    run_fgbg_model = feature_net_3D(
+    run_fgbg_model = feature_net_skip_3D(
         receptive_field=receptive_field,
-        dilated=True,
         n_features=2,
         n_frames=frames_per_batch,
-        input_shape=tuple(X_test.shape[1:]))
+        n_skips=n_skips,
+        n_conv_filters=32,
+        n_dense_filters=128,
+        input_shape=tuple(X_test.shape[1:]),
+        multires=False,
+        last_only=False,
+        norm_method=norm_method)
+
     run_fgbg_model.load_weights(fgbg_gru_weights_file)
 
 
-    run_watershed_model = feature_net_3D(
+    run_conv_model = feature_net_skip_3D(
+        model=run_fgbg_model,
         receptive_field=receptive_field,
-        dilated=True,
-        n_features=distance_bins,
+        n_skips=n_skips,
+        n_features=4,  # (background edge, interior edge, cell interior, background)
         n_frames=frames_per_batch,
-        input_shape=tuple(X_test.shape[1:]))
-    run_watershed_model.load_weights(conv_gru_weights_file)
+        n_conv_filters=32,
+        n_dense_filters=128,
+        multires=False,
+        last_only=False,
+        input_shape=tuple(X_test.shape[1:]),
+        norm_method=norm_method)
+    run_conv_model.load_weights(conv_gru_weights_file)
 
 
-    test_images = run_watershed_model.predict(X_test)[-1]
+    test_images = run_conv_model.predict(X_test)[-1]
     test_images_fgbg = run_fgbg_model.predict(X_test)[-1]
 
-    print('watershed transform shape:', test_images.shape)
-    print('segmentation mask shape:', test_images_fgbg.shape)
+    print('edge/interior prediction shape:', test_images.shape)
+    print('fgbg mask shape:', test_images_fgbg.shape)
 
     return test_images, test_images_fgbg
 
@@ -94,39 +100,32 @@ def post_process(test_images, test_images_fgbg):
     argmax_images = np.array(argmax_images)
     argmax_images = np.expand_dims(argmax_images, axis=-1)
 
-    print('watershed argmax shape:', argmax_images.shape)
+    print('argmax shape:', argmax_images.shape)
 
     # threshold the foreground/background
-    # and remove back ground from watershed transform
-    threshold = 0.8
-    fg_thresh = test_images_fgbg[..., 1] > threshold
+    # and remove back ground from edge transform
 
+    fg_thresh = test_images_fgbg[..., 1] > threshold
     fg_thresh = np.expand_dims(fg_thresh, axis=-1)
-    argmax_images_post_fgbg = argmax_images * fg_thresh
+
+    test_images_post_fgbg = test_images * fg_thresh
 
 
     # Label interior predictions
 
-    watershed_images = []
-    for i in range(argmax_images_post_fgbg.shape[0]):
-        image = fg_thresh[i, ..., 0]
-        distance = argmax_images_post_fgbg[i, ..., 0]
+    labeled_images = []
+    for i in range(test_images_post_fgbg.shape[0]):
+        interior = test_images_post_fgbg[i, ..., 2] > .2
+        labeled_image = label(interior)
+        labeled_image = morphology.remove_small_objects(
+            labeled_image, min_size=50, connectivity=1)
+        labeled_images.append(labeled_image)
+    labeled_images = np.array(labeled_images)
+    labeled_images = np.expand_dims(labeled_images, axis=-1)
 
-        local_maxi = peak_local_max(test_images[i, ..., -1],
-                                    min_distance=15, 
-                                    exclude_border=False,
-                                    indices=False,
-                                    labels=image)
+    print('labeled_images shape:', labeled_images.shape)
 
-        markers = label(local_maxi)
-        segments = watershed(-distance, markers, mask=image)
-        watershed_images.append(segments)
-
-    watershed_images = np.array(watershed_images)
-    watershed_images = np.expand_dims(watershed_images, axis=-1)
-
-
-    return argmax_images, watershed_images, fg_thresh
+    return labeled_images, fg_thresh
 
 
 # ==============================================================================
@@ -134,33 +133,39 @@ def post_process(test_images, test_images_fgbg):
 # ==============================================================================
 
 def plot_results(X_test, test_images_fgbg, fg_thresh, 
-    argmax_images, argmax_images_post_fgbg, watershed_images, model_name):
-    index = np.random.randint(low=0, high=watershed_images.shape[0])
-    frame = np.random.randint(low=0, high=watershed_images.shape[1])
+    test_images, labeled_images, model_name):
+    index = np.random.randint(low=0, high=labeled_images.shape[0])
+    print('Image number:', index)
 
-    print('Image:', index)
-    print('Frame:', frame)
-
-    fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(15, 15), sharex=True, sharey=True)
+    fig, axes = plt.subplots(ncols=3, nrows=3, figsize=(15, 15), sharex=True, sharey=True)
     ax = axes.ravel()
 
-    ax[0].imshow(X_test[index, frame, ..., 0])
+    ax[0].imshow(X_test[0,index, ..., 0])
     ax[0].set_title('Source Image')
 
-    ax[1].imshow(test_images_fgbg[index, frame, ..., 1])
-    ax[1].set_title('Segmentation Prediction')
+    ax[1].imshow(X_test[1,index, ..., 0])
+    ax[1].set_title('Source Image')
 
-    ax[2].imshow(fg_thresh[index, frame, ..., 0], cmap='jet')
-    ax[2].set_title('Thresholded Segmentation')
+    ax[2].imshow(X_test[2,index, ..., 0])
+    ax[2].set_title('Source Image')
 
-    ax[3].imshow(argmax_images[index, frame, ..., 0], cmap='jet')
-    ax[3].set_title('Watershed Transform')
+    ax[3].imshow(X_test[3,index, ..., 0])
+    ax[3].set_title('Source Image')
 
-    ax[4].imshow(argmax_images_post_fgbg[index, frame, ..., 0], cmap='jet')
-    ax[4].set_title('Watershed Transform w/o Background')
+    ax[4].imshow(test_images_fgbg[index, ..., 1])
+    ax[4].set_title('Segmentation Prediction')
 
-    ax[5].imshow(watershed_images[index, frame, ..., 0], cmap='jet')
-    ax[5].set_title('Watershed Segmentation')
+    ax[5].imshow(fg_thresh[index, ..., 0], cmap='jet')
+    ax[5].set_title('FGBG Threshold {}%'.format(threshold * 100))
+
+    ax[6].imshow(test_images[index, ..., 0] + test_images[index, ..., 1], cmap='jet')
+    ax[6].set_title('Edge Prediction')
+
+    ax[7].imshow(test_images[index, ..., 2], cmap='jet')
+    ax[7].set_title('Interior Prediction')
+
+    ax[8].imshow(labeled_images[index, ..., 0], cmap='jet')
+    ax[8].set_title('Instance Segmentation')
 
     fig.tight_layout()
     plt.show()
@@ -232,10 +237,9 @@ def main(argv):
         print("Model not supported, please choose gru or lstm")
         sys.exit()
 
-    argmax_images, watershed_images, fg_thresh = post_process(test_images, test_images_fgbg)
+    labeled_images, fg_thresh = post_process(test_images, test_images_fgbg)
 
-    plot_results(X_test, test_images_fgbg, fg_thresh, 
-    argmax_images, argmax_images_post_fgbg, watershed_images, model_name)
+    plot_results(X_test, test_images_fgbg, fg_thresh, test_images, labeled_images, model_name)
     get_video_prediction(labeled_images, model_name)
 
 
@@ -254,29 +258,21 @@ if __name__== "__main__":
     conv_gru_model_name = 'conv_gru_featurenet_model'
     fgbg_gru_model_name = 'fgbg_gru_featurenet_model'
 
-    n_epoch = 1  # Number of training epochs
+    n_epoch = 10  # Number of training epochs
     test_size = .10  # % of data saved as test
-    norm_method = 'std'  # data normalization
     receptive_field = 61  # should be adjusted for the scale of the data
 
-    # Transformation settings
-    # Transformation settings
-    transform = 'watershed'
-    distance_bins = 4  # number of distance classes
-    erosion_width = 0  # erode edges
+    batch_size = 1  # FC training uses 1 image per batch
+    threshold = 0.9
 
+    # Transformation settings
+    n_skips = 1
+    transform = None
     n_features = 4  # (cell-background edge, cell-cell edge, cell interior, background)
 
     # 3D Settings
     frames_per_batch = 3
     norm_method = 'whole_image'  # data normalization - `whole_image` for 3d conv
-
-    batch_size = 2  # number of images per batch (should be 2 ^ n)
-    win = (receptive_field - 1) // 2  # sample window size
-    win_z = (frames_per_batch - 1) // 2 # z window size
-    balance_classes = True  # sample each class equally
-    max_class_samples = 1e7  # max number of samples per class.
-
 
     main(sys.argv[1:])
 

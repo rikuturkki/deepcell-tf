@@ -426,7 +426,7 @@ def train_model(model,
 # Create and train foreground/background separation model
 # ==============================================================================
 
-def create_and_train_fgbg(data_filename, train_dict):
+def create_and_train_model(data_filename, train_dict):
     
     fgbg_model = feature_net_skip_3D(
         receptive_field=receptive_field,
@@ -443,7 +443,6 @@ def create_and_train_fgbg(data_filename, train_dict):
     # print(fgbg_model.summary())
 
     fgbg_model = train_model_conv(
-        model=fgbg_model,
         dataset=data_filename,  # full path to npz file
         model_name=fgbg_gru_model_name,
         log_dir=LOG_DIR,
@@ -463,12 +462,7 @@ def create_and_train_fgbg(data_filename, train_dict):
     fgbg_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_gru_model_name))
     fgbg_model.save_weights(fgbg_gru_weights_file)
 
-
-# ==============================================================================
-# Create a segmentation model
-# ==============================================================================
-
-def create_and_train_conv_gru(fgbg_model, data_filename, train_dict):
+    print("Training segmentation model. \n")
     conv_gru_model = feature_net_skip_3D(
         fgbg_model=fgbg_model,
         receptive_field=receptive_field,
@@ -541,13 +535,7 @@ def main(argv):
     print("Training " + model_name)
     print(device_lib.list_local_devices())
 
-    if model_name == 'fgbg':
-        create_and_train_fgbg(data_filename, train_dict)
-    elif model_name == 'conv':
-        create_and_train_conv_gru(fgbg_model, data_filename, train_dict)
-    else:
-        print("Model not supported, please choose fgbg or conv")
-        sys.exit()
+    create_and_train_model(data_filename, train_dict)
 
   
 if __name__== "__main__":
@@ -564,7 +552,7 @@ if __name__== "__main__":
     conv_gru_model_name = 'conv_gru_featurenet_model'
     fgbg_gru_model_name = 'fgbg_gru_featurenet_model'
 
-    n_epoch = 1  # Number of training epochs
+    n_epoch = 5  # Number of training epochs
     test_size = .10  # % of data saved as test
     norm_method = 'std'  # data normalization
     receptive_field = 61  # should be adjusted for the scale of the data
