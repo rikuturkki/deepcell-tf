@@ -65,7 +65,7 @@ def test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file):
 
 
     run_conv_model = feature_net_skip_3D(
-        model=run_fgbg_model,
+        fgbg_model=run_fgbg_model,
         receptive_field=receptive_field,
         n_skips=n_skips,
         n_features=4,  # (background edge, interior edge, cell interior, background)

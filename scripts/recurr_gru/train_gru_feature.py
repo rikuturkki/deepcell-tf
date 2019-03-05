@@ -114,7 +114,8 @@ def feature_net_3D(receptive_field=61,
             input_shape = (n_frames, receptive_field, receptive_field, n_channels)
 
     x.append(Input(shape=input_shape))
-    x.append(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(x[-1]))
+    # x.append(ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(x[-1]))
+    x.append(BatchNormalization(axis=channel_axis)(x[-1]))
 
     if padding:
         if padding_mode == 'reflect':
@@ -234,7 +235,8 @@ def feature_net_skip_3D(receptive_field=61,
         channel_axis = -1
 
     inputs = Input(shape=input_shape)
-    img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
+    # img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
+    img = BatchNormalization(axis=channel_axis)(inputs)
 
     models = []
     model_outputs = []
@@ -430,12 +432,12 @@ def create_and_train_fgbg(data_filename, train_dict):
     
     fgbg_model = feature_net_skip_3D(
         receptive_field=receptive_field,
-        n_features=2,  # segmentation mask (is_cell, is_not_cell)
+        n_features=2,
         n_frames=frames_per_batch,
         n_skips=n_skips,
         n_conv_filters=32,
         n_dense_filters=128,
-        input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
+        input_shape=tuple(X_test.shape[1:]),
         multires=False,
         last_only=False,
         norm_method=norm_method)
