@@ -426,7 +426,7 @@ def train_model(model,
 # Create and train foreground/background separation model
 # ==============================================================================
 
-def create_and_train_model(data_filename, train_dict):
+def create_and_train_fgbg(data_filename, train_dict):
     
     fgbg_model = feature_net_skip_3D(
         receptive_field=receptive_field,
@@ -463,6 +463,9 @@ def create_and_train_model(data_filename, train_dict):
     fgbg_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_gru_model_name))
     fgbg_model.save_weights(fgbg_gru_weights_file)
 
+    return fgbg_model
+
+def create_and_train_gru(fgbg_model, data_filename, train_dict):
     conv_gru_model = feature_net_skip_3D(
         fgbg_model=fgbg_model,
         receptive_field=receptive_field,
@@ -533,9 +536,9 @@ def main(argv):
     print("Training GRU")
     print(device_lib.list_local_devices())
 
-    create_and_train_model(data_filename, train_dict)
+    # fgbg_model =  create_and_train_fgbg(data_filename, train_dict)
+    create_and_train_gru(fgbg_model, data_filename, train_dict)
 
-  
 if __name__== "__main__":
 
     # create directories if they do not exist
