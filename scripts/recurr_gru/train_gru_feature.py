@@ -465,9 +465,8 @@ def create_and_train_fgbg(data_filename, train_dict):
 
     return fgbg_model
 
-def create_and_train_gru(fgbg_model, data_filename, train_dict):
+def create_and_train_gru(data_filename, train_dict):
     conv_gru_model = feature_net_skip_3D(
-        fgbg_model=fgbg_model,
         receptive_field=receptive_field,
         n_skips=n_skips,
         n_features=4,  # (background edge, interior edge, cell interior, background)
@@ -537,7 +536,7 @@ def main(argv):
     print(device_lib.list_local_devices())
 
     # fgbg_model =  create_and_train_fgbg(data_filename, train_dict)
-    create_and_train_gru(fgbg_model, data_filename, train_dict)
+    create_and_train_gru(data_filename, train_dict)
 
 if __name__== "__main__":
 
