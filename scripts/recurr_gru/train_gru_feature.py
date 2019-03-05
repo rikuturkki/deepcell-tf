@@ -432,12 +432,12 @@ def create_and_train_fgbg(data_filename, train_dict):
     
     fgbg_model = feature_net_skip_3D(
         receptive_field=receptive_field,
-        n_features=2,
+        n_features=2,  # segmentation mask (is_cell, is_not_cell)
         n_frames=frames_per_batch,
         n_skips=n_skips,
         n_conv_filters=32,
         n_dense_filters=128,
-        input_shape=tuple(X_test.shape[1:]),
+        input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         multires=False,
         last_only=False,
         norm_method=norm_method)
@@ -527,7 +527,7 @@ def main(argv):
             data_filename = arg
 
     if data_filename == None:
-        data_filename = 'mousebrain.npz'
+        data_filename = '3T3_NIH.npz'
 
     #  Load data
     print("Loading data from " + data_filename)
@@ -537,7 +537,7 @@ def main(argv):
     print("Training GRU")
     print(device_lib.list_local_devices())
 
-    # fgbg_model =  create_and_train_fgbg(data_filename, train_dict)
+    fgbg_model =  create_and_train_fgbg(data_filename, train_dict)
     create_and_train_gru(data_filename, train_dict)
 
 if __name__== "__main__":
