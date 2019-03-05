@@ -195,6 +195,7 @@ def feature_net_3D(receptive_field=61,
     x.append(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
+    '''
 
     x.append(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                         activation = 'relu', 
@@ -206,7 +207,8 @@ def feature_net_3D(receptive_field=61,
                         padding='same', kernel_initializer=init,
                         kernel_regularizer=l2(reg), return_sequences=True)(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
-
+    '''
+    
     x.append(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
 
     if not dilated:
@@ -551,8 +553,8 @@ if __name__== "__main__":
                 raise
 
     # Set up training parameters
-    conv_gru_model_name = 'conv_gru_featurenet_model'
-    fgbg_gru_model_name = 'fgbg_gru_featurenet_model'
+    conv_gru_model_name = 'conv_featurenet_model'
+    fgbg_gru_model_name = 'fgbg_featurenet_model'
 
     n_epoch = 5  # Number of training epochs
     test_size = .10  # % of data saved as test
