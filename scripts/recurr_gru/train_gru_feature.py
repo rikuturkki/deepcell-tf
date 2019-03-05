@@ -511,7 +511,7 @@ def main(argv):
     data_filename = None
     model_name = None
     try:
-        opts, args = getopt.getopt(argv,"hf:m:",["file=","model="])
+        opts, args = getopt.getopt(argv,"hf:",["file="])
     except getopt.GetoptError:
         print('train_gru_feature.py -f <full data file path> -m <model name>\n model name is conv or fgbg')
         sys.exit(2)
@@ -521,8 +521,6 @@ def main(argv):
             sys.exit()
         elif opt in ("-f", "--file"):
             data_filename = arg
-        elif opt in ("-m", "--model"):
-            model_name = arg
 
     if data_filename == None:
         data_filename = 'mousebrain.npz'
@@ -532,7 +530,7 @@ def main(argv):
     train_dict, test_dict = get_data(data_filename, test_size=0.2)
 
     # Train model and get GPU info
-    print("Training " + model_name)
+    print("Training GRU")
     print(device_lib.list_local_devices())
 
     create_and_train_model(data_filename, train_dict)

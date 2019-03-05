@@ -203,7 +203,7 @@ def main(argv):
     data_filename = None
     model_name = None
     try:
-        opts, args = getopt.getopt(argv,"hf:m:",["file=","model="])
+        opts, args = getopt.getopt(argv,"hf:",["file="])
     except getopt.GetoptError:
         print('test.py -f <full data file path> -m <model name>\n model name is gru or lstm')
         sys.exit(2)
@@ -213,8 +213,6 @@ def main(argv):
             sys.exit()
         elif opt in ("-f", "--file"):
             data_filename = arg
-        elif opt in ("-m", "--model"):
-            model_name = arg
 
     if data_filename == None:
         data_filename = 'mousebrain.npz'
@@ -226,16 +224,12 @@ def main(argv):
 
 
     # Train model and get GPU info
-    print("Testing " + model_name)
+    print("Testing GRU")
 
-    if model_name == 'gru':
-        fgbg_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_gru_model_name))
-        conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
-        test_images, test_images_fgbg = test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file)
+    fgbg_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_gru_model_name))
+    conv_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(conv_gru_model_name))
+    test_images, test_images_fgbg = test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file)
 
-    else:
-        print("Model not supported, please choose gru or lstm")
-        sys.exit()
 
     labeled_images, fg_thresh = post_process(test_images, test_images_fgbg)
 
