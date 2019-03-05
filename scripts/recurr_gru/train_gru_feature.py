@@ -37,7 +37,7 @@ from deepcell.layers import TensorProduct, ReflectionPadding3D, DilatedMaxPool3D
 from deepcell.utils import train_utils
 from deepcell.utils.data_utils import get_data
 from deepcell.utils.train_utils import rate_scheduler
-from deepcell.training import train_model_conv #, train_model_sample
+from deepcell.training import train_model_conv
 
 
 from tensorflow.python.keras.layers import MaxPool3D, Conv3DTranspose, UpSampling3D
@@ -220,6 +220,53 @@ def feature_net_3D(receptive_field=61,
     return model
 
 
+def feature_net_skip_3D(receptive_field=61,
+                           input_shape=(5, 256, 256, 1),
+                           fgbg_model=None,
+                           last_only=True,
+                           n_skips=2,
+                           norm_method='std',
+                           padding_mode='reflect',
+                           **kwargs):
+    if K.image_data_format() == 'channels_first':
+        channel_axis = 1
+    else:
+        channel_axis = -1
+
+    inputs = Input(shape=input_shape)
+    img = ImageNormalization3D(norm_method=norm_method, filter_size=receptive_field)(inputs)
+
+    models = []
+    model_outputs = []
+
+    if fgbg_model is not None:
+        for layer in fgbg_model.layers:
+            layer.trainable = False
+        models.append(fgbg_model)
+        fgbg_output = fgbg_model(inputs)
+        if isinstance(fgbg_output, list):
+            fgbg_output = fgbg_output[-1]
+        model_outputs.append(fgbg_output)
+
+    for _ in range(n_skips + 1):
+        if model_outputs:
+            model_input = Concatenate(axis=channel_axis)([img, model_outputs[-1]])
+        else:
+            model_input = img
+        new_input_shape = model_input.get_shape().as_list()[1:]
+        models.append(feature_net_3D(receptive_field=receptive_field, input_shape=new_input_shape, norm_method=None, dilated=True, padding=True, padding_mode=padding_mode, **kwargs))
+        model_outputs.append(models[-1](model_input))
+
+    if last_only:
+        model = Model(inputs=inputs, outputs=model_outputs[-1])
+    else:
+        if fgbg_model is None:
+            model = Model(inputs=inputs, outputs=model_outputs)
+        else:
+            model = Model(inputs=inputs, outputs=model_outputs[1:])
+
+    return model
+
 # ==============================================================================
 # Train model
 # ==============================================================================
@@ -375,162 +422,34 @@ def train_model(model,
 
     return model
 
-def train_model_sample(model,
-                       dataset,
-                       expt='',
-                       test_size=.1,
-                       n_epoch=10,
-                       batch_size=32,
-                       num_gpus=None,
-                       transform=None,
-                       window_size=None,
-                       balance_classes=True,
-                       max_class_samples=None,
-                       log_dir=LOG_DIR,
-                       model_dir=MODEL_DIR,
-                       model_name=None,
-                       focal=False,
-                       gamma=0.5,
-                       optimizer=SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True),
-                       lr_sched=rate_scheduler(lr=0.01, decay=0.95),
-                       rotation_range=0,
-                       flip=False,
-                       shear=0,
-                       zoom_range=0,
-                       **kwargs):
-    is_channels_first = K.image_data_format() == 'channels_first'
-
-    if model_name is None:
-        todays_date = datetime.datetime.now().strftime('%Y-%m-%d')
-        data_name = os.path.splitext(os.path.basename(dataset))[0]
-        model_name = '{}_{}_{}'.format(todays_date, data_name, expt)
-    model_path = os.path.join(model_dir, '{}.h5'.format(model_name))
-    loss_path = os.path.join(model_dir, '{}.npz'.format(model_name))
-
-    train_dict, test_dict = get_data(dataset, mode='sample', test_size=test_size)
-
-    n_classes = model.layers[-1].output_shape[1 if is_channels_first else -1]
-
-    # the data, shuffled and split between train and test sets
-    print('X_train shape:', train_dict['X'].shape)
-    print('y_train shape:', train_dict['y'].shape)
-    print('X_test shape:', test_dict['X'].shape)
-    print('y_test shape:', test_dict['y'].shape)
-    print('Output Shape:', model.layers[-1].output_shape)
-    print('Number of Classes:', n_classes)
-
-    def loss_function(y_true, y_pred):
-        if isinstance(transform, str) and transform.lower() == 'disc':
-            return losses.discriminative_instance_loss(y_true, y_pred)
-        if focal:
-            return losses.weighted_focal_loss(
-                y_true, y_pred, gamma=gamma, n_classes=n_classes)
-        return losses.weighted_categorical_crossentropy(
-            y_true, y_pred, n_classes=n_classes)
-
-    if num_gpus is None:
-        num_gpus = train_utils.count_gpus()
-
-    if num_gpus >= 2:
-        batch_size = batch_size * num_gpus
-        model = train_utils.MultiGpuModel(model, num_gpus)
-
-    print('Training on {} GPUs'.format(num_gpus))
-
-    model.compile(loss=loss_function, optimizer=optimizer, metrics=['accuracy'])
-
-    if train_dict['X'].ndim == 4:
-        DataGenerator = image_generators.SampleDataGenerator
-        window_size = window_size if window_size else (30, 30)
-    elif train_dict['X'].ndim == 5:
-        DataGenerator = image_generators.SampleMovieDataGenerator
-        window_size = window_size if window_size else (30, 30, 3)
-    else:
-        raise ValueError('Expected `X` to have ndim 4 or 5. Got',
-                         train_dict['X'].ndim)
-
-    # this will do preprocessing and realtime data augmentation
-    datagen = DataGenerator(
-        rotation_range=rotation_range,
-        shear_range=shear,
-        zoom_range=zoom_range,
-        horizontal_flip=flip,
-        vertical_flip=flip)
-
-    # no validation augmentation
-    datagen_val = DataGenerator(
-        rotation_range=0,
-        shear_range=0,
-        zoom_range=0,
-        horizontal_flip=0,
-        vertical_flip=0)
-
-    train_data = datagen.flow(
-        train_dict,
-        batch_size=batch_size,
-        transform=transform,
-        transform_kwargs=kwargs,
-        window_size=window_size,
-        balance_classes=balance_classes,
-        max_class_samples=max_class_samples)
-
-    val_data = datagen_val.flow(
-        test_dict,
-        batch_size=batch_size,
-        transform=transform,
-        transform_kwargs=kwargs,
-        window_size=window_size,
-        balance_classes=False,
-        max_class_samples=max_class_samples)
-
-    # fit the model on the batches generated by datagen.flow()
-    loss_history = model.fit_generator(
-        train_data,
-        steps_per_epoch=train_data.y.shape[0] // batch_size,
-        epochs=n_epoch,
-        validation_data=val_data,
-        validation_steps=val_data.y.shape[0] // batch_size,
-        callbacks=[
-            callbacks.LearningRateScheduler(lr_sched),
-            callbacks.ModelCheckpoint(
-                model_path, monitor='val_loss', verbose=1,
-                save_best_only=True, save_weights_only=num_gpus >= 2),
-            callbacks.TensorBoard(log_dir=os.path.join(log_dir, model_name))
-        ])
-
-    np.savez(loss_path, loss_history=loss_history.history)
-
-
-    return model
-
 # ==============================================================================
 # Create and train foreground/background separation model
 # ==============================================================================
 
 def create_and_train_fgbg(data_filename, train_dict):
     
-    fgbg_model = feature_net_3D(
-        input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
+    fgbg_model = feature_net_skip_3D(
         receptive_field=receptive_field,
-        n_features=2,
-        norm_method=norm_method,
+        n_features=2,  # segmentation mask (is_cell, is_not_cell)
         n_frames=frames_per_batch,
-        n_channels=train_dict['X'].shape[-1],
-        dilated=True)
+        n_skips=n_skips,
+        n_conv_filters=32,
+        n_dense_filters=128,
+        input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
+        multires=False,
+        last_only=False,
+        norm_method=norm_method)
 
     # print(fgbg_model.summary())
 
-    fgbg_model = train_model(
+    fgbg_model = train_model_conv(
         model=fgbg_model,
-        data_filename=data_filename,  # full path to npz file
+        dataset=data_filename,  # full path to npz file
         model_name=fgbg_gru_model_name,
-        window_size=(win, win, win_z),
+        transform='fgbg',
         optimizer=optimizer,
         batch_size=batch_size,
-        balance_classes=balance_classes,
         frames_per_batch=frames_per_batch,
-        max_class_samples=max_class_samples,
-        transform='fgbg',
         n_epoch=n_epoch,
         model_dir=MODEL_DIR,
         lr_sched=lr_sched,
@@ -548,34 +467,33 @@ def create_and_train_fgbg(data_filename, train_dict):
 # Create a segmentation model
 # ==============================================================================
 
-def create_and_train_conv_gru(data_filename, train_dict):
-    conv_gru_model = feature_net_3D(
-        input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
+def create_and_train_conv_gru(fgbg_model, data_filename, train_dict):
+    conv_gru_model = feature_net_skip_3D(
+        fgbg_model=fgbg_model,
         receptive_field=receptive_field,
-        n_features=distance_bins,
-        norm_method=norm_method,
+        n_skips=n_skips,
+        n_features=4,  # (background edge, interior edge, cell interior, background)
         n_frames=frames_per_batch,
-        n_channels=train_dict['X'].shape[-1],
-        dilated=True)
+        n_conv_filters=32,
+        n_dense_filters=128,
+        multires=False,
+        last_only=False,
+        input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
+        norm_method=norm_method)
 
     # print(conv_gru_model.summary())
 
-    conv_gru_model = train_model(
-        model=conv_gru_model,
-        data_filename=data_filename,  # full path to npz file
+    conv_gru_model = train_model_conv(
+        model=conv_model,
+        dataset=data_filename,  # full path to npz file
         model_name=conv_gru_model_name,
-        window_size=(win, win, win_z),
-        transform='watershed',
-        distance_bins=distance_bins,
-        erosion_width=erosion_width,
         optimizer=optimizer,
+        transform=transform,
+        dilation_radius=dilation_radius,
         batch_size=batch_size,
         frames_per_batch=frames_per_batch,
-        balance_classes=balance_classes,
-        max_class_samples=max_class_samples,
         n_epoch=n_epoch,
         model_dir=MODEL_DIR,
-        expt='sample_watershed',
         lr_sched=lr_sched,
         rotation_range=180,
         flip=True,
@@ -624,7 +542,7 @@ def main(argv):
     if model_name == 'fgbg':
         create_and_train_fgbg(data_filename, train_dict)
     elif model_name == 'conv':
-        create_and_train_conv_gru(data_filename, train_dict)
+        create_and_train_conv_gru(fgbg_model, data_filename, train_dict)
     else:
         print("Model not supported, please choose fgbg or conv")
         sys.exit()
@@ -652,23 +570,18 @@ if __name__== "__main__":
 
     lr_sched = rate_scheduler(lr=0.01, decay=0.99)
 
-    # Transformation settings
-    # Transformation settings
-    transform = 'watershed'
-    distance_bins = 4  # number of distance classes
-    erosion_width = 0  # erode edges
+    # FC training settings
+    n_skips = 1 # number of skip-connections (only for FC training)
+    batch_size = 1  # FC training uses 1 image per batch
 
+    # Transformation settings
+    transform = 'deepcell'
+    dilation_radius = 1  # change dilation radius for edge dilation
     n_features = 4  # (cell-background edge, cell-cell edge, cell interior, background)
 
     # 3D Settings
     frames_per_batch = 3
     norm_method = 'whole_image'  # data normalization - `whole_image` for 3d conv
-
-    batch_size = 8  # number of images per batch (should be 2 ^ n)
-    win = (receptive_field - 1) // 2  # sample window size
-    win_z = (frames_per_batch - 1) // 2 # z window size
-    balance_classes = True  # sample each class equally
-    max_class_samples = 1e7  # max number of samples per class.
 
     main(sys.argv[1:])
 
