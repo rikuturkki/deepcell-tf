@@ -440,7 +440,7 @@ def create_and_train_model(data_filename, train_dict):
         last_only=False,
         norm_method=norm_method)
 
-    # print(fgbg_model.summary())
+    print("Training fgbg model. \n")
 
     fgbg_model = train_model_conv(
         model=fgbg_model,
@@ -463,7 +463,6 @@ def create_and_train_model(data_filename, train_dict):
     fgbg_gru_weights_file = os.path.join(MODEL_DIR, '{}.h5'.format(fgbg_gru_model_name))
     fgbg_model.save_weights(fgbg_gru_weights_file)
 
-    print("Training segmentation model. \n")
     conv_gru_model = feature_net_skip_3D(
         fgbg_model=fgbg_model,
         receptive_field=receptive_field,
@@ -477,10 +476,10 @@ def create_and_train_model(data_filename, train_dict):
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         norm_method=norm_method)
 
-    # print(conv_gru_model.summary())
+    print("Training segmentation model. \n")
 
     conv_gru_model = train_model_conv(
-        model=conv_model,
+        model=conv_gru_model,
         dataset=data_filename,  # full path to npz file
         model_name=conv_gru_model_name,
         log_dir=LOG_DIR,
