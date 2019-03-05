@@ -65,7 +65,7 @@ def test_gru(X_test, fgbg_gru_weights_file, conv_gru_weights_file):
 
 
     run_conv_model = feature_net_skip_3D(
-        fgbg_model=run_fgbg_model,
+        # fgbg_model=run_fgbg_model,
         receptive_field=receptive_field,
         n_skips=n_skips,
         n_features=4,  # (background edge, interior edge, cell interior, background)
@@ -135,37 +135,28 @@ def post_process(test_images, test_images_fgbg):
 def plot_results(X_test, test_images_fgbg, fg_thresh, 
     test_images, labeled_images, model_name):
     index = np.random.randint(low=0, high=labeled_images.shape[0])
-    print('Image number:', index)
+    frame = np.random.randint(low=0, high=labeled_images.shape[1])
 
-    fig, axes = plt.subplots(ncols=3, nrows=3, figsize=(15, 15), sharex=True, sharey=True)
+    fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(15, 15), sharex=True, sharey=True)
     ax = axes.ravel()
 
-    ax[0].imshow(X_test[0,index, ..., 0])
+    ax[0].imshow(X_test[index, frame, ..., 0])
     ax[0].set_title('Source Image')
 
-    ax[1].imshow(X_test[1,index, ..., 0])
-    ax[1].set_title('Source Image')
+    ax[1].imshow(test_images_fgbg[index, frame, ..., 1])
+    ax[1].set_title('FGBG Prediction')
 
-    ax[2].imshow(X_test[2,index, ..., 0])
-    ax[2].set_title('Source Image')
+    ax[2].imshow(fg_thresh[index, frame, ..., 0], cmap='jet')
+    ax[2].set_title('FGBG Threshold {}%'.format(threshold * 100))
 
-    ax[3].imshow(X_test[3,index, ..., 0])
-    ax[3].set_title('Source Image')
+    ax[3].imshow(test_images[index, frame, ..., 0] + test_images[index, frame, ..., 1], cmap='jet')
+    ax[3].set_title('Edge Prediction')
 
-    ax[4].imshow(test_images_fgbg[index, ..., 1])
-    ax[4].set_title('Segmentation Prediction')
+    ax[4].imshow(test_images[index, frame, ..., 2], cmap='jet')
+    ax[4].set_title('Interior Prediction')
 
-    ax[5].imshow(fg_thresh[index, ..., 0], cmap='jet')
-    ax[5].set_title('FGBG Threshold {}%'.format(threshold * 100))
-
-    ax[6].imshow(test_images[index, ..., 0] + test_images[index, ..., 1], cmap='jet')
-    ax[6].set_title('Edge Prediction')
-
-    ax[7].imshow(test_images[index, ..., 2], cmap='jet')
-    ax[7].set_title('Interior Prediction')
-
-    ax[8].imshow(labeled_images[index, ..., 0], cmap='jet')
-    ax[8].set_title('Instance Segmentation')
+    ax[5].imshow(labeled_images[index, frame, ..., 0], cmap='jet')
+    ax[5].set_title('Instance Segmentation')
 
     fig.tight_layout()
     plt.show()
