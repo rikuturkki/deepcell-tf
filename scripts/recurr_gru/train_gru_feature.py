@@ -446,6 +446,7 @@ def create_and_train_fgbg(data_filename, train_dict):
         model=fgbg_model,
         dataset=data_filename,  # full path to npz file
         model_name=fgbg_gru_model_name,
+        log_dir=LOG_DIR,
         transform='fgbg',
         optimizer=optimizer,
         batch_size=batch_size,
@@ -487,6 +488,7 @@ def create_and_train_conv_gru(fgbg_model, data_filename, train_dict):
         model=conv_model,
         dataset=data_filename,  # full path to npz file
         model_name=conv_gru_model_name,
+        log_dir=LOG_DIR,
         optimizer=optimizer,
         transform=transform,
         dilation_radius=dilation_radius,
