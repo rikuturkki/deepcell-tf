@@ -445,7 +445,7 @@ def create_and_train_fgbg(data_filename, train_dict):
     print("Training fgbg model. \n")
 
     fgbg_model = train_model_conv(
-        model=fgbg_model,
+        # model=fgbg_model,
         dataset=data_filename,  # full path to npz file
         model_name=fgbg_gru_model_name,
         log_dir=LOG_DIR,
