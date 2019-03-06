@@ -195,7 +195,7 @@ def feature_net_3D(receptive_field=61,
     x.append(TensorProduct(n_dense_filters, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
-    '''
+    
 
     x.append(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
                         activation = 'relu', 
@@ -207,8 +207,8 @@ def feature_net_3D(receptive_field=61,
                         padding='same', kernel_initializer=init,
                         kernel_regularizer=l2(reg), return_sequences=True)(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
-    '''
     
+
     x.append(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
 
     if not dilated:
@@ -447,7 +447,7 @@ def create_and_train_fgbg(data_filename, train_dict):
     print("Training fgbg model. \n")
 
     fgbg_model = train_model_conv(
-        # model=fgbg_model,
+        model=fgbg_model,
         dataset=data_filename,  # full path to npz file
         model_name=fgbg_gru_model_name,
         log_dir=LOG_DIR,

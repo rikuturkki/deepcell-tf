@@ -240,8 +240,8 @@ if __name__== "__main__":
 
     # Set up testing parameters
 
-    conv_gru_model_name = 'conv_featurenet_model'
-    fgbg_gru_model_name = 'fgbg_featurenet_model'
+    conv_gru_model_name = 'conv_gru_featurenet_model'
+    fgbg_gru_model_name = 'fgbg_gru_featurenet_model'
 
     n_epoch = 10  # Number of training epochs
     test_size = .10  # % of data saved as test
