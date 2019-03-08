@@ -72,7 +72,7 @@ LOG_DIR = os.path.join(sys.path[0], 'scripts/recurr_gru/logs/')
 
 
 def feature_net_3D(receptive_field=61,
-                      n_frames=5,
+                      n_frames=3,
                       input_shape=(5, 256, 256, 1),
                       n_features=3,
                       n_channels=1,
@@ -82,6 +82,7 @@ def feature_net_3D(receptive_field=61,
                       VGG_mode=False,
                       init='he_normal',
                       norm_method='std',
+                    gru=False,
                       location=False,
                       dilated=False,
                       padding=False,
@@ -196,18 +197,18 @@ def feature_net_3D(receptive_field=61,
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
     
+    if gru == True:
+        x.append(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                            activation = 'relu', 
+                            padding='same', kernel_initializer=init,
+                            kernel_regularizer=l2(reg), return_sequences=True)(x[-1]))
+        x.append(BatchNormalization(axis=channel_axis)(x[-1]))
+        x.append(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
+                            activation = 'relu', 
+                            padding='same', kernel_initializer=init,
+                            kernel_regularizer=l2(reg), return_sequences=True)(x[-1]))
+        x.append(BatchNormalization(axis=channel_axis)(x[-1]))
 
-    x.append(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                        activation = 'relu', 
-                        padding='same', kernel_initializer=init,
-                        kernel_regularizer=l2(reg), return_sequences=True)(x[-1]))
-    x.append(BatchNormalization(axis=channel_axis)(x[-1]))
-    x.append(ConvGRU2D(filters=n_conv_filters, kernel_size=(3, 3),
-                        activation = 'relu', 
-                        padding='same', kernel_initializer=init,
-                        kernel_regularizer=l2(reg), return_sequences=True)(x[-1]))
-    x.append(BatchNormalization(axis=channel_axis)(x[-1]))
-    
 
     x.append(TensorProduct(n_features, kernel_initializer=init, kernel_regularizer=l2(reg))(x[-1]))
 
@@ -224,13 +225,14 @@ def feature_net_3D(receptive_field=61,
 
 
 def feature_net_skip_3D(receptive_field=61,
-                           input_shape=(5, 256, 256, 1),
-                           fgbg_model=None,
-                           last_only=True,
-                           n_skips=2,
-                           norm_method='std',
-                           padding_mode='reflect',
-                           **kwargs):
+                        input_shape=(5, 256, 256, 1),
+                        fgbg_model=None,
+                        gru=False,
+                        last_only=True,
+                        n_skips=2,
+                        norm_method='std',
+                        padding_mode='reflect',
+                        **kwargs):
     if K.image_data_format() == 'channels_first':
         channel_axis = 1
     else:
@@ -258,7 +260,9 @@ def feature_net_skip_3D(receptive_field=61,
         else:
             model_input = img
         new_input_shape = model_input.get_shape().as_list()[1:]
-        models.append(feature_net_3D(receptive_field=receptive_field, input_shape=new_input_shape, norm_method=None, dilated=True, padding=True, padding_mode=padding_mode, **kwargs))
+        models.append(feature_net_3D(receptive_field=receptive_field, 
+                                     input_shape=new_input_shape, norm_method=None, dilated=True, 
+                                     padding=True, padding_mode=padding_mode, gru=gru, **kwargs))
         model_outputs.append(models[-1](model_input))
 
     if last_only:
@@ -430,7 +434,7 @@ def train_model(model,
 # Create and train foreground/background separation model
 # ==============================================================================
 
-def create_and_train_fgbg(data_filename, train_dict):
+def create_and_train_fgbg(data_filename, train_dict, gru=False):
     
     fgbg_model = feature_net_skip_3D(
         receptive_field=receptive_field,
@@ -439,6 +443,7 @@ def create_and_train_fgbg(data_filename, train_dict):
         n_skips=n_skips,
         n_conv_filters=32,
         n_dense_filters=128,
+        gru=gru,
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
         multires=False,
         last_only=False,
@@ -469,7 +474,7 @@ def create_and_train_fgbg(data_filename, train_dict):
 
     return fgbg_model
 
-def create_and_train_gru(data_filename, train_dict):
+def create_and_train_gru(data_filename, train_dict, gru=False):
     conv_gru_model = feature_net_skip_3D(
         receptive_field=receptive_field,
         n_skips=n_skips,
@@ -477,6 +482,7 @@ def create_and_train_gru(data_filename, train_dict):
         n_frames=frames_per_batch,
         n_conv_filters=32,
         n_dense_filters=128,
+        gru=gru,
         multires=False,
         last_only=False,
         input_shape=tuple([frames_per_batch] + list(train_dict['X'].shape[2:])),
@@ -517,16 +523,18 @@ def main(argv):
     data_filename = None
     model_name = None
     try:
-        opts, args = getopt.getopt(argv,"hf:",["file="])
+        opts, args = getopt.getopt(argv,"hf:m:",["file=","model="])
     except getopt.GetoptError:
-        print('train_gru_feature.py -f <full data file path> -m <model name>\n model name is conv or fgbg')
+        print('train_gru_feature.py -f <full data file path> -m <model name>\n model name is conv or featurenet')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('train_gru_feature.py -f <full data file path> -m <model name>\n model name is conv or fgbg')
+            print('train_gru_feature.py -f <full data file path> -m <model name>\n model name is conv or featurenet')
             sys.exit()
         elif opt in ("-f", "--file"):
             data_filename = arg
+        elif opt in ("-m", "--model"):
+            model_name = arg
 
     if data_filename == None:
         data_filename = '3T3_NIH.npz'
@@ -536,7 +544,21 @@ def main(argv):
     train_dict, test_dict = get_data(data_filename, test_size=0.2)
 
     # Train model and get GPU info
-    print("Training GRU")
+    if model_name == 'featurenet':
+        conv_gru_model_name = 'conv_featurenet_model'
+        fgbg_gru_model_name = 'fgbg_featurenet_model'
+        fgbg_model =  create_and_train_fgbg(data_filename, train_dict, gru=False)
+        create_and_train_gru(data_filename, train_dict)
+    elif model_name == 'conv':
+        conv_gru_model_name = 'conv_gru_featurenet_model'
+        fgbg_gru_model_name = 'fgbg_gru_featurenet_model'
+        fgbg_model =  create_and_train_fgbg(data_filename, train_dict, gru=True)
+        create_and_train_gru(data_filename, train_dict)
+    else:
+        print("Model not supported, please choose fgbg or conv")
+        sys.exit()
+        
+    print("Training " + model_name)
     print(device_lib.list_local_devices())
 
     fgbg_model =  create_and_train_fgbg(data_filename, train_dict)
@@ -551,10 +573,6 @@ if __name__== "__main__":
         except OSError as exc:  # Guard against race condition
             if exc.errno != errno.EEXIST:
                 raise
-
-    # Set up training parameters
-    conv_gru_model_name = 'conv_featurenet_model'
-    fgbg_gru_model_name = 'fgbg_featurenet_model'
 
     n_epoch = 5  # Number of training epochs
     test_size = .10  # % of data saved as test
