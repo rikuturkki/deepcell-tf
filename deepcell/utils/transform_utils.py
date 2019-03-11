@@ -111,6 +111,82 @@ def deepcell_transform(mask, dilation_radius=None, data_format=None):
     deepcell_stacks = np.stack(all_stacks, axis=channel_axis)
     return deepcell_stacks
 
+def deepcell_flat_transform(mask, dilation_radius=None, data_format=None):
+    """Transforms a label mask for a z stack edge, interior, and background
+
+    Args:
+        mask: tensor of labels
+        dilation_radius:  width to enlarge the edge feature of each instance
+        data_format: `channels_first` or `channels_last`
+
+    Returns:
+        one-hot encoded tensor of masks:
+            [cell_background_edge, cell_cell_edge, cell_interior, background]
+    """
+    if data_format is None:
+        data_format = K.image_data_format()
+
+    if data_format == 'channels_first':
+        channel_axis = 1
+    else:
+        channel_axis = len(mask.shape) - 1
+
+    mask = np.squeeze(mask, axis=channel_axis)
+
+    # Detect the edges and interiors
+    new_masks = np.zeros(mask.shape)
+    edges = np.zeros(mask.shape)
+    strel = disk(1)
+    for cell_label in np.unique(mask):
+        if cell_label != 0:
+            for i in range(mask.shape[0]):
+                # j is the frame
+                for j in range(mask[i].shape[0]):
+                    # get the cell interior
+                    img = mask[i][j] == cell_label
+                    img = binary_erosion(img, strel)
+                    new_masks[i][j] += img
+
+    interiors = np.multiply(new_masks, mask)
+    edges = (mask - interiors > 0).astype('int')
+    interiors = (interiors > 0).astype('int')
+
+    # dilate the background masks and subtract from all edges for background-edges
+    dilated_background = np.zeros(mask.shape)
+    for i in range(mask.shape[0]):
+        background = (mask[i] == 0).astype('int')
+        dilated_background[i] = binary_dilation(background, strel)
+
+    background_edges = (edges - dilated_background > 0).astype('int')
+
+    # edges that are not background-edges are interior-edges
+    interior_edges = (edges - background_edges > 0).astype('int')
+
+    if dilation_radius:
+        dil_strel = disk(dilation_radius)
+        # Thicken cell edges to be more pronounced
+        for i in range(edges.shape[0]):
+            for j in ange(edges[i].shape[0]):
+                interior_edges[i][j] = binary_dilation(interior_edges[i][j], selem=dil_strel)
+                background_edges[i][j] = binary_dilation(background_edges[i][j], selem=dil_strel)
+
+        # Thin the augmented edges by subtracting the interior features.
+        interior_edges = (interior_edges - interiors > 0).astype('int')
+        background_edges = (background_edges - interiors > 0).astype('int')
+
+    background = (1 - background_edges - interior_edges - interiors > 0)
+    background = background.astype('int')
+
+    all_stacks = [
+        background_edges,
+        interior_edges,
+        interiors,
+        background
+    ]
+
+    deepcell_stacks = np.stack(all_stacks, axis=channel_axis)
+    return deepcell_stacks
+
 
 def erode_edges(mask, erosion_width):
     """Erode edge of objects to prevent them from touching

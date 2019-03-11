@@ -115,6 +115,10 @@ def _transform_masks(y, transform, data_format=None, **kwargs):
         dilation_radius = kwargs.pop('dilation_radius', None)
         y_transform = deepcell_transform(y, dilation_radius, data_format=data_format)
 
+    if transform == 'deepcell_flat':
+        dilation_radius = kwargs.pop('dilation_radius', None)
+        y_transform = deepcell_flat_transform(y, dilation_radius, data_format=data_format)
+
     elif transform == 'watershed':
         distance_bins = kwargs.pop('distance_bins', 4)
         erosion = kwargs.pop('erosion_width', 0)
