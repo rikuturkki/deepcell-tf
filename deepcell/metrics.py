@@ -513,7 +513,7 @@ class Metrics(object):
             feature='all',
             stat_type='pixel'
         ))
-
+        
         self.print_pixel_report()
 
     def pixel_df_to_dict(self, df):
@@ -612,7 +612,7 @@ class Metrics(object):
                     stat_type='object'
                 ))
 
-        self.print_object_report()
+        # self.print_object_report()
 
     def print_object_report(self):
         """Print neat report of object based statistics

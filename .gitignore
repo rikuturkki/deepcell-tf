@@ -122,6 +122,7 @@ Thumbs.db
 scripts/recurr_gru/LSTM_images
 scripts/recurr_gru/GRU_images
 scripts/recurr_gru/logs
+scripts/recurr_gru/data
 
 # NPZ files
 scripts/recurr_gru/*.npz

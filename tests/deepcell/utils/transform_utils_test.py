@@ -65,6 +65,31 @@ class TransformUtilsTest(test.TestCase):
         self.assertGreater(
             dc_maskstack_dil[..., 0].sum() + dc_maskstack_dil[..., 1].sum(),
             dc_maskstack[..., 0].sum() + dc_maskstack[..., 1].sum())
+        
+    def test_deepcell_flat_transform(self):
+        frames = 10
+        img_list = []
+        for im in _generate_test_masks():
+            frame_list = []
+            for _ in range(frames):
+                frame_list.append(label(im))
+            img_stack = np.array(frame_list)
+            img_list.append(img_stack)
+
+        maskstack = np.vstack(img_list)
+        batch_count = maskstack.shape[0] // frames
+        new_shape = (batch_count, frames, *maskstack.shape[1:])
+        
+        dc_maskstack = transform_utils.deepcell_flat_transform(
+            maskstack, data_format=None)
+        dc_maskstack_dil = transform_utils.deepcell_flat_transform(
+            maskstack, dilation_radius=1, data_format='channels_last')
+
+        self.assertEqual(dc_maskstack.shape[-1], 4)
+        self.assertEqual(dc_maskstack_dil.shape[-1], 4)
+        self.assertGreater(
+            dc_maskstack_dil[..., 0].sum() + dc_maskstack_dil[..., 1].sum(),
+            dc_maskstack[..., 0].sum() + dc_maskstack[..., 1].sum())
 
     def test_deepcell_transform_3d(self):
         frames = 10

@@ -154,8 +154,9 @@ def deepcell_flat_transform(mask, dilation_radius=None, data_format=None):
     # dilate the background masks and subtract from all edges for background-edges
     dilated_background = np.zeros(mask.shape)
     for i in range(mask.shape[0]):
-        background = (mask[i] == 0).astype('int')
-        dilated_background[i] = binary_dilation(background, strel)
+        for j in range(mask[i].shape[0]):
+            background = (mask[i][j] == 0).astype('int')
+            dilated_background[i][j] = binary_dilation(background, strel)
 
     background_edges = (edges - dilated_background > 0).astype('int')
 
@@ -166,7 +167,7 @@ def deepcell_flat_transform(mask, dilation_radius=None, data_format=None):
         dil_strel = disk(dilation_radius)
         # Thicken cell edges to be more pronounced
         for i in range(edges.shape[0]):
-            for j in ange(edges[i].shape[0]):
+            for j in range(edges[i].shape[0]):
                 interior_edges[i][j] = binary_dilation(interior_edges[i][j], selem=dil_strel)
                 background_edges[i][j] = binary_dilation(background_edges[i][j], selem=dil_strel)
 
