@@ -49,6 +49,8 @@ frames was adapted from Jaqaman et al. (2008). Robust single-particle tracking
 in live-cell time-lapse sequences. Nature Methods 5, 695–702.
 """
 
+# NOTE THIS IS THE 3D Version!!!
+
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
@@ -165,8 +167,10 @@ class ObjectAccuracy(object):
 
 >>>>>>> master
     Args:
-        y_true (2D np.array): Labeled ground truth annotation
-        y_pred (2D np.array): Labled object prediction, same size as y_true
+        # edge/interior prediction shape: (2, 30, 135, 160, 4)
+        # fgbg mask shape: (2, 30, 135, 160, 2)
+        y_true (3D np.array): Labeled ground truth annotation
+        y_pred (3D np.array): Labled object prediction, same size as y_true
         cutoff1 (:obj:`float`, optional): Threshold for overlap in cost matrix,
             smaller values are more conservative, default 0.4
         cutoff2 (:obj:`float`, optional): Threshold for overlap in unassigned
@@ -263,7 +267,7 @@ class ObjectAccuracy(object):
         if self.seg is True:
             self.seg_thresh = np.zeros((self.n_true, self.n_pred))
 
-        # Make all pairwise comparisons to calc iou
+        # Make all pairwise comparisons to calc iou (2, 30, 135, 160, 4)
         for t in np.unique(self.y_true)[1:]:  # skip 0
             for p in np.unique(self.y_pred)[1:]:  # skip 0
                 intersection = np.logical_and(
