@@ -47,6 +47,7 @@ def count_pairs(y, same_probability=0.5, data_format=None):
     Args:
         y: 5D tensor of cell labels
         same_probability: liklihood that 2 cells are the same
+
     Returns:
         the total pairs needed to sample to see all possible pairings
     """
@@ -156,11 +157,13 @@ def trk_folder_to_trks(dirname, trks_filename):
 
 def save_trks(filename, lineages, raw, tracked):
     """Saves raw, tracked, and lineage data into one trks_file.
+
     Args:
         filename: full path to the final trk files
         lineages: a list of dictionaries saved as a json
         raw: raw images data
         tracked: annotated image data
+
     Returns:
         Nothing
     """
