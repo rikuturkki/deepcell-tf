@@ -32,12 +32,14 @@ from __future__ import print_function
 from deepcell import datasets
 from deepcell import layers
 from deepcell import losses
+from deepcell import initializers
 from deepcell import image_generators
 from deepcell import model_zoo
 from deepcell import notebooks
 from deepcell import running
 from deepcell import training
 from deepcell import utils
+from deepcell import metrics
 
 from deepcell.layers import *
 from deepcell.losses import *
