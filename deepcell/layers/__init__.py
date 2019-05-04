@@ -37,6 +37,7 @@ from deepcell.layers.padding import *
 from deepcell.layers.filter_detections import *
 from deepcell.layers.retinanet import *
 from deepcell.layers.upsample import *
+from deepcell.layers.compression import *
 
 del absolute_import
 del division
