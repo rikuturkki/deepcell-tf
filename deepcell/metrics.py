@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 
-=======
->>>>>>> master
 # Copyright 2016-2019 The Van Valen Lab at the California Institute of
 # Technology (Caltech), with support from the Paul Allen Family Foundation,
 # Google, & National Institutes of Health (NIH) under Grant U24CA224309-01.
@@ -76,30 +73,19 @@ from tensorflow.python.platform import tf_logging as logging
 def stats_pixelbased(y_true, y_pred):
     """Calculates pixel-based statistics
     (Dice, Jaccard, Precision, Recall, F-measure)
-<<<<<<< HEAD
-=======
 
->>>>>>> master
     Takes in raw prediction and truth data in order to calculate accuracy
     metrics for pixel based classfication. Statistics were chosen according
     to the guidelines presented in Caicedo et al. (2018) Evaluation of Deep
     Learning Strategies for Nucleus Segmentation in Fluorescence Images.
     BioRxiv 335216.
-<<<<<<< HEAD
-=======
-
->>>>>>> master
+    
     Args:
         y_true (3D np.array): Binary ground truth annotations for a single
             feature, (batch,x,y)
         y_pred (3D np.array): Binary predictions for a single feature,
             (batch,x,y)
-<<<<<<< HEAD
-    Returns:
-        dictionary: Containing a set of calculated statistics
-    Raises:
-        ValueError: Shapes of `y_true` and `y_pred` do not match.
-=======
+
 
     Returns:
         dictionary: Containing a set of calculated statistics
@@ -107,7 +93,6 @@ def stats_pixelbased(y_true, y_pred):
     Raises:
         ValueError: Shapes of `y_true` and `y_pred` do not match.
 
->>>>>>> master
     Warning:
         Comparing labeled to unlabeled data will produce low accuracy scores.
         Make sure to input the same type of data for `y_true` and `y_pred`
@@ -147,10 +132,7 @@ def stats_pixelbased(y_true, y_pred):
 
 class ObjectAccuracy(object):
     """Classifies object prediction errors as TP, FP, FN, merge or split
-<<<<<<< HEAD
-=======
 
->>>>>>> master
     The schema for this analysis was adopted from the description of
     object-based statistics in Caicedo et al. (2018) Evaluation of Deep
     Learning Strategies for Nucleus Segmentation in Fluorescence Images.
@@ -162,10 +144,7 @@ class ObjectAccuracy(object):
     prediction frames was adapted from Jaqaman et al. (2008).
     Robust single-particle tracking in live-cell time-lapse sequences.
     Nature Methods 5, 695–702.
-<<<<<<< HEAD
-=======
 
->>>>>>> master
     Args:
         # edge/interior prediction shape: (2, 30, 135, 160, 4)
         # fgbg mask shape: (2, 30, 135, 160, 2)
@@ -179,12 +158,7 @@ class ObjectAccuracy(object):
             analysis during testing
         seg (:obj:`bool`, optional): Calculates SEG score for cell tracking
             competition
-<<<<<<< HEAD
-    Raises:
-        ValueError: If y_true and y_pred are not the same shape
-    Warning:
-        Position indicies are not currently collected appropriately
-=======
+
 
     Raises:
         ValueError: If y_true and y_pred are not the same shape
@@ -192,7 +166,6 @@ class ObjectAccuracy(object):
     Warning:
         Position indicies are not currently collected appropriately
 
->>>>>>> master
     Todo:
         Implement recording of object indices for each error group
     """
@@ -281,10 +254,7 @@ class ObjectAccuracy(object):
 
     def _make_matrix(self):
         """Assembles cost matrix using the iou matrix and cutoff1
-<<<<<<< HEAD
-=======
 
->>>>>>> master
         The previously calculated iou matrix is cast into the top left and
         transposed for the bottom right corner. The diagonals of the two
         remaining corners are populated according to `cutoff1`. The lower the
@@ -313,10 +283,7 @@ class ObjectAccuracy(object):
     def _linear_assignment(self):
         """Runs linear sun assignment on cost matrix, identifies true positives
         and unassigned true and predicted cells.
-<<<<<<< HEAD
-=======
 
->>>>>>> master
         True positives correspond to assignments in the top left or bottom
         right corner. There are two possible unassigned positions: true cell
         unassigned in bottom left or predicted cell unassigned in top right.
@@ -400,10 +367,7 @@ class ObjectAccuracy(object):
 
     def _classify_graph(self):
         """Assign each node in graph to an error type
-<<<<<<< HEAD
-=======
 
->>>>>>> master
         Nodes with a degree (connectivity) of 0 correspond to either false
         positives or false negatives depending on the origin of the node from
         either the predicted objects (false positive) or true objects
@@ -455,10 +419,7 @@ class ObjectAccuracy(object):
 
     def save_to_dataframe(self):
         """Save error results to a pandas dataframe
-<<<<<<< HEAD
-=======
 
->>>>>>> master
         Returns:
             pd.DataFrame: Single row dataframe with error types as columns
         """
@@ -487,10 +448,7 @@ class ObjectAccuracy(object):
 
 class Metrics(object):
     """Class to calculate and save various classification metrics
-<<<<<<< HEAD
-=======
 
->>>>>>> master
     Args:
         model_name (str): Name of the model which determines output file names
         outdir (:obj:`str`, optional): Directory to save json file, default ''
@@ -507,10 +465,7 @@ class Metrics(object):
             information about the model
         seg (:obj:`bool`, optional): Calculates SEG score for
             cell tracking competition
-<<<<<<< HEAD
-=======
 
->>>>>>> master
     Examples:
         >>> from deepcell import metrics
         >>> m = metrics.Metrics('model_name')
@@ -519,10 +474,7 @@ class Metrics(object):
                 y_pred_lbl,
                 y_true_unlbl,
                 y_true_unlbl)
-<<<<<<< HEAD
-=======
 
->>>>>>> master
         >>> m.all_pixel_stats(y_true_unlbl,y_pred_unlbl)
         >>> m.calc_obj_stats(y_true_lbl,y_pred_lbl)
         >>> m.save_to_json(m.output)
@@ -557,14 +509,6 @@ class Metrics(object):
 
     def all_pixel_stats(self, y_true, y_pred):
         """Collect pixel statistics for each feature.
-<<<<<<< HEAD
-        y_true should have the appropriate transform applied to match y_pred.
-        Each channel is converted to binary using the threshold
-        `pixel_threshold` prior to calculation of accuracy metrics.
-        Args:
-            y_true (4D np.array): Ground truth annotations after transform
-            y_pred (4D np.array): Model predictions without labeling
-=======
 
         y_true should have the appropriate transform applied to match y_pred.
         Each channel is converted to binary using the threshold
@@ -574,7 +518,6 @@ class Metrics(object):
             y_true (4D np.array): Ground truth annotations after transform
             y_pred (4D np.array): Model predictions without labeling
 
->>>>>>> master
         Raises:
             ValueError: If y_true and y_pred are not the same shape
         """
@@ -611,24 +554,15 @@ class Metrics(object):
             feature='all',
             stat_type='pixel'
         ))
-<<<<<<< HEAD
-        
-=======
 
->>>>>>> master
         self.print_pixel_report()
 
     def pixel_df_to_dict(self, df):
         """Output pandas df as a list of dictionary objects
-<<<<<<< HEAD
-        Args:
-            df (pd.DataFrame): Dataframe of statistics for each channel
-=======
 
         Args:
             df (pd.DataFrame): Dataframe of statistics for each channel
 
->>>>>>> master
         Returns:
             list: List of dictionaries
         """
@@ -659,18 +593,12 @@ class Metrics(object):
 
     def calc_pixel_confusion_matrix(self, y_true, y_pred):
         """Calculate confusion matrix for pixel classification data.
-<<<<<<< HEAD
-=======
 
->>>>>>> master
         Args:
             y_true (4D np.array): Ground truth annotations after any
                 necessary transformations
             y_pred (4D np.array): Prediction array
-<<<<<<< HEAD
-=======
 
->>>>>>> master
         Returns:
             confusion_matrix: nxn array determined by number of features
         """
@@ -737,11 +665,8 @@ class Metrics(object):
                     stat_type='object'
                 ))
 
-<<<<<<< HEAD
         # self.print_object_report()
-=======
-        self.print_object_report()
->>>>>>> master
+
 
     def print_object_report(self):
         """Print neat report of object based statistics
@@ -781,10 +706,6 @@ class Metrics(object):
                 y_true_unlbl,
                 y_pred_unlbl):
         """Runs pixel and object base statistics and ouputs to file
-<<<<<<< HEAD
-=======
-
->>>>>>> master
         Args:
             y_true_lbl (3D np.array): Labeled ground truth annotation,
                 (sample, x, y)
@@ -805,10 +726,7 @@ class Metrics(object):
 
     def save_to_json(self, L):
         """Save list of dictionaries to json file with file metadata
-<<<<<<< HEAD
-=======
 
->>>>>>> master
         Args:
             L (list): List of metric dictionaries
         """
@@ -839,10 +757,7 @@ class Metrics(object):
 def split_stack(arr, batch, n_split1, axis1, n_split2, axis2):
     """Crops an array in the width and height dimensions to produce
     a stack of smaller arrays
-<<<<<<< HEAD
-=======
 
->>>>>>> master
     Args:
         arr (np.array): Array to be split with at least 2 dimensions
         batch (bool): True if the zeroth dimension of arr is a batch or
@@ -853,13 +768,7 @@ def split_stack(arr, batch, n_split1, axis1, n_split2, axis2):
         n_split2 (int): Number of sections to produce from the second split axis
             Must be able to divide arr.shape[axis2] evenly by n_split2
         axis2 (int): Axis on which to perform first split
-<<<<<<< HEAD
-    Returns:
-        np.array: Array after dual splitting with frames in the zeroth dimension
-    Raises:
-        ValueError: arr.shape[axis] must be evenly divisible by n_split
-            for both the first and second split
-=======
+
 
     Returns:
         np.array: Array after dual splitting with frames in the zeroth dimension
@@ -868,7 +777,6 @@ def split_stack(arr, batch, n_split1, axis1, n_split2, axis2):
         ValueError: arr.shape[axis] must be evenly divisible by n_split
             for both the first and second split
 
->>>>>>> master
     Examples:
         >>> from deepcell import metrics
         >>> from numpy import np
@@ -900,7 +808,4 @@ def split_stack(arr, batch, n_split1, axis1, n_split2, axis2):
     split2con = np.concatenate(split2, axis=0)
 
     return split2con
-<<<<<<< HEAD
 
-=======
->>>>>>> master
