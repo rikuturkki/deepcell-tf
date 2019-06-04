@@ -169,7 +169,7 @@ def _transform_masks(y, transform, data_format=None, **kwargs):
             y_transform = np.rollaxis(y_transform, y.ndim - 1, 1)
 
     elif transform is None:
-        y_transform = to_categorical(y.squeeze(channel_axis))
+        y_transform = y #.squeeze(channel_axis)
         if data_format == 'channels_first':
             y_transform = np.rollaxis(y_transform, y.ndim - 1, 1)
 
@@ -255,7 +255,7 @@ class StackDataGenerator(ImageDataGenerator):
     def flow(self,
              train_dict,
              batch_size=1,
-             frames_per_batch=10,
+             frames_per_batch=61,
              skip=None,
              transform=None,
              transform_kwargs={},
@@ -380,10 +380,13 @@ class StackDataGenerator(ImageDataGenerator):
                 _interpolation_order = self.interpolation_order
                 self.interpolation_order = 0
                 if self.data_format == 'channels_first':
-                    y_trans = self.apply_transform(y[:, frame], params)
-                    y_new[:, frame] = np.rollaxis(y_trans, 1, 0)
+                    # y_trans = self.apply_transform(y[:, frame], params)
+                    # y_new[:, frame] = np.rollaxis(y_trans, 1, 0)
+                    y_trans = self.apply_transform(y, params)
+                    y_new = np.rollaxis(y_trans, 1, 0)
                 else:
-                    y_new[frame] = self.apply_transform(y[frame], params)
+                    # y_new[frame] = self.apply_transform(y[frame], params)
+                    y_new = self.apply_transform(y, params)
                 self.interpolation_order = _interpolation_order
         # Note: Undo workaround
         self.row_axis += 1
@@ -466,6 +469,7 @@ class StackDataGenerator(ImageDataGenerator):
 
 
 
+
 class StackArrayIterator(Iterator):
     """Iterator yielding data from two 5D Numpy arrays (`X and `y`).
     Args:
@@ -490,8 +494,8 @@ class StackArrayIterator(Iterator):
     def __init__(self,
                  train_dict,
                  movie_data_generator,
-                 batch_size=32,
-                 frames_per_batch=10,
+                 batch_size=1,
+                 frames_per_batch=61,
                  skip=None,
                  transform=None,
                  transform_kwargs={},
@@ -553,7 +557,7 @@ class StackArrayIterator(Iterator):
         if self.y is not None:
             # batch_y = np.zeros(tuple([len(index_array), self.frames_per_batch] +
             #                          list(self.y.shape)[2:]))
-            batch_y = np.zeros(tuple([len(index_array), self.frames_per_batch] +
+            batch_y = np.zeros(tuple([len(index_array)] +
                                       list(self.y.shape)[1:]))
 
         for i, j in enumerate(index_array):
@@ -561,13 +565,15 @@ class StackArrayIterator(Iterator):
                 y = self.y[j]
 
             # Sample along the time axis
-            last_frame = self.x.shape[self.time_axis] - self.frames_per_batch
-            time_start = np.random.randint(0, high=last_frame)
-            time_end = time_start + self.frames_per_batch
-            if self.time_axis == 1:
-                x = self.x[j, time_start:time_end, ...]
-            elif self.time_axis == 2:
-                x = self.x[j, :, time_start:time_end, ...]
+#             last_frame = self.x.shape[self.time_axis] - self.frames_per_batch
+#             time_start = np.random.randint(0, high=last_frame)
+#             time_end = time_start + self.frames_per_batch
+            
+#             if self.time_axis == 1:
+#                 x = self.x[j, time_start:time_end, ...]
+#             elif self.time_axis == 2:
+#                 x = self.x[j, :, time_start:time_end, ...]
+            x = self.x[j, ...]
             if self.y is not None:
                 y = self.y[j, ...]
 
@@ -599,12 +605,12 @@ class StackArrayIterator(Iterator):
                     if self.y is not None:
                         # Save argmax of y batch
                         if self.time_axis == 2:
-                            img_y = np.argmax(batch_y[i, :, frame], axis=0)
+                            img_y = np.argmax(batch_y[i], axis=0)
                             img_channel_axis = 0
-                            img_y = batch_y[i, :, frame]
+                            #img_y = batch_y[i, :, frame]
                         else:
                             img_channel_axis = -1
-                            img_y = batch_y[i, frame]
+                        img_y = batch_y[i]
                         img_y = np.argmax(img_y, axis=img_channel_axis)
                         img_y = np.expand_dims(img_y, axis=img_channel_axis)
                         img = array_to_img(img_y, self.data_format, scale=True)
@@ -633,4 +639,7 @@ class StackArrayIterator(Iterator):
         # The transformation of images is not under thread lock
         # so it can be done in parallel
         return self._get_batches_of_transformed_samples(index_array)
+
+
+
 
