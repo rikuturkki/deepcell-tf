@@ -83,3 +83,15 @@ class TuckerConvTest(test.TestCase):
                         'data_format': 'channels_first'},
                 custom_objects=custom_objects,
                 input_shape=(3, 4, 11, 12, 10))
+
+    @tf_test_util.run_in_graph_and_eager_modes()
+    def test_svd_tensorprod(self):
+        custom_objects = {'SVDTensorProd': layers.SVDTensorProd}
+        with self.test_session(use_gpu=True):
+            testing_utils.layer_test(
+                layers.SVDTensorProd,
+                kwargs={'input_dim': 256,
+                        'output_dim': 256,
+                        'rank': 2},
+                custom_objects=custom_objects,
+                input_shape=(3, 11, 12, 10, 4))
