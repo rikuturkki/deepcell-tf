@@ -36,7 +36,7 @@ from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.layers import Conv2D
 from tensorflow.python.keras.layers import Input, Concatenate
 from tensorflow.python.keras.layers import Permute, Reshape
-from tensorflow.python.keras.layers import Activation
+from tensorflow.python.keras.layers import Activation, Lambda
 from tensorflow.python.keras.initializers import RandomNormal
 
 from deepcell.initializers import PriorProbability
@@ -190,8 +190,13 @@ def __build_model_pyramid(name, model, features):
     Returns:
         A tensor containing the response from the submodel on the FPN features.
     """
-    concat = Concatenate(axis=1, name=name)
-    return concat([model(f) for f in features])
+    if len(features) == 1:
+        # TODO: Lambda layer has no compute_output_shape in eager mode
+        identity = Lambda(lambda x: x, name=name)
+        return identity(model(features[0]))
+    else:
+        concat = Concatenate(axis=1, name=name)
+        return concat([model(f) for f in features])
 
 
 def __build_pyramid(models, features):
@@ -223,17 +228,26 @@ def __build_anchors(anchor_parameters, features):
         (batch_size, num_anchors, 4)
         ```
     """
-    anchors = [
-        Anchors(
-            size=anchor_parameters.sizes[i],
-            stride=anchor_parameters.strides[i],
+
+    if len(features) == 1:
+        anchors = Anchors(
+            size=anchor_parameters.sizes[0],
+            stride=anchor_parameters.strides[0],
             ratios=anchor_parameters.ratios,
             scales=anchor_parameters.scales,
-            name='anchors_{}'.format(i)
-        )(f) for i, f in enumerate(features)
-    ]
-
-    return Concatenate(axis=1, name='anchors')(anchors)
+            name='anchors')(features[0])
+        return anchors
+    else:
+        anchors = [
+            Anchors(
+                size=anchor_parameters.sizes[i],
+                stride=anchor_parameters.strides[i],
+                ratios=anchor_parameters.ratios,
+                scales=anchor_parameters.scales,
+                name='anchors_{}'.format(i)
+            )(f) for i, f in enumerate(features)
+        ]
+        return Concatenate(axis=1, name='anchors')(anchors)
 
 
 def retinanet(inputs,
@@ -243,9 +257,10 @@ def retinanet(inputs,
               pyramid_levels=['P3', 'P4', 'P5', 'P6', 'P7'],
               num_anchors=None,
               create_pyramid_features=__create_pyramid_features,
-              create_symantic_head=__create_semantic_head,
+              create_semantic_head=__create_semantic_head,
               panoptic=False,
-              num_semantic_classes=3,
+              num_semantic_heads=1,
+              num_semantic_classes=[3],
               submodels=None,
               name='retinanet'):
     """Construct a RetinaNet model on top of a backbone.
@@ -267,8 +282,8 @@ def retinanet(inputs,
             be used for panoptic segmentation tasks
         panoptic: Flag for adding the semantic head for panoptic segmentation
             tasks. Defaults to false.
-        num_semantic_classes: The number of classes for the semantic segmentation
-            part of panoptic segmentation tasks. Defaults to 3.
+        num_semantic_classes: The number of classes for the semantic
+            segmentation part of panoptic segmentation tasks. Defaults to 3.
         submodels: Submodels to run on each feature map (default is regression
             and classification submodels).
         name: Name of the model.
@@ -290,6 +305,9 @@ def retinanet(inputs,
     if submodels is None:
         submodels = default_submodels(num_classes, num_anchors)
 
+    if not isinstance(num_semantic_classes, list):
+        num_semantic_classes = list(num_semantic_classes)
+
     # compute pyramid features as per https://arxiv.org/abs/1708.02002
 
     # Use only the desired backbone levels to create the feature pyramid
@@ -302,14 +320,17 @@ def retinanet(inputs,
     object_head = __build_pyramid(submodels, features)
 
     if panoptic:
-        semantic_levels = [int(re.findall(r'\d+', N)[0]) for N in pyramid_dict.keys()]
+        semantic_levels = [int(re.findall(r'\d+', k)[0]) for k in pyramid_dict]
         target_level = min(semantic_levels)
 
-        semantic_head = __create_semantic_head(
-            pyramid_dict, n_classes=num_semantic_classes,
-            input_target=inputs, target_level=target_level)
+        semantic_head_list = []
+        for i in range(num_semantic_heads):
+            semantic_head_list.append(create_semantic_head(
+                pyramid_dict, n_classes=num_semantic_classes[i],
+                input_target=inputs, target_level=target_level,
+                semantic_id=i))
 
-        outputs = object_head + [semantic_head]
+        outputs = object_head + semantic_head_list
     else:
         outputs = object_head
 
@@ -323,6 +344,7 @@ def retinanet(inputs,
 def retinanet_bbox(model=None,
                    nms=True,
                    panoptic=False,
+                   num_semantic_heads=1,
                    class_specific_filter=True,
                    name='retinanet-bbox',
                    anchor_params=None,
@@ -330,9 +352,9 @@ def retinanet_bbox(model=None,
     """Construct a RetinaNet model on top of a backbone and adds convenience
     functions to output boxes directly.
 
-    This model uses the minimum retinanet model and appends a few layers to
-    compute boxes within the graph. These layers include applying the regression
-    values to the anchors and performing NMS.
+    This model uses the minimum retinanet model and appends a few layers
+    to compute boxes within the graph. These layers include applying the
+    regression values to the anchors and performing NMS.
 
     Args:
         model: RetinaNet model to append bbox layers to.
@@ -373,19 +395,19 @@ def retinanet_bbox(model=None,
                              'outputs are: {}).'.format(model.output_names))
 
     # compute the anchors
-    features = [model.get_layer(level).output for level in model.pyramid_levels]
+    features = [model.get_layer(l).output for l in model.pyramid_levels]
     anchors = __build_anchors(anchor_params, features)
 
-    # we expect the anchors, regression and classification values as first output
+    # we expect anchors, regression. and classification values as first output
     regression = model.outputs[0]
     classification = model.outputs[1]
 
-    # "other" can be any additional output from custom submodels, by default this will be []
+    # "other" can be any additional output from custom submodels, by default []
     if panoptic:
         # The last output is the panoptic output, which should not be
         # sent to filter detections
-        other = model.outputs[2:-1]
-        semantic = model.outputs[-1]
+        other = model.outputs[2:-num_semantic_heads]
+        semantic = model.outputs[-num_semantic_heads:]
     else:
         other = model.outputs[2:]
 
@@ -402,7 +424,7 @@ def retinanet_bbox(model=None,
 
     # add the semantic head's output if needed
     if panoptic:
-        outputs = detections + [semantic]
+        outputs = detections + list(semantic)
     else:
         outputs = detections
 
@@ -413,6 +435,7 @@ def retinanet_bbox(model=None,
 def RetinaNet(backbone,
               num_classes,
               input_shape,
+              inputs=None,
               norm_method='whole_image',
               location=False,
               use_imagenet=False,
@@ -445,19 +468,25 @@ def RetinaNet(backbone,
     Returns:
         RetinaNet model with a backbone.
     """
-    inputs = Input(shape=input_shape)
+    if inputs is None:
+        inputs = Input(shape=input_shape)
+
     channel_axis = 1 if K.image_data_format() == 'channels_first' else -1
+
     if location:
         location = Location2D(in_shape=input_shape)(inputs)
-        inputs = Concatenate(axis=channel_axis)([inputs, location])
+        concat = Concatenate(axis=channel_axis)([inputs, location])
+    else:
+        concat = inputs
 
     # force the channel size for backbone input to be `required_channels`
-    norm = ImageNormalization2D(norm_method=norm_method)(inputs)
+    norm = ImageNormalization2D(norm_method=norm_method)(concat)
     fixed_inputs = TensorProduct(required_channels)(norm)
 
     # force the input shape
+    axis = 0 if K.image_data_format() == 'channels_first' else -1
     fixed_input_shape = list(input_shape)
-    fixed_input_shape[-1] = required_channels
+    fixed_input_shape[axis] = required_channels
     fixed_input_shape = tuple(fixed_input_shape)
 
     model_kwargs = {
@@ -467,7 +496,8 @@ def RetinaNet(backbone,
         'pooling': pooling
     }
 
-    backbone_dict = get_backbone(backbone, fixed_inputs, use_imagenet=use_imagenet, **model_kwargs)
+    backbone_dict = get_backbone(backbone, fixed_inputs,
+                                 use_imagenet=use_imagenet, **model_kwargs)
 
     # create the full model
     return retinanet(

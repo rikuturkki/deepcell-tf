@@ -36,7 +36,6 @@ from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.layers import Conv2D, Conv3D
 from tensorflow.python.keras.layers import Softmax
 from tensorflow.python.keras.layers import Input, Add
-from tensorflow.python.keras.layers import Reshape
 from tensorflow.python.keras.layers import Activation
 from tensorflow.python.keras.layers import UpSampling2D, UpSampling3D
 from tensorflow.python.keras.layers import BatchNormalization
@@ -75,10 +74,10 @@ def create_pyramid_level(backbone_input,
     if ndim not in acceptable_ndims:
         raise ValueError('Only 2 and 3 dimensional networks are supported')
 
-    reduced_name = 'C%s_reduced' % level
-    upsample_name = 'P%s_upsampled' % level
-    addition_name = 'P%s_merged' % level
-    final_name = 'P%s' % level
+    reduced_name = 'C{}_reduced'.format(level)
+    upsample_name = 'P{}_upsampled'.format(level)
+    addition_name = 'P{}_merged'.format(level)
+    final_name = 'P{}'.format(level)
 
     # Apply 1x1 conv to backbone layer
     if ndim == 2:
@@ -156,7 +155,10 @@ def __create_pyramid_features(backbone_dict, ndim=2, feature_size=256,
 
         # Don't add for the bottom of the pyramid
         if i == 0:
-            upsamplelike_input = backbone_features[i + 1]
+            if len(backbone_features) > 1:
+                upsamplelike_input = backbone_features[i + 1]
+            else:
+                upsamplelike_input = None
             addition_input = None
 
         # Don't upsample for the top of the pyramid
@@ -183,7 +185,7 @@ def __create_pyramid_features(backbone_dict, ndim=2, feature_size=256,
         N = backbone_names[0]
         F = backbone_features[0]
         level = int(re.findall(r'\d+', N)[0]) + 1
-        P_minus_2_name = 'P%s' % level
+        P_minus_2_name = 'P{}'.format(level)
 
         if ndim == 2:
             P_minus_2 = Conv2D(feature_size, kernel_size=(3, 3), strides=(2, 2),
@@ -290,7 +292,8 @@ def semantic_prediction(semantic_names,
                         n_filters=64,
                         n_dense=64,
                         ndim=2,
-                        n_classes=3):
+                        n_classes=3,
+                        semantic_id=0):
     """
     Creates the prediction head from a list of semantic features
     Args:
@@ -301,8 +304,10 @@ def semantic_prediction(semantic_names,
         target_level (int, optional): Defaults to 0. The level we need to reach.
             Performs 2x upsampling until we're at the target level
         input_target (tensor, optional): Defaults to None. Tensor with the input image.
-        n_dense (int, optional): Defaults to 256. The number of filters for dense layers
-        n_classes (int, optional): Defaults to 3.  The number of classes to be predicted
+        n_dense (int, optional): Defaults to 256. The number of filters for dense layers.
+        n_classes (int, optional): Defaults to 3.  The number of classes to be predicted.
+        semantic_id (int): Defaults to 0. An number to name the final layer. Allows for multiple
+            semantic heads.
     Returns:
         The softmax prediction for the semantic segmentation head
     """
@@ -326,25 +331,14 @@ def semantic_prediction(semantic_names,
     n_upsample = min_level - target_level
     x = semantic_upsample(semantic_sum, n_upsample, target=input_target)
 
-    # Reshape to match input size
-    if ndim == 2:
-        x = Reshape(target_shape=(input_target.shape[1].value,
-                                  input_target.shape[2].value,
-                                  x.shape[-1]))(x)
-    else:
-        x = Reshape(target_shape=(input_target.shape[1].value,
-                                  input_target.shape[2].value,
-                                  input_target.shape[3].value,
-                                  x.shape[-1]))(x)
-
     # First tensor product
     x = TensorProduct(n_dense)(x)
-    x = BatchNormalization(axis=-1)(x)
+    x = BatchNormalization(axis=channel_axis)(x)
     x = Activation('relu')(x)
 
     # Apply tensor product and softmax layer
     x = TensorProduct(n_classes)(x)
-    x = Softmax(axis=channel_axis, name='semantic')(x)
+    x = Softmax(axis=channel_axis, name='semantic_' + str(semantic_id))(x)
 
     return x
 
@@ -353,7 +347,8 @@ def __create_semantic_head(pyramid_dict,
                            input_target=None,
                            target_level=2,
                            n_classes=3,
-                           n_filters=128):
+                           n_filters=128,
+                           semantic_id=0):
     """
     Creates a semantic head from a feature pyramid network
     Args:
@@ -396,7 +391,8 @@ def __create_semantic_head(pyramid_dict,
 
     # Combine all of the semantic features
     x = semantic_prediction(semantic_names, semantic_features,
-                            n_classes=n_classes, input_target=input_target)
+                            n_classes=n_classes, input_target=input_target,
+                            semantic_id=semantic_id)
 
     return x
 
