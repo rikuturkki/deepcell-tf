@@ -9,6 +9,6 @@ nbformat>=4.4.0,<5
 keras-preprocessing==1.0.6
 networkx>=2.1,<3
 opencv-python>=3.4.2.17,<4
-tensorly>=0.4.3,<1
+tensorly==0.4.3
 cython>=0.28
 pathlib==1.0.1
