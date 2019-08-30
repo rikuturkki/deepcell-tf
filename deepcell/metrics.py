@@ -59,6 +59,8 @@ import skimage.measure
 from skimage.segmentation import relabel_sequential
 from sklearn.metrics import confusion_matrix
 
+from keras_retinanet.utils.compute_overlap import compute_overlap
+
 from tensorflow.python.platform import tf_logging as logging
 
 
@@ -249,20 +251,48 @@ class ObjectAccuracy(object):  # pylint: disable=useless-object-inheritance
         objects where $|T\bigcap P| > 0.5 * |T|$
         """
 
+        # Compute IOUs only when neccesary
+        # If bboxs for true and pred do not overlap with each other, the assignment is immediate
+        # Otherwise use pixel-wise IOU to determine which cell is which
+
         self.iou = np.zeros((self.n_true, self.n_pred))
         if self.seg is True:
             self.seg_thresh = np.zeros((self.n_true, self.n_pred))
 
-        # Make all pairwise comparisons to calc iou
-        for t in range(1, self.y_true.max() + 1):
-            for p in range(1, self.y_pred.max() + 1):
-                intersection = np.logical_and(self.y_true == t, self.y_pred == p)
-                union = np.logical_or(self.y_true == t, self.y_pred == p)
-                # Subtract 1 from index to account for skipping 0
-                self.iou[t - 1, p - 1] = intersection.sum() / union.sum()
-                if (self.seg is True) & \
-                   (intersection.sum() > 0.5 * np.sum(self.y_true == t)):
-                    self.seg_thresh[t - 1, p - 1] = 1
+        # Regionprops expects one 2D array at a time, but input is already 2d
+        # Calc bounding boxes for each true object
+        true_props = skimage.measure.regionprops(self.n_true.astype('int'))
+        true_boxes, true_box_labels = [], []
+        for true_prop in true_props:
+            true_boxes.append(np.array(true_prop.bbox))
+            true_box_labels.append(int(true_prop.label))
+        true_boxes = np.array(true_boxes).astype('double')
+
+        # Calc bounding boxes for each predicted object
+        pred_props = skimage.measure.regionprops(self.n_pred.astype('int'))
+        pred_boxes, pred_box_labels = [], []
+        for pred_prop in pred_props:
+            pred_boxes.append(np.array(pred_prop.bbox))
+            pred_box_labels.append(int(pred_prop.label))
+        pred_boxes = np.array(pred_boxes).astype('double')
+
+        # Calc overlaps of bounding boxes
+        overlaps = compute_overlap(true_boxes, pred_boxes)  # has the form [true_bbox, pred_bbox]
+
+        # Get indicies of boxes that have nonzero overlap
+        ind_true, ind_pred = np.nonzero(overlaps)
+
+        # Calc iou for all objects with bbox overlap
+        for ind_t, ind_p in zip(ind_true, ind_pred):
+            t = true_box_labels[ind_t]
+            p = pred_box_labels[ind_p]
+            intersection = np.logical_and(self.y_true == t, self.y_pred == p)
+            union = np.logical_or(self.y_true == t, self.y_pred == p)
+            # Subtract 1 from index to account for skipping 0
+            self.iou[t - 1, p - 1] = intersection.sum() / union.sum()
+            if (self.seg is True) & \
+                (intersection.sum() > 0.5 * np.sum(self.y_true == t)):
+                self.seg_thresh[t - 1, p - 1] = 1
 
     def _make_matrix(self):
         """Assembles cost matrix using the iou matrix and cutoff1
