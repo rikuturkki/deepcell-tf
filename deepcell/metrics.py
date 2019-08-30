@@ -261,7 +261,7 @@ class ObjectAccuracy(object):  # pylint: disable=useless-object-inheritance
 
         # Regionprops expects one 2D array at a time, but input is already 2d
         # Calc bounding boxes for each true object
-        true_props = skimage.measure.regionprops(self.n_true.astype('int'))
+        true_props = skimage.measure.regionprops(self.y_true.astype('int'))
         true_boxes, true_box_labels = [], []
         for true_prop in true_props:
             true_boxes.append(np.array(true_prop.bbox))
@@ -269,7 +269,7 @@ class ObjectAccuracy(object):  # pylint: disable=useless-object-inheritance
         true_boxes = np.array(true_boxes).astype('double')
 
         # Calc bounding boxes for each predicted object
-        pred_props = skimage.measure.regionprops(self.n_pred.astype('int'))
+        pred_props = skimage.measure.regionprops(self.y_pred.astype('int'))
         pred_boxes, pred_box_labels = [], []
         for pred_prop in pred_props:
             pred_boxes.append(np.array(pred_prop.bbox))
@@ -290,8 +290,7 @@ class ObjectAccuracy(object):  # pylint: disable=useless-object-inheritance
             union = np.logical_or(self.y_true == t, self.y_pred == p)
             # Subtract 1 from index to account for skipping 0
             self.iou[t - 1, p - 1] = intersection.sum() / union.sum()
-            if (self.seg is True) & \
-                (intersection.sum() > 0.5 * np.sum(self.y_true == t)):
+            if (self.seg is True) & (intersection.sum() > 0.5 * np.sum(self.y_true == t)):
                 self.seg_thresh[t - 1, p - 1] = 1
 
     def _make_matrix(self):
@@ -940,3 +939,6 @@ def split_stack(arr, batch, n_split1, axis1, n_split2, axis2):
     split2con = np.concatenate(split2, axis=0)
 
     return split2con
+
+
+######################
