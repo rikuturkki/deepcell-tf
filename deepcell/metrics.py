@@ -47,6 +47,7 @@ import datetime
 import operator
 import math
 import decimal
+import glob
 
 import numpy as np
 import pandas as pd
@@ -57,9 +58,10 @@ from scipy.optimize import linear_sum_assignment
 import skimage.io
 import skimage.measure
 from skimage.segmentation import relabel_sequential
+from skimage.external.tifffile import TiffFile
 from sklearn.metrics import confusion_matrix
 
-from keras_retinanet.utils.compute_overlap import compute_overlap
+from deepcell.utils.compute_overlap import compute_overlap
 
 from tensorflow.python.platform import tf_logging as logging
 
@@ -942,3 +944,156 @@ def split_stack(arr, batch, n_split1, axis1, n_split2, axis2):
 
 
 ######################
+##### Tracking #######
+######################
+
+def load_data(pattern):
+    """Loads a set of tiff files into a stacked numpy array
+
+    Args:
+        pattern (str): Filename pattern with wildcard * for selecting tiff files
+
+    Returns:
+        np.array
+    """
+    files = np.sort(glob.glob(pattern))
+    Lim = []
+    for i, f in enumerate(files):
+        Lim.append(TiffFile(f).asarray())
+
+    im = np.stack(Lim)
+    return(im)
+
+
+def match_nodes(pattern1, pattern2):
+    gt = load_data(pattern1)
+    res = load_data(pattern2)
+
+    num_frames = gt.shape[0]
+    iou = np.zeros((num_frames, np.max(gt) + 1, np.max(res)+1))
+    # Compute IOUs only when neccesary
+    # If bboxs for true and pred do not overlap with each other, the assignment is immediate
+    # Otherwise use pixel-wise IOU to determine which cell is which
+    # Regionprops expects one frame at a time
+
+    for frame in range(num_frames):
+        gt_frame = gt[frame]
+        res_frame = res[frame]
+
+        # Calculate ground truth bounding boxes
+        gt_props = skimage.measure.regionprops(np.squeeze(gt_frame.astype('int')))
+        gt_boxes, gt_box_labels = [], []
+        for gt_prop in gt_props:
+            gt_boxes.append(np.array(gt_prop.bbox))
+            gt_box_labels.append(int(gt_prop.label))
+        gt_boxes = np.array(gt_boxes).astype('double')
+
+        # Calculate results boudning boxes
+        res_props = skimage.measure.regionprops(np.squeeze(res_frame.astype('int')))
+        res_boxes, res_box_labels = [], []
+        for res_prop in res_props:
+            res_boxes.append(np.array(res_prop.bbox))
+            res_box_labels.append(int(res_prop.label))
+        res_boxes = np.array(res_boxes).astype('double')
+
+        # Find overlaps between bboxes
+        overlaps = compute_overlap(gt_boxes, res_boxes)    # has the form [gt_bbox, res_bbox]
+        # Find the bboxes that have overlap at all (ind_ corresponds to box number - starting at 0)
+        ind_gt, ind_res = np.nonzero(overlaps)
+
+        # Calculate ious for overlapping objects
+        for i_gt, i_res in zip(ind_gt, ind_res):
+            iou_gt_idx = gt_box_labels[i_gt]
+            iou_res_idx = res_box_labels[i_res]
+            intersection = np.logical_and(gt_frame == iou_gt_idx, res_frame == iou_res_idx)
+            union = np.logical_or(gt_frame == iou_gt_idx, res_frame == iou_res_idx)
+            iou[frame, iou_gt_idx, iou_res_idx] = intersection.sum() / union.sum()
+
+    gtcells, rescells = np.where(np.nansum(iou, axis=0) >= 1)
+    return gtcells, rescells
+
+
+def create_graph(file, node_key=None):
+    df = pd.read_csv(file, header=None, sep=' ', names=['Cell_ID','Start','End','Parent_ID'])
+
+    if node_key != None:
+        df[['Cell_ID','Parent_ID']] = df[['Cell_ID','Parent_ID']].replace(node_key)
+
+    edges = pd.DataFrame()
+
+    # Add each cell lineage as a set of edges to df
+    for _, row in df.iterrows():
+        tpoints = np.arange(row['Start'], row['End']+1)
+        deltaT = len(tpoints)
+
+        cellid = ['{cellid}_{frame}'.format(cellid = row['Cell_ID'], frame = t) for t in tpoints]
+        source = cellid[0:-1]
+        target = cellid[1:]
+
+        edges = edges.append(pd.DataFrame({'source':source, 'target':target}))
+
+    Dattr = {}
+    # Add parent-daughter connections
+    for _,row in df[df['Parent_ID']!=0].iterrows():
+        source = '{cellid}_{frame}'.format(cellid = row['Parent_ID'], frame = row['Start']-1)
+        target = '{cellid}_{frame}'.format(cellid = row['Cell_ID'], frame = row['Start'])
+
+        edges = edges.append(pd.DataFrame({'source':[source], 'target':[target]}))
+
+        Dattr[source] = {'division':True}
+
+    # Create graph
+    G = nx.from_pandas_edgelist(edges, source='source', target='target')
+    nx.set_node_attributes(G, Dattr)
+    return G
+
+
+def classify_divisions(G_gt, G_res):
+    """Given two graphs of cell tracks, classifies each division event as correct, incorrect
+    False  positive or missed.
+
+    Args:
+        G_gt (networkx graph):  Graph for ground truth data
+        G_res (networkx graph): Graph for predicted data
+    """
+
+    # Identify nodes with parent attribute
+    div_gt =[node for node, d in G_gt.node.data() if d.get('division', False) == True]
+    div_res =[node for node, d in G_res.node.data() if d.get('division', False) == True]
+
+    divI = 0 # Correct division
+    divJ = 0 # Wrong division
+    divC = 0 # False positive division
+    divGH = 0 # Missed division
+
+    for node in div_gt:
+        nb_gt = list(G_gt.neighbors(node))
+
+        # Check if res node was also called a division
+        if node in div_res:
+            nb_res = list(G_gt.neighbors(node))
+            # If neighbors are same, then correct division
+            if Counter(nb_gt) == Counter(nb_res):
+                divI += 1
+            # Wrong division
+            elif len(nb_res) == 3:
+                divJ += 1
+            else:
+                divGH += 1
+        # If not called division, then missed division
+        else:
+            divGH += 1
+
+        # Remove processed nodes from res list
+        try:
+            div_res.remove(node)
+        except:
+            print('attempted removal of node {} failed'.format(node))
+
+    # Count any remaining res nodes as false positives
+    divC += len(div_res)
+
+    return({'Correct division': divI,
+            'Incorrect division': divJ,
+            'False positive division':divC,
+            'False negative division':divGH})
