@@ -44,6 +44,7 @@ from __future__ import division
 import os
 import json
 import datetime
+from collections import Counter
 import operator
 import math
 import decimal
@@ -62,6 +63,7 @@ from skimage.external.tifffile import TiffFile
 from sklearn.metrics import confusion_matrix
 
 from deepcell.utils.compute_overlap import compute_overlap
+from deepcell.utils.tracking_utils import load_trks
 
 from tensorflow.python.platform import tf_logging as logging
 
@@ -947,153 +949,208 @@ def split_stack(arr, batch, n_split1, axis1, n_split2, axis2):
 ##### Tracking #######
 ######################
 
-def load_data(pattern):
-    """Loads a set of tiff files into a stacked numpy array
+class BenchmarkTrackingDivisions:
+    """Classify each division event in a comparison of two track lineages
 
     Args:
-        pattern (str): Filename pattern with wildcard * for selecting tiff files
+        true_trk (str): File path for ground truth trk file
+        res_trk (str): File path for trk file to be compared to `true_trk`
 
     Returns:
-        np.array
-    """
-    files = np.sort(glob.glob(pattern))
-    Lim = []
-    for i, f in enumerate(files):
-        Lim.append(TiffFile(f).asarray())
+        (dict): Dictionary with divison statistics:
+                correct, incorrect, false positive, false negative
 
-    im = np.stack(Lim)
-    return(im)
-
-
-def match_nodes(pattern1, pattern2):
-    gt = load_data(pattern1)
-    res = load_data(pattern2)
-
-    num_frames = gt.shape[0]
-    iou = np.zeros((num_frames, np.max(gt) + 1, np.max(res)+1))
-    # Compute IOUs only when neccesary
-    # If bboxs for true and pred do not overlap with each other, the assignment is immediate
-    # Otherwise use pixel-wise IOU to determine which cell is which
-    # Regionprops expects one frame at a time
-
-    for frame in range(num_frames):
-        gt_frame = gt[frame]
-        res_frame = res[frame]
-
-        # Calculate ground truth bounding boxes
-        gt_props = skimage.measure.regionprops(np.squeeze(gt_frame.astype('int')))
-        gt_boxes, gt_box_labels = [], []
-        for gt_prop in gt_props:
-            gt_boxes.append(np.array(gt_prop.bbox))
-            gt_box_labels.append(int(gt_prop.label))
-        gt_boxes = np.array(gt_boxes).astype('double')
-
-        # Calculate results boudning boxes
-        res_props = skimage.measure.regionprops(np.squeeze(res_frame.astype('int')))
-        res_boxes, res_box_labels = [], []
-        for res_prop in res_props:
-            res_boxes.append(np.array(res_prop.bbox))
-            res_box_labels.append(int(res_prop.label))
-        res_boxes = np.array(res_boxes).astype('double')
-
-        # Find overlaps between bboxes
-        overlaps = compute_overlap(gt_boxes, res_boxes)    # has the form [gt_bbox, res_bbox]
-        # Find the bboxes that have overlap at all (ind_ corresponds to box number - starting at 0)
-        ind_gt, ind_res = np.nonzero(overlaps)
-
-        # Calculate ious for overlapping objects
-        for i_gt, i_res in zip(ind_gt, ind_res):
-            iou_gt_idx = gt_box_labels[i_gt]
-            iou_res_idx = res_box_labels[i_res]
-            intersection = np.logical_and(gt_frame == iou_gt_idx, res_frame == iou_res_idx)
-            union = np.logical_or(gt_frame == iou_gt_idx, res_frame == iou_res_idx)
-            iou[frame, iou_gt_idx, iou_res_idx] = intersection.sum() / union.sum()
-
-    gtcells, rescells = np.where(np.nansum(iou, axis=0) >= 1)
-    return gtcells, rescells
-
-
-def create_graph(file, node_key=None):
-    df = pd.read_csv(file, header=None, sep=' ', names=['Cell_ID','Start','End','Parent_ID'])
-
-    if node_key != None:
-        df[['Cell_ID','Parent_ID']] = df[['Cell_ID','Parent_ID']].replace(node_key)
-
-    edges = pd.DataFrame()
-
-    # Add each cell lineage as a set of edges to df
-    for _, row in df.iterrows():
-        tpoints = np.arange(row['Start'], row['End']+1)
-        deltaT = len(tpoints)
-
-        cellid = ['{cellid}_{frame}'.format(cellid = row['Cell_ID'], frame = t) for t in tpoints]
-        source = cellid[0:-1]
-        target = cellid[1:]
-
-        edges = edges.append(pd.DataFrame({'source':source, 'target':target}))
-
-    Dattr = {}
-    # Add parent-daughter connections
-    for _,row in df[df['Parent_ID']!=0].iterrows():
-        source = '{cellid}_{frame}'.format(cellid = row['Parent_ID'], frame = row['Start']-1)
-        target = '{cellid}_{frame}'.format(cellid = row['Cell_ID'], frame = row['Start'])
-
-        edges = edges.append(pd.DataFrame({'source':[source], 'target':[target]}))
-
-        Dattr[source] = {'division':True}
-
-    # Create graph
-    G = nx.from_pandas_edgelist(edges, source='source', target='target')
-    nx.set_node_attributes(G, Dattr)
-    return G
-
-
-def classify_divisions(G_gt, G_res):
-    """Given two graphs of cell tracks, classifies each division event as correct, incorrect
-    False  positive or missed.
-
-    Args:
-        G_gt (networkx graph):  Graph for ground truth data
-        G_res (networkx graph): Graph for predicted data
+    Examples:
+        >>> benchmark = BenchmarkTrackingDivisions('true.trk', 'res.trk')
     """
 
-    # Identify nodes with parent attribute
-    div_gt =[node for node, d in G_gt.node.data() if d.get('division', False) == True]
-    div_res =[node for node, d in G_res.node.data() if d.get('division', False) == True]
+    def __init__(self, true_trk, res_trk):
 
-    divI = 0 # Correct division
-    divJ = 0 # Wrong division
-    divC = 0 # False positive division
-    divGH = 0 # Missed division
+        self.benchmark_trks(true_trk, res_trk)
 
-    for node in div_gt:
-        nb_gt = list(G_gt.neighbors(node))
+    def benchmark_trks(self, true_trk, res_trk):
+        """Loads trk files and compares performance on tracking
 
-        # Check if res node was also called a division
-        if node in div_res:
-            nb_res = list(G_gt.neighbors(node))
-            # If neighbors are same, then correct division
-            if Counter(nb_gt) == Counter(nb_res):
-                divI += 1
-            # Wrong division
-            elif len(nb_res) == 3:
-                divJ += 1
+        Args:
+            true_trk (str): File path to trk with ground truth data
+            res_trk (str): File path to trk with model results
+        """
+
+        Dtrue = load_trks(true_trk)
+        Dres = load_trks(res_trk)
+
+        gtcells, rescells = self.match_nodes(Dtrue['y'], Dres['y'])
+
+        # Correct mismatched cell ids
+        if len(np.unique(rescells)) < len(np.unique(gtcells)):
+            node_key = {r: g for g, r in zip(gtcells, rescells)}
+            Dres['lineages'] = self.correct_nodes(Dres['lineages'], node_key)
+        else:
+            node_key = {g: r for g, r in zip(gtcells, rescells)}
+            Dtrue['lineages'] = self.correct_nodes(Dtrue['lineages'], node_key)
+
+        G_gt = self.track_to_graph(Dtrue['lineages'])
+        G_res = self.track_to_graph(Dres['lineages'])
+
+        return self.classify_divisions(G_gt, G_res)
+
+    def match_nodes(self, true_segmentations, res_segmentations):
+        """Compares to stacks of segmented images in order to match cell label numbers
+
+        Args:
+            true_segmentations (np.array): Array containing segmentations for ground truth
+            res_segmentations (np.array): Array containing segmentations for results
+
+        Returns:
+            lists: Lists of the ground truth and result cell id numbers.
+            Each ith number in ground truth corresponds to the ith number in results.
+        """
+        gt = true_segmentations
+        res = res_segmentations
+
+        num_frames = gt.shape[0]
+        iou = np.zeros((num_frames, np.max(gt) + 1, np.max(res)+1))
+        # Compute IOUs only when neccesary
+        # If bboxs for true and pred do not overlap with each other, the assignment is immediate
+        # Otherwise use pixel-wise IOU to determine which cell is which
+        # Regionprops expects one frame at a time
+
+        for frame in range(num_frames):
+            gt_frame = gt[frame]
+            res_frame = res[frame]
+
+            # Calculate ground truth bounding boxes
+            gt_props = skimage.measure.regionprops(np.squeeze(gt_frame.astype('int')))
+            gt_boxes, gt_box_labels = [], []
+            for gt_prop in gt_props:
+                gt_boxes.append(np.array(gt_prop.bbox))
+                gt_box_labels.append(int(gt_prop.label))
+            gt_boxes = np.array(gt_boxes).astype('double')
+
+            # Calculate results boudning boxes
+            res_props = skimage.measure.regionprops(np.squeeze(res_frame.astype('int')))
+            res_boxes, res_box_labels = [], []
+            for res_prop in res_props:
+                res_boxes.append(np.array(res_prop.bbox))
+                res_box_labels.append(int(res_prop.label))
+            res_boxes = np.array(res_boxes).astype('double')
+
+            # Find overlaps between bboxes
+            overlaps = compute_overlap(gt_boxes, res_boxes)    # has the form [gt_bbox, res_bbox]
+            # Find the bboxes that have overlap at all
+            # (ind_ corresponds to box number - starting at 0)
+            ind_gt, ind_res = np.nonzero(overlaps)
+
+            # Calculate ious for overlapping objects
+            for i_gt, i_res in zip(ind_gt, ind_res):
+                iou_gt_idx = gt_box_labels[i_gt]
+                iou_res_idx = res_box_labels[i_res]
+                intersection = np.logical_and(gt_frame == iou_gt_idx, res_frame == iou_res_idx)
+                union = np.logical_or(gt_frame == iou_gt_idx, res_frame == iou_res_idx)
+                iou[frame, iou_gt_idx, iou_res_idx] = intersection.sum() / union.sum()
+
+        gtcells, rescells = np.where(np.nansum(iou, axis=0) >= 1)
+        return gtcells, rescells
+
+    def _action_swap(self, old_label, new_label, lineage):
+        def relabel(old_label, new_label, lineage):
+
+            # replace fields
+            track_new = lineage[new_label] = lineage[old_label]
+            track_new["label"] = new_label
+            del lineage[old_label]
+
+            for d in track_new["daughters"]:
+                lineage[d]["parent"] = new_label
+
+            return lineage
+
+        lineage = relabel(old_label, -1, lineage)
+        lineage = relabel(new_label, old_label, lineage)
+        lineage = relabel(-1, new_label, lineage)
+
+        return lineage
+
+    def correct_nodes(self, lineage, node_key):
+
+        for old, new in node_key.items():
+            lineage = self._action_swap(old, new, lineage)
+
+        return lineage
+
+    def track_to_graph(self, tracks):
+        """Create a graph from the lineage information"""
+        Dattr = {}
+        edges = pd.DataFrame()
+
+        for L in tracks.values():
+            # Calculate node ids
+            cellid = ['{}_{}'.format(L['label'], f) for f in L['frames']]
+            # Add edges from cell ids
+            edges = edges.append(pd.DataFrame({'source': cellid[0:-1],
+                                               'target': cellid[1:]}))
+
+            # Collect any division attributes
+            if L['frame_div'] is not None:
+                Dattr['{}_{}'.format(L['label'], L['frame_div'] - 1)] = {'division': True}
+
+            # Create any daughter-parent edges
+            if L['parent'] is not None:
+                source = '{}_{}'.format(L['parent'], min(L['frames']) - 1)
+                target = '{}_{}'.format(L['label'], min(L['frames']))
+                edges = edges.append(pd.DataFrame({'source': [source],
+                                                   'target': [target]}))
+
+        G = nx.from_pandas_edgelist(edges, source='source', target='target')
+        nx.set_node_attributes(G, Dattr)
+        return G
+
+    def classify_divisions(self, G_gt, G_res):
+        """Given two graphs of cell tracks, classifies each division event as correct, incorrect
+        False  positive or missed.
+
+        Args:
+            G_gt (networkx graph):  Graph for ground truth data
+            G_res (networkx graph): Graph for predicted data
+        """
+
+        # Identify nodes with parent attribute
+        div_gt = [node for node, d in G_gt.node.data() if d.get('division', False) is True]
+        div_res = [node for node, d in G_res.node.data() if d.get('division', False) is True]
+
+        divI = 0  # Correct division
+        divJ = 0  # Wrong division
+        divC = 0  # False positive division
+        divGH = 0  # Missed division
+
+        for node in div_gt:
+            nb_gt = list(G_gt.neighbors(node))
+
+            # Check if res node was also called a division
+            if node in div_res:
+                nb_res = list(G_gt.neighbors(node))
+                # If neighbors are same, then correct division
+                if Counter(nb_gt) == Counter(nb_res):
+                    divI += 1
+                # Wrong division
+                elif len(nb_res) == 3:
+                    divJ += 1
+                else:
+                    divGH += 1
+            # If not called division, then missed division
             else:
                 divGH += 1
-        # If not called division, then missed division
-        else:
-            divGH += 1
 
-        # Remove processed nodes from res list
-        try:
-            div_res.remove(node)
-        except:
-            print('attempted removal of node {} failed'.format(node))
+            # Remove processed nodes from res list
+            try:
+                div_res.remove(node)
+            except:
+                print('attempted removal of node {} failed'.format(node))
 
-    # Count any remaining res nodes as false positives
-    divC += len(div_res)
+        # Count any remaining res nodes as false positives
+        divC += len(div_res)
 
-    return({'Correct division': divI,
-            'Incorrect division': divJ,
-            'False positive division':divC,
-            'False negative division':divGH})
+        return({'Correct division': divI,
+                'Incorrect division': divJ,
+                'False positive division': divC,
+                'False negative division': divGH})
