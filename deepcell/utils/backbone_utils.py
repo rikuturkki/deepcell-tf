@@ -31,6 +31,7 @@ from __future__ import division
 
 import copy
 
+from efficientnet import model as efn
 import keras_applications as applications
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
@@ -222,6 +223,7 @@ def get_backbone(backbone, input_tensor, use_imagenet=False, return_dict=True, *
     resnet_v2_backbones = ['resnet50v2', 'resnet101v2', 'resnet152v2']
     resnext_backbones = ['resnext50', 'resnext101']
     nasnet_backbones = ['nasnet_large', 'nasnet_mobile']
+    efficientnet_backbones = ['efficientnetb%s' % x for x in range(8)]
 
     # TODO: Check and make sure **kwargs is in the right format.
     # 'weights' flag should be None, and 'input_shape' must have size 3 on the channel axis
@@ -426,11 +428,55 @@ def get_backbone(backbone, input_tensor, use_imagenet=False, return_dict=True, *
         layer_names.extend(['normal_concat_%s' % i for i in block_ids])
         layer_outputs = [model.get_layer(name=ln).output for ln in layer_names]
 
+    elif _backbone in efficientnet_backbones:
+        if _backbone.endswith('b0'):
+            model = efn.EfficientNetB0(input_tensor=input_tensor, **kwargs)
+        elif _backbone.endswith('b1'):
+            model = efn.EfficientNetB1(input_tensor=input_tensor, **kwargs)
+        elif _backbone.endswith('b2'):
+            model = efn.EfficientNetB2(input_tensor=input_tensor, **kwargs)
+        elif _backbone.endswith('b3'):
+            model = efn.EfficientNetB3(input_tensor=input_tensor, **kwargs)
+        elif _backbone.endswith('b4'):
+            model = efn.EfficientNetB4(input_tensor=input_tensor, **kwargs)
+        elif _backbone.endswith('b5'):
+            model = efn.EfficientNetB5(input_tensor=input_tensor, **kwargs)
+        elif _backbone.endswith('b6'):
+            model = efn.EfficientNetB6(input_tensor=input_tensor, **kwargs)
+        elif _backbone.endswith('b7'):
+            model = efn.EfficientNetB7(input_tensor=input_tensor, **kwargs)
+
+        if use_imagenet:
+            if _backbone.endswith('b0'):
+                model_with_weights = efn.EfficientNetB0(**kwargs_with_weights)
+            elif _backbone.endswith('b1'):
+                model_with_weights = efn.EfficientNetB1(**kwargs_with_weights)
+            elif _backbone.endswith('b2'):
+                model_with_weights = efn.EfficientNetB2(**kwargs_with_weights)
+            elif _backbone.endswith('b3'):
+                model_with_weights = efn.EfficientNetB3(**kwargs_with_weights)
+            elif _backbone.endswith('b4'):
+                model_with_weights = efn.EfficientNetB4(**kwargs_with_weights)
+            elif _backbone.endswith('b5'):
+                model_with_weights = efn.EfficientNetB5(**kwargs_with_weights)
+            elif _backbone.endswith('b6'):
+                model_with_weights = efn.EfficientNetB6(**kwargs_with_weights)
+            elif _backbone.endswith('b7'):
+                model_with_weights = efn.EfficientNetB7(**kwargs_with_weights)
+            model_with_weights.save_weights('model_weights.h5')
+            model.load_weights('model_weights.h5', by_name=True)
+
+        layer_names = ['block2a_expand_activation', 'block3a_expand_activation',
+                       'block4a_expand_activation', 'block6a_expand_activation',
+                       'top_activation']
+        layer_outputs = [model.get_layer(name=ln).output for ln in layer_names]
+
     else:
         backbones = list(featurenet_backbones + densenet_backbones +
                          resnet_backbones + resnext_backbones +
                          resnet_v2_backbones + vgg_backbones +
-                         nasnet_backbones + mobilenet_backbones)
+                         nasnet_backbones + mobilenet_backbones +
+                         efficientnet_backbones)
         raise ValueError('Invalid value for `backbone`. Must be one of: %s' %
                          ', '.join(backbones))
 

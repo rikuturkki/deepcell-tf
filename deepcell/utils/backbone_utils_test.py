@@ -95,6 +95,7 @@ class TestBackboneUtils(test.TestCase, parameterized.TestCase):
         ('mobilenetv2',) * 2,
         ('nasnet_large',) * 2,
         ('nasnet_mobile',) * 2,
+        ('efficientnetb0',) * 2,
     ])
     def test_get_backbone(self, backbone):
         # some backbones seem to not play well with python2.7
@@ -102,6 +103,8 @@ class TestBackboneUtils(test.TestCase, parameterized.TestCase):
             'resnext50', 'resnext101',
             'resnet50v2', 'resnet101v2', 'resnet152v2'
         }
+
+        bad_backbones += set(['efficientnetb%s' % x for x in range(8)])
 
         if sys.version_info[0] != 2 or backbone not in bad_backbones:
             # with self.test_session(use_gpu=True):
