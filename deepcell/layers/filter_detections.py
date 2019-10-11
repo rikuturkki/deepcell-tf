@@ -30,13 +30,9 @@ from __future__ import division
 
 import tensorflow as tf
 from tensorflow.python.framework import tensor_shape
-from tensorflow.python.keras.layers import Layer
 from tensorflow.python.keras import backend as K
-
-try:  # tf v1.9 moves conv_utils from _impl to keras.utils
-    from tensorflow.python.keras.utils import conv_utils
-except ImportError:
-    from tensorflow.python.keras._impl.keras.utils import conv_utils
+from tensorflow.python.keras.layers import Layer
+from tensorflow.python.keras.utils import conv_utils
 
 
 def filter_detections(boxes,
@@ -225,7 +221,7 @@ class FilterDetections(Layer):
                 [boxes, classification, other[0], other[1], ...].
 
         Returns:
-            List of tuples representing the output shapes:
+            list: List of tuples representing the output shapes:
                 [filtered_boxes.shape, filtered_scores.shape,
                  filtered_labels.shape, filtered_other[0].shape,
                  filtered_other[1].shape, ...]

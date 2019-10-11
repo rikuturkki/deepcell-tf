@@ -31,6 +31,7 @@ from __future__ import print_function
 
 import warnings
 
+from deepcell.utils import backbone_utils
 from deepcell.utils import data_utils
 from deepcell.utils import export_utils
 from deepcell.utils import io_utils
@@ -61,7 +62,7 @@ from deepcell.utils.misc_utils import sorted_nicely
 from deepcell.utils.train_utils import rate_scheduler
 from deepcell.utils.transform_utils import distance_transform_2d
 from deepcell.utils.transform_utils import distance_transform_3d
-from deepcell.utils.transform_utils import deepcell_transform
+from deepcell.utils.transform_utils import pixelwise_transform
 
 del warnings
 

@@ -33,7 +33,6 @@ import datetime
 import os
 
 import numpy as np
-import tensorflow as tf
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras import callbacks
 from tensorflow.python.keras.optimizers import SGD
@@ -43,7 +42,6 @@ from deepcell import losses
 from deepcell import image_generators
 from deepcell.callbacks import RedirectModel, Evaluate
 from deepcell.model_zoo import retinanet_bbox
-from deepcell.utils.retinanet_anchor_utils import overlap
 from deepcell.utils.retinanet_anchor_utils import make_shapes_callback
 from deepcell.utils.retinanet_anchor_utils import guess_shapes
 from deepcell.utils.retinanet_anchor_utils import evaluate
@@ -58,7 +56,7 @@ from sklearn.model_selection import train_test_split
 def train_model_sample(model,
                        dataset,
                        expt='',
-                       test_size=.1,
+                       test_size=.2,
                        n_epoch=10,
                        batch_size=32,
                        num_gpus=None,
@@ -77,8 +75,41 @@ def train_model_sample(model,
                        flip=False,
                        shear=0,
                        zoom_range=0,
-                       seed=None,
+                       seed=0,
                        **kwargs):
+    """Train a model using sample mode.
+
+    Args:
+        model (tensorflow.keras.Model): The model to train.
+        dataset (str): Path to a dataset to train the model with.
+        expt (str): Experiment, substring to include in model name.
+        test_size (float): Percent of data to leave as test data.
+        n_epoch (int): Number of training epochs.
+        batch_size (int): Number of batches per training step.
+        num_gpus (int): The number of GPUs to train on.
+        transform (str): Defines the transformation of the training data.
+            One of 'watershed', 'fgbg', 'pixelwise'.
+        window_size (tuple(int, int)): Size of sampling window
+        balance_classes (bool): Whether to perform class-balancing on data
+        max_class_samples (int): Maximum number of examples per class to sample
+        log_dir (str): Filepath to save tensorboard logs. If None, disables
+            the tensorboard callback.
+        model_dir (str): Directory to save the model file.
+        model_name (str): Name of the model (and name of output file).
+        focal (bool): If true, uses focal loss.
+        gamma (float): Parameter for focal loss
+        optimizer (object): Pre-initialized optimizer object (SGD, Adam, etc.)
+        lr_sched (function): Learning rate schedular function
+        rotation_range (int): Maximum rotation range for image augmentation
+        flip (bool): Enables horizontal and vertical flipping for augmentation
+        shear (int): Maximum rotation range for image augmentation
+        zoom_range (tuple): Minimum and maximum zoom values (0.8, 1.2)
+        seed (int): Random seed
+        kwargs (dict): Other parameters to pass to _transform_masks
+
+    Returns:
+        tensorflow.keras.Model: The trained model
+    """
     is_channels_first = K.image_data_format() == 'channels_first'
 
     if model_name is None:
@@ -148,6 +179,7 @@ def train_model_sample(model,
 
     train_data = datagen.flow(
         train_dict,
+        seed=seed,
         batch_size=batch_size,
         transform=transform,
         transform_kwargs=kwargs,
@@ -157,6 +189,7 @@ def train_model_sample(model,
 
     val_data = datagen_val.flow(
         test_dict,
+        seed=seed,
         batch_size=batch_size,
         transform=transform,
         transform_kwargs=kwargs,
@@ -189,7 +222,7 @@ def train_model_conv(model,
                      train_dict,
                      test_dict,
                      expt='',
-                     test_size=.1,
+                     test_size=.2,
                      n_epoch=10,
                      batch_size=1,
                      num_gpus=None,
@@ -206,8 +239,39 @@ def train_model_conv(model,
                      flip=True,
                      shear=0,
                      zoom_range=0,
-                     seed=None,
+                     seed=0,
                      **kwargs):
+    """Train a model using fully convolutional mode.
+
+    Args:
+        model (tensorflow.keras.Model): The model to train.
+        dataset (str): Path to a dataset to train the model with.
+        expt (str): Experiment, substring to include in model name.
+        test_size (float): Percent of data to leave as test data.
+        n_epoch (int): Number of training epochs.
+        batch_size (int): Number of batches per training step.
+        num_gpus (int): The number of GPUs to train on.
+        frames_per_batch (int): Number of training frames if training 3D data.
+        transform (str): Defines the transformation of the training data.
+            One of 'watershed', 'fgbg', 'pixelwise'.
+        log_dir (str): Filepath to save tensorboard logs. If None, disables
+            the tensorboard callback.
+        model_dir (str): Directory to save the model file.
+        model_name (str): Name of the model (and name of output file).
+        focal (bool): If true, uses focal loss.
+        gamma (float): Parameter for focal loss
+        optimizer (object): Pre-initialized optimizer object (SGD, Adam, etc.)
+        lr_sched (function): Learning rate schedular function
+        rotation_range (int): Maximum rotation range for image augmentation
+        flip (bool): Enables horizontal and vertical flipping for augmentation
+        shear (int): Maximum rotation range for image augmentation
+        zoom_range (tuple): Minimum and maximum zoom values (0.8, 1.2)
+        seed (int): Random seed
+        kwargs (dict): Other parameters to pass to _transform_masks
+
+    Returns:
+        tensorflow.keras.Model: The trained model
+    """
     is_channels_first = K.image_data_format() == 'channels_first'
 
     if model_name is None:
@@ -292,9 +356,10 @@ def train_model_conv(model,
         vertical_flip=0)
 
     if train_dict['X'].ndim == 5:
-        train_data = datagen_val.flow(
+        train_data = datagen.flow(
             train_dict,
             skip=skip,
+            seed=seed,
             batch_size=batch_size,
             transform=transform,
             transform_kwargs=kwargs,
@@ -303,6 +368,7 @@ def train_model_conv(model,
         val_data = datagen_val.flow(
             test_dict,
             skip=skip,
+            seed=seed,
             batch_size=batch_size,
             transform=transform,
             transform_kwargs=kwargs,
@@ -311,6 +377,7 @@ def train_model_conv(model,
         train_data = datagen.flow(
             train_dict,
             skip=skip,
+            seed=seed,
             batch_size=batch_size,
             transform=transform,
             transform_kwargs=kwargs)
@@ -318,6 +385,7 @@ def train_model_conv(model,
         val_data = datagen_val.flow(
             test_dict,
             skip=skip,
+            seed=seed,
             batch_size=batch_size,
             transform=transform,
             transform_kwargs=kwargs)
@@ -348,7 +416,7 @@ def train_model_conv(model,
 def train_model_siamese_daughter(model,
                                  dataset,
                                  expt='',
-                                 test_size=.1,
+                                 test_size=.2,
                                  n_epoch=100,
                                  batch_size=1,
                                  num_gpus=None,
@@ -367,7 +435,7 @@ def train_model_siamese_daughter(model,
                                  flip=True,
                                  shear=0,
                                  zoom_range=0,
-                                 seed=None,
+                                 seed=0,
                                  **kwargs):
     is_channels_first = K.image_data_format() == 'channels_first'
 
@@ -437,8 +505,12 @@ def train_model_siamese_daughter(model,
     total_train_pairs = tracking_utils.count_pairs(train_dict['y'], same_probability=5.0)
     total_test_pairs = tracking_utils.count_pairs(val_dict['y'], same_probability=5.0)
 
+    # total_train_pairs = tracking_utils.count_pairs(train_dict['y'], same_probability=0.5)
+    # total_test_pairs = tracking_utils.count_pairs(val_dict['y'], same_probability=0.5)
+
     train_data = datagen.flow(
         train_dict,
+        seed=seed,
         crop_dim=crop_dim,
         batch_size=batch_size,
         min_track_length=min_track_length,
@@ -447,6 +519,7 @@ def train_model_siamese_daughter(model,
 
     val_data = datagen_val.flow(
         val_dict,
+        seed=seed,
         crop_dim=crop_dim,
         batch_size=batch_size,
         min_track_length=min_track_length,
@@ -481,13 +554,19 @@ def train_model_siamese_daughter(model,
 
 def train_model_retinanet(model,
                           dataset,
-                          backbone,
                           expt='',
-                          test_size=.1,
+                          test_size=.2,
                           n_epoch=10,
                           batch_size=1,
                           num_gpus=None,
                           include_masks=False,
+                          panoptic=False,
+                          panoptic_weight=0.1,
+                          transforms=['watershed'],
+                          transforms_kwargs={},
+                          anchor_params=None,
+                          pyramid_levels=['P3', 'P4', 'P5', 'P6', 'P7'],
+                          min_objects=3,
                           mask_size=(28, 28),
                           optimizer=SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True),
                           log_dir='/data/tensorboard_logs',
@@ -505,25 +584,85 @@ def train_model_retinanet(model,
                           flip=True,
                           shear=0,
                           zoom_range=0,
+                          compute_map=True,
+                          seed=0,
                           **kwargs):
-    """Train a RetinaNet model from the given backbone
+    """Train a RetinaNet model from the given backbone.
 
     Adapted from:
         https://github.com/fizyr/keras-retinanet &
         https://github.com/fizyr/keras-maskrcnn
+
+    Args:
+        model (tensorflow.keras.Model): The model to train.
+        dataset (str): Path to a dataset to train the model with.
+        expt (str): Experiment, substring to include in model name.
+        test_size (float): Percent of data to leave as test data.
+        n_epoch (int): Number of training epochs.
+        batch_size (int): Number of batches per training step.
+        num_gpus (int): The number of GPUs to train on.
+        include_masks (bool): Whether to generate masks using MaskRCNN.
+        panoptic (bool): Whether to include semantic segmentation heads.
+        panoptic_weight (float): Weight applied to the semantic loss.
+        transforms (list): List of transform names as strings. Each transform
+            will have its own semantic segmentation head.
+        transforms_kwargs (list): List of dicts of optional values for each
+            transform in transforms.
+        anchor_params (AnchorParameters): Struct containing anchor parameters.
+            If None, default values are used.
+        pyramid_levels (list): Pyramid levels to attach
+            the object detection heads to.
+        min_objects (int): If a training image has fewer than min_objects
+            objects, the image will not be used for training.
+        mask_size (tuple): The size of the masks.
+        log_dir (str): Filepath to save tensorboard logs. If None, disables
+            the tensorboard callback.
+        model_dir (str): Directory to save the model file.
+        model_name (str): Name of the model (and name of output file).
+        sigma (float): The point where the loss changes from L2 to L1.
+        alpha (float): Scale the focal weight with alpha.
+        gamma (float): Take the power of the focal weight with gamma.
+        iou_threshold (float): The threshold used to consider when a detection
+            is positive or negative.
+        score_threshold (float): The score confidence threshold
+            to use for detections.
+        max_detections (int): The maximum number of detections to use per image
+        weighted_average (bool): Use a weighted average in evaluation.
+        optimizer (object): Pre-initialized optimizer object (SGD, Adam, etc.)
+        lr_sched (function): Learning rate schedular function
+        rotation_range (int): Maximum rotation range for image augmentation
+        flip (bool): Enables horizontal and vertical flipping for augmentation
+        shear (int): Maximum rotation range for image augmentation
+        zoom_range (tuple): Minimum and maximum zoom values (0.8, 1.2)
+        seed (int): Random seed
+        compute_map (bool): Whether to compute mAP at end of training.
+        kwargs (dict): Other parameters to pass to _transform_masks
+
+    Returns:
+        tensorflow.keras.Model: The trained model
     """
+
     is_channels_first = K.image_data_format() == 'channels_first'
 
     if model_name is None:
         todays_date = datetime.datetime.now().strftime('%Y-%m-%d')
         data_name = os.path.splitext(os.path.basename(dataset))[0]
         model_name = '{}_{}_{}'.format(todays_date, data_name, expt)
+
     model_path = os.path.join(model_dir, '{}.h5'.format(model_name))
     loss_path = os.path.join(model_dir, '{}.npz'.format(model_name))
 
-    train_dict, test_dict = get_data(dataset, mode='conv', test_size=test_size)
+    train_dict, test_dict = get_data(dataset, seed=seed, test_size=test_size)
 
-    n_classes = model.layers[-1].output_shape[1 if is_channels_first else -1]
+    channel_axis = 1 if is_channels_first else -1
+    n_classes = model.layers[-1].output_shape[channel_axis]
+
+    if panoptic:
+        n_semantic_classes = [layer.output_shape[channel_axis]
+                              for layer in model.layers if 'semantic' in layer.name]
+    else:
+        n_semantic_classes = []
+
     # the data, shuffled and split between train and test sets
     print('X_train shape:', train_dict['X'].shape)
     print('y_train shape:', train_dict['y'].shape)
@@ -541,143 +680,42 @@ def train_model_retinanet(model,
 
     print('Training on {} GPUs'.format(num_gpus))
 
-    def regress_loss(y_true, y_pred):
-        # separate target and state
-        regression = y_pred
-        regression_target = y_true[..., :-1]
-        anchor_state = y_true[..., -1]
-
-        # filter out "ignore" anchors
-        indices = tf.where(K.equal(anchor_state, 1))
-        regression = tf.gather_nd(regression, indices)
-        regression_target = tf.gather_nd(regression_target, indices)
-
-        # compute the loss
-        loss = losses.smooth_l1(regression_target, regression, sigma=sigma)
-
-        # compute the normalizer: the number of positive anchors
-        normalizer = K.maximum(1, K.shape(indices)[0])
-        normalizer = K.cast(normalizer, dtype=K.floatx())
-
-        return K.sum(loss) / normalizer
-
-    def classification_loss(y_true, y_pred):
-        # TODO: try weighted_categorical_crossentropy
-        labels = y_true[..., :-1]
-        # -1 for ignore, 0 for background, 1 for object
-        anchor_state = y_true[..., -1]
-
-        classification = y_pred
-        # filter out "ignore" anchors
-        indices = tf.where(K.not_equal(anchor_state, -1))
-        labels = tf.gather_nd(labels, indices)
-        classification = tf.gather_nd(classification, indices)
-
-        # compute the loss
-        loss = losses.focal(labels, classification, alpha=alpha, gamma=gamma)
-
-        # compute the normalizer: the number of positive anchors
-        normalizer = tf.where(K.equal(anchor_state, 1))
-        normalizer = K.cast(K.shape(normalizer)[0], K.floatx())
-        normalizer = K.maximum(K.cast_to_floatx(1.0), normalizer)
-
-        return K.sum(loss) / normalizer
-
-    def mask_loss(y_true, y_pred):
-
-        def _mask(y_true, y_pred, iou_threshold=0.5, mask_size=(28, 28)):
-            # split up the different predicted blobs
-            boxes = y_pred[:, :, :4]
-            masks = y_pred[:, :, 4:]
-
-            # split up the different blobs
-            annotations = y_true[:, :, :5]
-            width = K.cast(y_true[0, 0, 5], dtype='int32')
-            height = K.cast(y_true[0, 0, 6], dtype='int32')
-            masks_target = y_true[:, :, 7:]
-
-            # reshape the masks back to their original size
-            masks_target = K.reshape(masks_target,
-                                     (K.shape(masks_target)[0] * K.shape(masks_target)[1],
-                                      height, width))
-            masks = K.reshape(masks, (K.shape(masks)[0] * K.shape(masks)[1],
-                                      mask_size[0], mask_size[1], -1))
-
-            # batch size > 1 fix
-            boxes = K.reshape(boxes, (-1, K.shape(boxes)[2]))
-            annotations = K.reshape(annotations, (-1, K.shape(annotations)[2]))
-
-            # compute overlap of boxes with annotations
-            iou = overlap(boxes, annotations)
-            argmax_overlaps_inds = K.argmax(iou, axis=1)
-            max_iou = K.max(iou, axis=1)
-
-            # filter those with IoU > 0.5
-            indices = tf.where(K.greater_equal(max_iou, iou_threshold))
-            boxes = tf.gather_nd(boxes, indices)
-            masks = tf.gather_nd(masks, indices)
-            argmax_overlaps_inds = tf.gather_nd(argmax_overlaps_inds, indices)
-            argmax_overlaps_inds = K.cast(argmax_overlaps_inds, 'int32')
-            labels = K.gather(annotations[:, 4], argmax_overlaps_inds)
-            labels = K.cast(labels, 'int32')
-
-            # make normalized boxes
-            x1 = boxes[:, 0]
-            y1 = boxes[:, 1]
-            x2 = boxes[:, 2]
-            y2 = boxes[:, 3]
-            boxes = K.stack([
-                y1 / (K.cast(height, dtype=K.floatx()) - 1),
-                x1 / (K.cast(width, dtype=K.floatx()) - 1),
-                (y2 - 1) / (K.cast(height, dtype=K.floatx()) - 1),
-                (x2 - 1) / (K.cast(width, dtype=K.floatx()) - 1),
-            ], axis=1)
-
-            # crop and resize masks_target
-            # append a fake channel dimension
-            masks_target = K.expand_dims(masks_target, axis=3)
-            masks_target = tf.image.crop_and_resize(
-                masks_target, boxes, argmax_overlaps_inds, mask_size)
-
-            # remove fake channel dimension
-            masks_target = masks_target[:, :, :, 0]
-
-            # gather the predicted masks using the annotation label
-            masks = tf.transpose(masks, (0, 3, 1, 2))
-            label_indices = K.stack([tf.range(K.shape(labels)[0]), labels], axis=1)
-            masks = tf.gather_nd(masks, label_indices)
-
-            # compute mask loss
-            mask_loss = K.binary_crossentropy(masks_target, masks)
-            normalizer = K.shape(masks)[0] * K.shape(masks)[1] * K.shape(masks)[2]
-            normalizer = K.maximum(K.cast(normalizer, K.floatx()), 1)
-            mask_loss = K.sum(mask_loss) / normalizer
-
-            return mask_loss
-
-        # if there are no masks annotations, return 0; else, compute the masks loss
-        return tf.cond(
-            K.any(K.equal(K.shape(y_true), 0)),
-            lambda: K.cast_to_floatx(0.0),
-            lambda: _mask(y_true, y_pred,
-                          iou_threshold=iou_threshold,
-                          mask_size=mask_size)
-        )
-
     # evaluation of model is done on `retinanet_bbox`
     if include_masks:
         prediction_model = model
     else:
         prediction_model = retinanet_bbox(
-            model, nms=True, class_specific_filter=False)
+            model,
+            nms=True,
+            anchor_params=anchor_params,
+            num_semantic_heads=len(n_semantic_classes),
+            panoptic=panoptic,
+            class_specific_filter=False)
+
+    retinanet_losses = losses.RetinaNetLosses(sigma=sigma, alpha=alpha, gamma=gamma,
+                                              iou_threshold=iou_threshold,
+                                              mask_size=mask_size)
+
+    def semantic_loss(n_classes):
+        def _semantic_loss(y_pred, y_true):
+            return panoptic_weight * losses.weighted_categorical_crossentropy(
+                y_pred, y_true, n_classes=n_classes)
+        return _semantic_loss
 
     loss = {
-        'regression': regress_loss,
-        'classification': classification_loss
+        'regression': retinanet_losses.regress_loss,
+        'classification': retinanet_losses.classification_loss
     }
 
     if include_masks:
-        loss['masks'] = mask_loss
+        loss['masks'] = retinanet_losses.mask_loss
+
+    if panoptic:
+        # Give losses for all of the semantic heads
+        for layer in model.layers:
+            if 'semantic' in layer.name:
+                n_classes = layer.output_shape[channel_axis]
+                loss[layer.name] = semantic_loss(n_classes)
 
     model.compile(loss=loss, optimizer=optimizer)
 
@@ -713,20 +751,38 @@ def train_model_retinanet(model,
         horizontal_flip=0,
         vertical_flip=0)
 
-    if 'vgg' in backbone or 'densenet' in backbone:
-        compute_shapes = make_shapes_callback(model)
-    else:
-        compute_shapes = guess_shapes
+    # if 'vgg' in backbone or 'densenet' in backbone:
+    #     compute_shapes = make_shapes_callback(model)
+    # else:
+    #     compute_shapes = guess_shapes
+
+    compute_shapes = guess_shapes
 
     train_data = datagen.flow(
         train_dict,
+        seed=seed,
+        include_mask_transforms=len(transforms) > 0,
         include_masks=include_masks,
+        panoptic=panoptic,
+        transforms=transforms,
+        transforms_kwargs=transforms_kwargs,
+        pyramid_levels=pyramid_levels,
+        min_objects=min_objects,
+        anchor_params=anchor_params,
         compute_shapes=compute_shapes,
         batch_size=batch_size)
 
     val_data = datagen_val.flow(
         test_dict,
+        seed=seed,
+        include_mask_transforms=len(transforms) > 0,
         include_masks=include_masks,
+        panoptic=panoptic,
+        transforms=transforms,
+        transforms_kwargs=transforms_kwargs,
+        pyramid_levels=pyramid_levels,
+        min_objects=min_objects,
+        anchor_params=anchor_params,
         compute_shapes=compute_shapes,
         batch_size=batch_size)
 
@@ -764,28 +820,29 @@ def train_model_retinanet(model,
     model.save_weights(model_path)
     np.savez(loss_path, loss_history=loss_history.history)
 
-    average_precisions = evaluate(
-        val_data,
-        prediction_model,
-        iou_threshold=iou_threshold,
-        score_threshold=score_threshold,
-        max_detections=max_detections,
-    )
+    if compute_map:
+        average_precisions = evaluate(
+            val_data,
+            prediction_model,
+            iou_threshold=iou_threshold,
+            score_threshold=score_threshold,
+            max_detections=max_detections,
+        )
 
-    # print evaluation
-    total_instances = []
-    precisions = []
-    for label, (average_precision, num_annotations) in average_precisions.items():
-        print('{:.0f} instances of class'.format(num_annotations),
-              label, 'with average precision: {:.4f}'.format(average_precision))
-        total_instances.append(num_annotations)
-        precisions.append(average_precision)
+        # print evaluation
+        total_instances = []
+        precisions = []
+        for label, (average_precision, num_annotations) in average_precisions.items():
+            print('{:.0f} instances of class'.format(num_annotations),
+                  label, 'with average precision: {:.4f}'.format(average_precision))
+            total_instances.append(num_annotations)
+            precisions.append(average_precision)
 
-    if sum(total_instances) == 0:
-        print('No test instances found.')
-    else:
-        print('mAP using the weighted average of precisions among classes: {:.4f}'.format(
-            sum([a * b for a, b in zip(total_instances, precisions)]) / sum(total_instances)))
-        print('mAP: {:.4f}'.format(sum(precisions) / sum(x > 0 for x in total_instances)))
+        if sum(total_instances) == 0:
+            print('No test instances found.')
+        else:
+            print('mAP using the weighted average of precisions among classes: {:.4f}'.format(
+                sum([a * b for a, b in zip(total_instances, precisions)]) / sum(total_instances)))
+            print('mAP: {:.4f}'.format(sum(precisions) / sum(x > 0 for x in total_instances)))
 
     return model
