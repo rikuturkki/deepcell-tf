@@ -68,7 +68,7 @@ if not hasattr(ImageDataGenerator, 'apply_transform'):
 
 from deepcell.utils.data_utils import sample_label_movie
 from deepcell.utils.data_utils import sample_label_matrix
-from deepcell.utils.transform_utils import deepcell_transform
+from deepcell.utils.transform_utils import pixelwise_transform
 from deepcell.utils.transform_utils import deepcell_flat_transform
 from deepcell.utils.transform_utils import distance_transform_2d
 from deepcell.utils.transform_utils import distance_transform_3d
@@ -93,7 +93,15 @@ def _transform_masks(y, transform, data_format=None, **kwargs):
     Raises:
         IOError: An error occurred
     """
-    valid_transforms = {'deepcell', 'deepcell_flat', 'disc', 'watershed', 'centroid', 'fgbg'}
+    valid_transforms = {
+        'pixelwise',
+        'deepcell_flat',
+        'disc',
+        'watershed',
+        'centroid',
+        'fgbg'
+    }
+
 
     if data_format is None:
         data_format = K.image_data_format()
@@ -112,9 +120,9 @@ def _transform_masks(y, transform, data_format=None, **kwargs):
         if transform not in valid_transforms:
             raise ValueError('`{}` is not a valid transform'.format(transform))
 
-    if transform == 'deepcell':
+    if transform == 'pixelwise':
         dilation_radius = kwargs.pop('dilation_radius', None)
-        y_transform = deepcell_transform(y, dilation_radius, data_format=data_format)
+        y_transform = pixelwise_transform(y, dilation_radius, data_format=data_format)
 
     elif transform == 'deepcell_flat':
         dilation_radius = kwargs.pop('dilation_radius', None)

@@ -71,7 +71,7 @@ if not hasattr(ImageDataGenerator, 'apply_transform'):
 
 from deepcell.utils.data_utils import sample_label_movie
 from deepcell.utils.data_utils import sample_label_matrix
-from deepcell.utils.transform_utils import deepcell_transform
+from deepcell.utils.transform_utils import pixelwise_transform
 from deepcell.utils.transform_utils import distance_transform_2d
 from deepcell.utils.transform_utils import distance_transform_3d
 from deepcell.utils.retinanet_anchor_utils import anchor_targets_bbox
@@ -113,7 +113,7 @@ def _transform_masks(y, transform, data_format=None, **kwargs):
 
     if transform == 'deepcell':
         dilation_radius = kwargs.pop('dilation_radius', None)
-        y_transform = deepcell_transform(y, dilation_radius, data_format=data_format)
+        y_transform = pixelwise_transform(y, dilation_radius, data_format=data_format)
 
     elif transform == 'watershed':
         distance_bins = kwargs.pop('distance_bins', 4)

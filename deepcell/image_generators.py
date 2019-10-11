@@ -112,8 +112,7 @@ def _transform_masks(y, transform, data_format=None, **kwargs):
         transform = transform.lower()
         if transform == 'deepcell':
             raise ValueError('`deepcell` transform has been replaced with the '
-                             '`
-                             ` transform.')
+                             '`transform.')
         if transform not in valid_transforms:
             raise ValueError('`{}` is not a valid transform'.format(transform))
 
