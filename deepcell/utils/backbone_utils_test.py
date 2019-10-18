@@ -102,7 +102,7 @@ class TestBackboneUtils(test.TestCase, parameterized.TestCase):
             'resnet50v2', 'resnet101v2', 'resnet152v2'
         }
 
-        bad_backbones += set(['efficientnetb%s' % x for x in range(8)])
+        bad_backbones += set('efficientnetb%s' % x for x in range(8))
 
         if sys.version_info[0] != 2 or backbone not in bad_backbones:
             with self.test_session():
