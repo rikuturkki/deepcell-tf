@@ -450,40 +450,22 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
     elif _backbone in efficientnet_backbones:
         from efficientnet import model as efn  # incompatible with python2
 
-        if _backbone.endswith('b0'):
-            model = efn.EfficientNetB0(input_tensor=input_tensor, **kwargs)
-        elif _backbone.endswith('b1'):
-            model = efn.EfficientNetB1(input_tensor=input_tensor, **kwargs)
-        elif _backbone.endswith('b2'):
-            model = efn.EfficientNetB2(input_tensor=input_tensor, **kwargs)
-        elif _backbone.endswith('b3'):
-            model = efn.EfficientNetB3(input_tensor=input_tensor, **kwargs)
-        elif _backbone.endswith('b4'):
-            model = efn.EfficientNetB4(input_tensor=input_tensor, **kwargs)
-        elif _backbone.endswith('b5'):
-            model = efn.EfficientNetB5(input_tensor=input_tensor, **kwargs)
-        elif _backbone.endswith('b6'):
-            model = efn.EfficientNetB6(input_tensor=input_tensor, **kwargs)
-        elif _backbone.endswith('b7'):
-            model = efn.EfficientNetB7(input_tensor=input_tensor, **kwargs)
+        efnmap = {
+            'b0': efn.EfficientNetB0,
+            'b1': efn.EfficientNetB1,
+            'b2': efn.EfficientNetB2,
+            'b3': efn.EfficientNetB3,
+            'b4': efn.EfficientNetB4,
+            'b5': efn.EfficientNetB5,
+            'b6': efn.EfficientNetB6,
+            'b7': efn.EfficientNetB7
+        }
+
+        model_cls = [efnmap.get(k) for k in efnmap if _backbone.endswith(k)][0]
+        model = model_cls(input_tensor=img_input, **kwargs)
 
         if use_imagenet:
-            if _backbone.endswith('b0'):
-                model_with_weights = efn.EfficientNetB0(**kwargs_with_weights)
-            elif _backbone.endswith('b1'):
-                model_with_weights = efn.EfficientNetB1(**kwargs_with_weights)
-            elif _backbone.endswith('b2'):
-                model_with_weights = efn.EfficientNetB2(**kwargs_with_weights)
-            elif _backbone.endswith('b3'):
-                model_with_weights = efn.EfficientNetB3(**kwargs_with_weights)
-            elif _backbone.endswith('b4'):
-                model_with_weights = efn.EfficientNetB4(**kwargs_with_weights)
-            elif _backbone.endswith('b5'):
-                model_with_weights = efn.EfficientNetB5(**kwargs_with_weights)
-            elif _backbone.endswith('b6'):
-                model_with_weights = efn.EfficientNetB6(**kwargs_with_weights)
-            elif _backbone.endswith('b7'):
-                model_with_weights = efn.EfficientNetB7(**kwargs_with_weights)
+            model_with_weights = model_cls(**kwargs_with_weights)
             model_with_weights.save_weights('model_weights.h5')
             model.load_weights('model_weights.h5', by_name=True)
 
