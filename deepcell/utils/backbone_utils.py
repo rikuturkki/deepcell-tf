@@ -31,7 +31,6 @@ from __future__ import division
 
 import copy
 
-from efficientnet import model as efn
 import keras_applications as applications
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
@@ -449,6 +448,8 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
         layer_outputs = [model.get_layer(name=ln).output for ln in layer_names]
 
     elif _backbone in efficientnet_backbones:
+        from efficientnet import model as efn  # incompatible with python2
+
         if _backbone.endswith('b0'):
             model = efn.EfficientNetB0(input_tensor=input_tensor, **kwargs)
         elif _backbone.endswith('b1'):
