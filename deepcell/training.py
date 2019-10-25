@@ -49,12 +49,8 @@ from deepcell.utils import train_utils
 from deepcell.utils import tracking_utils
 from deepcell.utils.data_utils import get_data
 from deepcell.utils.train_utils import rate_scheduler
-<<<<<<< HEAD
 from deepcell.utils.tracking_utils import load_trks
 from sklearn.model_selection import train_test_split 
-=======
-from deepcell.utils.train_utils import get_callbacks
->>>>>>> 195d279f72f743562fd1d183900bcca44c7d3d6d
 
 
 def train_model_sample(model,

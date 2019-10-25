@@ -1,4 +1,3 @@
-
 # Copyright 2016-2019 The Van Valen Lab at the California Institute of
 # Technology (Caltech), with support from the Paul Allen Family Foundation,
 # Google, & National Institutes of Health (NIH) under Grant U24CA224309-01.
@@ -38,8 +37,6 @@ frames was adapted from Jaqaman et al. (2008). Robust single-particle tracking
 in live-cell time-lapse sequences. Nature Methods 5, 695-702.
 """
 
-# NOTE THIS IS THE 3D Version!!!
-
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
@@ -78,13 +75,12 @@ def stats_pixelbased(y_true, y_pred):
     to the guidelines presented in Caicedo et al. (2018) Evaluation of Deep
     Learning Strategies for Nucleus Segmentation in Fluorescence Images.
     BioRxiv 335216.
-    
+
     Args:
         y_true (numpy.array): Binary ground truth annotations for a single
             feature, (batch,x,y)
         y_pred (numpy.array): Binary predictions for a single feature,
             (batch,x,y)
-
 
     Returns:
         dict: Containing a set of calculated statistics
@@ -155,7 +151,6 @@ class ObjectAccuracy(object):  # pylint: disable=useless-object-inheritance
             analysis during testing
         seg (:obj:`bool`, optional): Calculates SEG score for cell tracking
             competition
-
 
     Raises:
         ValueError: If y_true and y_pred are not the same shape
@@ -378,6 +373,7 @@ class ObjectAccuracy(object):  # pylint: disable=useless-object-inheritance
 
     def _array_to_graph(self):
         """Transform matrix for unassigned cells into a graph object
+
         In order to cast the iou matrix into a graph form, we treat each
         unassigned cell as a node. The iou values for each pair of cells is
         treated as an edge between nodes/cells. Any iou values equal to 0 are
@@ -775,8 +771,7 @@ class Metrics(object):
                     stat_type='object'
                 ))
 
-        # self.print_object_report()
-
+        self.print_object_report()
 
     def print_object_report(self):
         """Print neat report of object based statistics
@@ -838,6 +833,7 @@ class Metrics(object):
                 y_true_unlbl,
                 y_pred_unlbl):
         """Runs pixel and object base statistics and ouputs to file
+
         Args:
             y_true_lbl (numpy.array): Labeled ground truth annotation,
                 (sample, x, y)
@@ -900,7 +896,6 @@ def split_stack(arr, batch, n_split1, axis1, n_split2, axis2):
             Must be able to divide arr.shape[axis2] evenly by n_split2
         axis2 (int): Axis on which to perform first split
 
-
     Returns:
         numpy.array: Array after dual splitting with frames in the zeroth dimension
 
@@ -940,8 +935,6 @@ def split_stack(arr, batch, n_split1, axis1, n_split2, axis2):
 
     return split2con
 
-<<<<<<< HEAD
-=======
 
 def create_graph(file, node_key=None):
     df = pd.read_csv(file, header=None, sep=' ', names=['Cell_ID', 'Start', 'End', 'Parent_ID'])
@@ -1060,4 +1053,3 @@ def classify_divisions(G_gt, G_res):
             'Incorrect division': divJ,
             'False positive division': divC,
             'False negative division': divGH})
->>>>>>> 195d279f72f743562fd1d183900bcca44c7d3d6d
