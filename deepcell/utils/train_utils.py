@@ -61,7 +61,7 @@ def get_callbacks(model_path,
     cbs = [
         callbacks.ModelCheckpoint(
             model_path, monitor=monitor,
-            save_best_only=False, verbose=verbose,
+            save_best_only=True, verbose=verbose,
             save_weights_only=save_weights_only),
     ]
 
