@@ -392,6 +392,13 @@ def retinanet(inputs,
         outputs = object_head + semantic_head_list
     else:
         outputs = object_head
+        
+    if association_head:
+        association_head_list = []
+        association_head_list.append(create_association_head(
+            input_target=inputs,
+            ndim=3 if frames_per_batch > 1 else 2))
+        outputs = outputs + semantic_head_list
 
     model = Model(inputs=inputs, outputs=outputs, name=name)
     model.backbone_levels = backbone_levels

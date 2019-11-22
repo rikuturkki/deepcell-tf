@@ -343,6 +343,11 @@ def semantic_prediction(semantic_names,
     return x
 
 
+def __create_association_head(input_target=None,
+                              n_filters=128,
+                              ndim=2):
+    
+    
 def __create_semantic_head(pyramid_dict,
                            input_target=None,
                            target_level=2,
