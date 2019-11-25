@@ -341,11 +341,6 @@ def semantic_prediction(semantic_names,
     x = Softmax(axis=channel_axis, name='semantic_{}'.format(semantic_id))(x)
 
     return x
-
-
-def __create_association_head(input_target=None,
-                              n_filters=128,
-                              ndim=2):
     
     
 def __create_semantic_head(pyramid_dict,
