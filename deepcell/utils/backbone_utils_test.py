@@ -31,50 +31,60 @@ from __future__ import division
 
 from absl.testing import parameterized
 
-import sys
-
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.layers import Input
 from tensorflow.python.keras.models import Model
+from tensorflow.python.keras import keras_parameterized
 from tensorflow.python.platform import test
 
 from deepcell.utils import backbone_utils
 
 
-class TestBackboneUtils(test.TestCase, parameterized.TestCase):
+class TestBackboneUtils(keras_parameterized.TestCase):
 
-    def test_get_featurenet_backbone(self):
+    @keras_parameterized.run_all_keras_modes
+    @parameterized.named_parameters([
+        ('channels_last',) * 2,
+        # ('channels_first',) * 2,
+    ])
+    def test_get_featurenet_backbone(self, data_format):
         backbone = 'featurenet'
         input_shape = (256, 256, 3)
         inputs = Input(shape=input_shape)
-        with self.test_session():
-            K.set_image_data_format('channels_last')
+        with self.cached_session():
+            K.set_image_data_format(data_format)
             model, output_dict = backbone_utils.get_backbone(
                 backbone, inputs, return_dict=True)
             assert isinstance(output_dict, dict)
             assert all(k.startswith('C') for k in output_dict)
             assert isinstance(model, Model)
 
-            # No imagenet weights fr featurenet backbone
+            # No imagenet weights for featurenet backbone
             with self.assertRaises(ValueError):
                 backbone_utils.get_backbone(backbone, inputs, use_imagenet=True)
 
-    def test_get_featurenet3d_backbone(self):
+    # @keras_parameterized.run_all_keras_modes
+    @parameterized.named_parameters([
+        ('channels_last',) * 2,
+        # ('channels_first',) * 2,
+    ])
+    def test_get_featurenet3d_backbone(self, data_format):
         backbone = 'featurenet3d'
         input_shape = (40, 256, 256, 3)
         inputs = Input(shape=input_shape)
-        with self.test_session():
-            K.set_image_data_format('channels_last')
+        with self.cached_session():
+            K.set_image_data_format(data_format)
             model, output_dict = backbone_utils.get_backbone(
                 backbone, inputs, return_dict=True)
             assert isinstance(output_dict, dict)
             assert all(k.startswith('C') for k in output_dict)
             assert isinstance(model, Model)
 
-            # No imagenet weights fr featurenet backbone
+            # No imagenet weights for featurenet backbone
             with self.assertRaises(ValueError):
                 backbone_utils.get_backbone(backbone, inputs, use_imagenet=True)
 
+    # @keras_parameterized.run_all_keras_modes
     @parameterized.named_parameters([
         ('resnet50',) * 2,
         ('resnet101',) * 2,
@@ -96,18 +106,14 @@ class TestBackboneUtils(test.TestCase, parameterized.TestCase):
         ('efficientnetb0',) * 2,
     ])
     def test_get_backbone(self, backbone):
-        # efficientnet is incompatible with python2.7
-        bad_backbones = set('efficientnetb%s' % x for x in range(8))
-
-        if sys.version_info[0] != 2 or backbone not in bad_backbones:
-            with self.test_session():
-                K.set_image_data_format('channels_last')
-                inputs = Input(shape=(256, 256, 3))
-                model, output_dict = backbone_utils.get_backbone(
-                    backbone, inputs, return_dict=True)
-                assert isinstance(output_dict, dict)
-                assert all(k.startswith('C') for k in output_dict)
-                assert isinstance(model, Model)
+        with self.cached_session():
+            K.set_image_data_format('channels_last')
+            inputs = Input(shape=(256, 256, 3))
+            model, output_dict = backbone_utils.get_backbone(
+                backbone, inputs, return_dict=True)
+            assert isinstance(output_dict, dict)
+            assert all(k.startswith('C') for k in output_dict)
+            assert isinstance(model, Model)
 
     def test_invalid_backbone(self):
         inputs = Input(shape=(4, 2, 3))

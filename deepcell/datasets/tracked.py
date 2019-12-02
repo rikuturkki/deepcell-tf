@@ -34,6 +34,14 @@ from deepcell.datasets import Dataset
 
 # pylint: disable=line-too-long
 
+nih_3t3 = Dataset(
+    path='3T3_NIH.trks',
+    url='https://deepcell-data.s3.amazonaws.com/tracked/3T3_NIH.trks',
+    file_hash='0d90ad370e1cb9655727065ada3ded65',
+    metadata={}
+)
+
+
 hek293 = Dataset(
     path='hek293.trks',
     url='https://deepcell-data.s3.amazonaws.com/tracked/HEK293.trks',
@@ -50,9 +58,47 @@ hela_s3 = Dataset(
 )
 
 
-nih_3t3 = Dataset(
-    path='3T3_NIH.trks',
-    url='https://deepcell-data.s3.amazonaws.com/tracked/3T3_NIH.trks',
-    file_hash='0d90ad370e1cb9655727065ada3ded65',
+raw2647 = Dataset(
+    path='raw2647.trks',
+    url='https://deepcell-data.s3.amazonaws.com/tracked/RAW2647.trks',
+    file_hash='52e53b7aab728d9ce18fd7478767eefa',
+    metadata={}
+)
+
+# The following datasets were used to benchmark DeepCell-Tracking in "Accurate
+# cell tracking and lineage construction in live-cell imaging experiments with
+# deep learning" (2019)
+
+# TODO: Correct all 4 full datasets (above) to improve training accuracy and
+#        allow for dynamic train/val/test split with seed values
+
+nih_3t3_bench = Dataset(
+    path='3T3_NIH_benchmarks.trks',
+    url='https://deepcell-data.s3.amazonaws.com/tracking_manuscript_benchmarking/GT_tracks/3T3_NIH_benchmarks.trks',
+    file_hash='fb4a6afc3fc10db0d9b07dd8db516eaf',
+    metadata={}
+)
+
+
+hek293_bench = Dataset(
+    path='HEK293_generic_benchmarks.trks',
+    url='https://deepcell-data.s3.amazonaws.com/tracking_manuscript_benchmarking/GT_tracks/HEK293_generic_benchmarks.trks',
+    file_hash='b895098641c05655d79af9437962184f',
+    metadata={}
+)
+
+
+hela_s3_bench = Dataset(
+    path='HeLa_S3_benchmarks.trks',
+    url='https://deepcell-data.s3.amazonaws.com/tracking_manuscript_benchmarking/GT_tracks/HeLa_S3_benchmarks.trks',
+    file_hash='ab3bc9f1a1bd0b0f93bbd20690d51585',
+    metadata={}
+)
+
+
+raw2647_bench = Dataset(
+    path='RAW2647_generic_benchmarks.trks',
+    url='https://deepcell-data.s3.amazonaws.com/tracking_manuscript_benchmarking/GT_tracks/RAW2647_generic_benchmarks.trks',
+    file_hash='d832a462c1d476c7f8b9c78891ab3881',
     metadata={}
 )

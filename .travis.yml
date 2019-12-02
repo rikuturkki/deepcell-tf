@@ -1,5 +1,5 @@
-sudo: false
-dist: trusty
+sudo: true
+dist: xenial
 
 git:
   depth: false
@@ -8,13 +8,12 @@ language: python
 
 python:
   - 2.7
-  - 3.5
   - 3.6
+  - 3.7
 
 env:
-  - TF_VERSION=1.10.0
-  - TF_VERSION=1.11.0
-  - TF_VERSION=1.12.0
+  - TF_VERSION=1.14.0
+  - TF_VERSION=1.15.0
 
 install:
   # code below is taken from https://github.com/keras-team/keras/blob/master/.travis.yml
@@ -60,7 +59,7 @@ jobs:
   include:
     - stage: deploy
       if: tag IS present
-      env: TF_VERSION=1.12.0
+      env: TF_VERSION=1.14.0
       python: 3.6
       script:
       - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
