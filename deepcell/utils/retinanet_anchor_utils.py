@@ -740,7 +740,7 @@ def _get_detections(generator,
     all_masks = [[None for i in range(generator.num_classes)]
                  for j in range(generator.y.shape[0])]
 
-    all_inferences = [None for i in range(generator.size())]
+    all_inferences = [None for i in range(generator.y.shape[0])]
 
     if len(generator.x.shape) == 4:
         for i in range(generator.y.shape[0]):
