@@ -134,6 +134,9 @@ class Evaluate(Callback):
             frames_per_batch=self.frames_per_batch,
         )
 
+        print('Inference time for {:.0f} images: {:.4f}'.format(
+            self.generator.y.shape[0], inference_time))
+
         # compute per class average precision
         instances = []
         precisions = []
