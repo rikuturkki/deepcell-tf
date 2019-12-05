@@ -858,6 +858,8 @@ def _get_detections(generator,
         all_masks = [[None for i in range(generator.num_classes)]
                      for j in range(batch_boxes.shape[0])]
 
+        all_inferences = [None for i in range(batch_boxes.shape[0])]
+
         for i in range(batch_boxes.shape[0]):
             boxes = batch_boxes[[i]]
             scores = batch_scores[[i]]
