@@ -808,7 +808,7 @@ def train_model_retinanet(model,
     np.savez(loss_path, loss_history=loss_history.history)
 
     if compute_map:
-        average_precisions = evaluate(
+        average_precisions, f1_scores, inference_time = evaluate(
             val_data,
             prediction_model,
             iou_threshold=iou_threshold,
@@ -819,6 +819,10 @@ def train_model_retinanet(model,
         # print evaluation
         total_instances = []
         precisions = []
+
+        print('Inference time for {:.0f} images: {:.4f}'.format(
+            val_data.y.shape[0], inference_time))
+
         for label, (average_precision, num_annotations) in average_precisions.items():
             print('{:.0f} instances of class'.format(num_annotations),
                   label, 'with average precision: {:.4f}'.format(average_precision))
@@ -831,5 +835,19 @@ def train_model_retinanet(model,
             print('mAP using the weighted average of precisions among classes: {:.4f}'.format(
                 sum([a * b for a, b in zip(total_instances, precisions)]) / sum(total_instances)))
             print('mAP: {:.4f}'.format(sum(precisions) / sum(x > 0 for x in total_instances)))
+
+        total_instances = []
+        f1s = []
+        for label, (f1_score, num_annotations) in f1_scores.items():
+            print('{:.0f} instances of class'.format(num_annotations),
+                  label, 'with f1 score: {:.4f}'.format(f1_score))
+            total_instances.append(num_annotations)
+            f1s.append(f1_score)
+        if sum(total_instances) == 0:
+            print('No test instances found.')
+        else:
+            print('F1 using the weighted average of precisions among classes: {:.4f}'.format(
+                sum([a * b for a, b in zip(total_instances, f1s)]) / sum(total_instances)))
+            print('F1: {:.4f}'.format(sum(f1s) / sum(x > 0 for x in total_instances)))
 
     return model
