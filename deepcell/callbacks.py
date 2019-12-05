@@ -124,11 +124,8 @@ class Evaluate(Callback):
     def on_epoch_end(self, epoch, logs=None):
         logs = logs or {}
 
-        # E = evaluate_mask if self.generator.include_masks else evaluate
-        E = evaluate
-
         # run evaluation
-        avg_precisions = E(
+        avg_precisions, f1_scores = evaluate(
             self.generator,
             self.model,
             iou_threshold=self.iou_threshold,
@@ -153,15 +150,30 @@ class Evaluate(Callback):
         else:
             mean_ap = sum(precisions) / sum(x > 0 for x in instances)
 
+        instances = []
+        f1s = []
+        for label, (f1_score, num_annotations) in f1_scores.items():
+            if self.verbose == 1:
+                print('{:.0f} instances of class'.format(num_annotations),
+                      label, 'with f1 score: {:.4f}'.format(f1_score))
+            instances.append(num_annotations)
+            f1s.append(f1_score)
+        if self.weighted_average:
+            mean_f1 = sum([a * b for a, b in zip(instances, f1s)])
+            mean_f1 = mean_f1 / sum(instances)
+        else:
+            mean_f1 = sum(f1s) / sum(x > 0 for x in instances)
+
         if self.tensorboard is not None and self.tensorboard.writer is not None:
             import tensorflow as tf
             summary = tf.Summary()
             summary_value = summary.value.add()  # pylint: disable=E1101
             summary_value.simple_value = mean_ap
-            summary_value.tag = 'mAP'
+            summary_value.tag = 'f1'
             self.tensorboard.writer.add_summary(summary, epoch)
 
         logs['mAP'] = mean_ap
+        logs['f1'] = mean_f1
 
         if self.verbose == 1:
-            print('mAP: {:.4f}'.format(mean_ap))
+            print('f1: {:.4f}'.format(mean_f1))

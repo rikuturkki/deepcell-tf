@@ -658,6 +658,22 @@ def overlap(a, b):
     return intersection / ua
 
 
+def _compute_f1(recall, precision):
+    """Compute the F1 score, given the recall and precision curves.
+
+    Args:
+        recall (numpy.array): The recall curve (list).
+        precision (numpy.array): The precision curve (list).
+
+    Returns:
+        numpy.array: The average precision as computed in py-faster-rcnn.
+    """
+    mrec = np.mean(recall)
+    mpre = np.mean(precision)
+    f1 = (2 * mrec * mpre) / (mrec + mpre + K.epsilon())
+    return f1
+
+
 def _compute_ap(recall, precision):
     """Compute the average precision, given the recall and precision curves.
 
@@ -949,6 +965,7 @@ def evaluate(generator, model,
         max_detections=max_detections)
     all_annotations, _ = _get_annotations(generator, frames_per_batch)
     average_precisions = {}
+    f1_scores = {}
 
     # all_detections = pickle.load(open('all_detections.pkl', 'rb'))
     # all_annotations = pickle.load(open('all_annotations.pkl', 'rb'))
@@ -1013,7 +1030,11 @@ def evaluate(generator, model,
         average_precision = _compute_ap(recall, precision)
         average_precisions[label] = average_precision, num_annotations
 
-    return average_precisions
+        # compute f1 score
+        f1_score = _compute_f1(recall, precision)
+        f1_scores[label] = f1_score, num_annotations
+
+    return average_precisions, f1_scores
 
 
 def evaluate_mask(generator, model,
@@ -1045,6 +1066,7 @@ def evaluate_mask(generator, model,
         max_detections=max_detections)
     all_annotations, all_gt_masks = _get_annotations(generator, frames_per_batch)
     average_precisions = {}
+    f1_scores = {}
 
     # import pickle
     # pickle.dump(all_detections, open('all_detections.pkl', 'wb'))
@@ -1136,4 +1158,8 @@ def evaluate_mask(generator, model,
         average_precision = _compute_ap(recall, precision)
         average_precisions[label] = average_precision, num_annotations
 
-    return average_precisions
+        # compute f1 score
+        f1_score = _compute_f1(recall, precision)
+        f1_scores[label] = f1_score, num_annotations
+
+    return average_precisions, f1_scores
