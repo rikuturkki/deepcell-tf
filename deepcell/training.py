@@ -820,7 +820,7 @@ def train_model_retinanet(model,
         total_instances = []
         precisions = []
 
-        print('Inference time for {:.0f} images: {:.4f}'.format(
+        print('Inference time for {:.0f} images: {:.4f} seconds'.format(
             val_data.y.shape[0], inference_time))
 
         for label, (average_precision, num_annotations) in average_precisions.items():
