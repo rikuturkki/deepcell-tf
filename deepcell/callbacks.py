@@ -166,7 +166,7 @@ class Evaluate(Callback):
 
         if self.tensorboard is not None and self.tensorboard.writer is not None:
             import tensorflow as tf
-            summary = tf.Summary()
+            summary = tf.compat.v1.Summary()
             summary_value = summary.value.add()  # pylint: disable=E1101
             summary_value.simple_value = mean_ap
             summary_value.tag = 'f1'
