@@ -156,8 +156,6 @@ def anchor_targets_bbox(anchors,
         annotations_group (list): List of annotations
             (np.array of shape (N, 5) for (x1, y1, x2, y2, label)).
         num_classes (int): Number of classes to predict.
-        mask_shape (numpy.array): If the image is padded with zeros, mask_shape
-            can be used to mark the relevant part of the image.
         negative_overlap (float): IoU overlap for negative anchors
             (all anchors with overlap < negative_overlap are negative).
         positive_overlap (float): IoU overlap or positive anchors
@@ -175,6 +173,12 @@ def anchor_targets_bbox(anchors,
                 image, the first 4 columns define regression targets for
                 (x1, y1, x2, y2) and the last column defines anchor states
                 (-1 for ignore, 0 for bg, 1 for fg).
+
+    Raises:
+        ValueError: If annotations and images are not the same length.
+        ValueError: If annotations has length 0.
+        ValueError: If annotations does not contain the required field "bboxes".
+        ValueError: If annotations does not contain the required field "labels".
     """
     if len(image_group) != len(annotations_group):
         raise ValueError('Images and annotations must be the same size. '
@@ -252,6 +256,9 @@ def compute_gt_annotations(anchors,
             positive_indices: indices of positive anchors
             ignore_indices: indices of ignored anchors
             argmax_overlaps_inds: ordered overlaps indices
+
+    Raises:
+        ImportError: If compute_overlap is not installed.
     """
     if compute_overlap is None:
         raise ImportError('To use `compute_overlap`, the C extensions must be '
@@ -345,7 +352,7 @@ def guess_shapes(image_shape, pyramid_levels):
 
     Args:
         image_shape (tuple): The shape of the image.
-        pyramid_levels (str[]): A list of what pyramid levels are used.
+        pyramid_levels (list): A list of what pyramid levels are used.
 
     Returns:
         list: image shapes at each pyramid level.
@@ -367,7 +374,7 @@ def anchors_for_shape(image_shape,
 
     Args:
         image_shape (tuple): The shape of the image.
-        pyramid_levels (int[]): List of ints representing which pyramids to use
+        pyramid_levels (list): List of ints representing which pyramids to use
             (defaults to [3, 4, 5, 6, 7]).
         anchor_params (AnchorParameters): Struct containing anchor parameters.
             If None, default values are used.
@@ -447,8 +454,8 @@ def generate_anchors(base_size=16, ratios=None, scales=None):
 
     Args:
         base_size (int): base size of anchors
-        ratios (float[]): list of ratios
-        scales (float[]): list of scales
+        ratios (list): list of ratios
+        scales (list): list of scales
 
     Returns:
         numpy.array: generated anchors
@@ -493,6 +500,9 @@ def bbox_transform(anchors, gt_boxes, mean=None, std=None):
         gt_boxes (numpy.array): coordinates of bounding boxes
         mean (numpy.array): arithmetic mean
         std (numpy.array): standard deviation
+
+    Returns:
+        float: the transformed bbox.
 
     Raises:
         ValueError: mean is not a np.array
@@ -617,7 +627,8 @@ def compute_iou(a, b):
     Args:
         a (numpy.array): (N, H, W) ndarray of float
         b (numpy.array): (K, H, W) ndarray of float
-    Returns
+
+    Returns:
         numpy.array: (N, K) ndarray of overlap between boxes and query_boxes
     """
     intersection = np.zeros((a.shape[0], b.shape[0]))
@@ -666,7 +677,7 @@ def _compute_f1(recall, precision):
         precision (numpy.array): The precision curve (list).
 
     Returns:
-        numpy.array: The average precision as computed in py-faster-rcnn.
+        numpy.array: The f1 score.
     """
     mrec = np.mean(recall)
     mpre = np.mean(precision)
