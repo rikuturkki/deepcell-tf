@@ -61,6 +61,7 @@ from skimage.segmentation import relabel_sequential
 from skimage.external.tifffile import TiffFile
 from sklearn.metrics import confusion_matrix
 from tensorflow.python.platform import tf_logging as logging
+from tensorflow.python.keras import backend as K
 
 from deepcell.utils.compute_overlap import compute_overlap
 
@@ -777,14 +778,17 @@ class Metrics(object):
         print('Number of true cells:\t\t', self.stats['n_true'].sum())
         print('Number of predicted cells:\t', self.stats['n_pred'].sum())
 
+        recall = self.stats['correct_detections'].sum() / self.stats['n_true'].sum()
+        precision = self.stats['correct_detections'].sum() / self.stats['n_pred'].sum()
+        f1_score = (2 * precision * recall) / (precision + recall + K.epsilon())
+
         print('\nCorrect detections:  {}\tRecall: {}%'.format(
             int(self.stats['correct_detections'].sum()),
-            to_precision(100 * self.stats['correct_detections'].sum() / self.stats['n_true'].sum(),
-                         self.ndigits)))
+            to_precision(100 * recall, self.ndigits)))
         print('Incorrect detections: {}\tPrecision: {}%'.format(
             int(self.stats['n_pred'].sum() - self.stats['correct_detections'].sum()),
-            to_precision(100 * self.stats['correct_detections'].sum() / self.stats['n_pred'].sum(),
-                         self.ndigits)))
+            to_precision(100 * precision, self.ndigits)))
+        print('F1 Score: {}'.format(to_precision(f1_score, self.ndigits)))
 
         total_err = (self.stats['gained_detections'].sum()
                      + self.stats['missed_detections'].sum()
