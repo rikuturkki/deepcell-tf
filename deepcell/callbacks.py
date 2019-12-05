@@ -125,7 +125,7 @@ class Evaluate(Callback):
         logs = logs or {}
 
         # run evaluation
-        avg_precisions, f1_scores = evaluate(
+        avg_precisions, f1_scores, inference_time = evaluate(
             self.generator,
             self.model,
             iou_threshold=self.iou_threshold,

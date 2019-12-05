@@ -28,7 +28,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-import itertools
+import time
 
 import numpy as np
 import skimage as sk
@@ -740,6 +740,8 @@ def _get_detections(generator,
     all_masks = [[None for i in range(generator.num_classes)]
                  for j in range(generator.y.shape[0])]
 
+    all_inferences = [None for i in range(generator.size())]
+
     if len(generator.x.shape) == 4:
         for i in range(generator.y.shape[0]):
             # raw_image = generator.load_image(i)
@@ -748,7 +750,9 @@ def _get_detections(generator,
             image = generator.x[i]
 
             # run network
+            start = time.time()
             results = model.predict_on_batch(np.expand_dims(image, axis=0))
+            inference_time = time.time() - start
 
             if generator.panoptic:
                 num_semantic_outputs = len(generator.y_semantic_list)
@@ -803,6 +807,8 @@ def _get_detections(generator,
                     imm = image_masks[image_detections[:, -1] == label, ...]
                     all_masks[i][label] = imm
 
+            all_inferences[i] = inference_time
+
     if len(generator.x.shape) == 5:
         boxes_list = []
         scores_list = []
@@ -810,11 +816,15 @@ def _get_detections(generator,
 
         for i in range(generator.y.shape[0]):
             for j in range(0, generator.y.shape[1], frames_per_batch):
+
                 movie = generator.x[[i], j:j + frames_per_batch, ...]
+
+                start = time.time()
                 results = model.predict_on_batch(movie)
+                inference_time = time.time() - start
 
                 if generator.panoptic:
-                    # Add logic for networks that have semantic heads
+                    # TODO: add logic for networks that have semantic heads
                     pass
                 else:
                     if (generator.include_masks and
@@ -884,7 +894,9 @@ def _get_detections(generator,
                     imm = image_masks[image_detections[:, -1] == label, ...]
                     all_masks[i][label] = imm
 
-    return all_detections, all_masks
+            all_inferences[i] = inference_time
+
+    return all_detections, all_masks, all_inferences
 
 
 def _get_annotations(generator, frames_per_batch=1):
@@ -969,7 +981,7 @@ def evaluate(generator, model,
         dict: A mapping of class names to mAP scores.
     """
     # gather all detections and annotations
-    all_detections, _ = _get_detections(
+    all_detections, _, all_inferences = _get_detections(
         generator, model,
         frames_per_batch=frames_per_batch,
         score_threshold=score_threshold,
@@ -1045,7 +1057,9 @@ def evaluate(generator, model,
         f1_score = _compute_f1(recall, precision)
         f1_scores[label] = f1_score, num_annotations
 
-    return average_precisions, f1_scores
+    inference_time = np.sum(all_inferences) / generator.y.shape[0]
+
+    return average_precisions, f1_scores, inference_time
 
 
 def evaluate_mask(generator, model,
@@ -1070,7 +1084,7 @@ def evaluate_mask(generator, model,
         dict: A mapping of class names to mAP scores.
     """
     # gather all detections and annotations
-    all_detections, all_masks = _get_detections(
+    all_detections, all_masks, all_inferences = _get_detections(
         generator, model,
         frames_per_batch=frames_per_batch,
         score_threshold=score_threshold,
@@ -1173,4 +1187,6 @@ def evaluate_mask(generator, model,
         f1_score = _compute_f1(recall, precision)
         f1_scores[label] = f1_score, num_annotations
 
-    return average_precisions, f1_scores
+    inference_time = np.sum(all_inferences) / generator.y.shape[0]
+
+    return average_precisions, f1_scores, inference_time
