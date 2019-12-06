@@ -679,9 +679,7 @@ def _compute_f1(recall, precision):
     Returns:
         numpy.array: The f1 score.
     """
-    mrec = np.mean(recall)
-    mpre = np.mean(precision)
-    f1 = (2 * mrec * mpre) / (mrec + mpre + K.epsilon())
+    f1 = (2 * recall * precision) / (recall + precision + K.epsilon())
     return f1
 
 
@@ -1042,6 +1040,12 @@ def evaluate(generator, model,
         false_positives = false_positives[indices]
         true_positives = true_positives[indices]
 
+        # compute f1 score
+        tp = np.sum(true_positives)
+        fp = np.sum(false_positives)
+        f1_score = _compute_f1(tp / num_annotations, tp / (tp + fp))
+        f1_scores[label] = f1_score, num_annotations
+
         # compute false positives and true positives
         false_positives = np.cumsum(false_positives)
         true_positives = np.cumsum(true_positives)
@@ -1054,10 +1058,6 @@ def evaluate(generator, model,
         # compute average precision
         average_precision = _compute_ap(recall, precision)
         average_precisions[label] = average_precision, num_annotations
-
-        # compute f1 score
-        f1_score = _compute_f1(recall, precision)
-        f1_scores[label] = f1_score, num_annotations
 
     inference_time = np.sum(all_inferences) / generator.y.shape[0]
 
@@ -1172,6 +1172,12 @@ def evaluate_mask(generator, model,
         false_positives = false_positives[indices]
         true_positives = true_positives[indices]
 
+        # compute f1 score
+        tp = np.sum(true_positives)
+        fp = np.sum(false_positives)
+        f1_score = _compute_f1(tp / num_annotations, tp / (tp + fp))
+        f1_scores[label] = f1_score, num_annotations
+
         # compute false positives and true positives
         false_positives = np.cumsum(false_positives)
         true_positives = np.cumsum(true_positives)
@@ -1184,10 +1190,6 @@ def evaluate_mask(generator, model,
         # compute average precision
         average_precision = _compute_ap(recall, precision)
         average_precisions[label] = average_precision, num_annotations
-
-        # compute f1 score
-        f1_score = _compute_f1(recall, precision)
-        f1_scores[label] = f1_score, num_annotations
 
     inference_time = np.sum(all_inferences) / generator.y.shape[0]
 
