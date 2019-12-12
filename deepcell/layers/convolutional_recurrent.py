@@ -1,4 +1,31 @@
-''' 
+# Copyright 2016-2019 The Van Valen Lab at the California Institute of
+# Technology (Caltech), with support from the Paul Allen Family Foundation,
+# Google, & National Institutes of Health (NIH) under Grant U24CA224309-01.
+# All rights reserved.
+#
+# Licensed under a modified Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.github.com/vanvalenlab/deepcell-tf/LICENSE
+#
+# The Work provided may be used for non-commercial academic purposes only.
+# For any other use of the Work, including commercial use, please contact:
+# vanvalenlab@gmail.com
+#
+# Neither the name of Caltech nor the names of its contributors may be used
+# to endorse or promote products derived from this software without specific
+# prior written permission.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+"""Convolutational Recurrent Layers
+
 References:
 
 Keras GRU
@@ -6,31 +33,14 @@ https://github.com/keras-team/keras/blob/master/keras/layers/recurrent.py#L422
 Keras ConvLSTM2D
 https://github.com/keras-team/keras/blob/master/keras/layers/convolutional_recurrent.py
 
-RFCNN 
+RFCNN
 https://gitlab.com/sepehr.valipour/RFCNN/blob/master/rfcnn/layers/convolutional.py
 Literature at https://ieeexplore.ieee.org/abstract/document/8296851
-
-TODO:
-1. Get versions of packages; put in header
-tensorflow-1.12.0
-keras-applications-1.0.6                               
-keras-preprocessing: 1.0.5
-python-3.6.6
-
-'''
+"""
 
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-import numpy as np
-import warnings
-import os
-# import pylab as plt
-import matplotlib
-matplotlib.use('Agg')
-import pylab as plt
-
 
 import tensorflow as tf
 
@@ -39,25 +49,15 @@ from tensorflow.python.keras import backend as K
 from tensorflow.python.keras import constraints
 from tensorflow.python.keras import initializers
 from tensorflow.python.keras import regularizers
-from tensorflow.python.keras.engine.base_layer import Layer
-from tensorflow.python.keras.layers.recurrent import _generate_dropout_mask
-from tensorflow.python.keras.layers.recurrent import RNN
-
+from tensorflow.python.keras.layers import Layer
+from tensorflow.python.keras.layers.recurrent import DropoutRNNCellMixin
+from tensorflow.python.keras.layers.convolutional_recurrent import ConvRNN2D
 from tensorflow.python.keras.utils import conv_utils
-from tensorflow.python.keras.utils import generic_utils
-from tensorflow.python.keras.utils import tf_utils
-
-from tensorflow.python.keras.engine.base_layer import Layer
-
-from tensorflow.python.keras.models import Sequential
-from tensorflow.python.keras.layers.convolutional import Conv3D
-from tensorflow.python.keras.layers.normalization import BatchNormalization
-from tensorflow.python.keras.layers.convolutional_recurrent import ConvLSTM2D, ConvRNN2D
 
 
-class ConvGRU2DCell(Layer):
+class ConvGRU2DCell(DropoutRNNCellMixin, Layer):
     """Cell class for the ConvGRU2D layer."""
-    
+
     def __init__(self,
                  filters,
                  kernel_size,
@@ -83,12 +83,11 @@ class ConvGRU2DCell(Layer):
         super(ConvGRU2DCell, self).__init__(**kwargs)
         self.filters = filters
         self.kernel_size = conv_utils.normalize_tuple(kernel_size, 2, 'kernel_size')
-        
+
         self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
         self.padding = conv_utils.normalize_padding(padding)
         self.data_format = conv_utils.normalize_data_format(data_format)
-        self.dilation_rate = conv_utils.normalize_tuple(dilation_rate, 2,
-                                                        'dilation_rate')
+        self.dilation_rate = conv_utils.normalize_tuple(dilation_rate, 2, 'dilation_rate')
         self.activation = activations.get(activation)
         self.recurrent_activation = activations.get(recurrent_activation)
         self.use_bias = use_bias
@@ -107,95 +106,60 @@ class ConvGRU2DCell(Layer):
 
         self.dropout = min(1., max(0., dropout))
         self.recurrent_dropout = min(1., max(0., recurrent_dropout))
-        self.state_size = (self.filters, self.filters)
         self._dropout_mask = None
         self._recurrent_dropout_mask = None
-            
+
+    @property
+    def state_size(self):
+        return (self.filters,)
 
     def build(self, input_shape):
+        if self.data_format == 'channels_first':
+            channel_axis = 1
+        else:
+            channel_axis = -1
+        if input_shape[channel_axis] is None:
+            raise ValueError('The channel dimension of the inputs '
+                             'should be defined. Found `None`.')
+        input_dim = input_shape[channel_axis]
+        kernel_shape = self.kernel_size + (input_dim, self.filters * 3)
+        self.kernel_shape = kernel_shape
+        recurrent_kernel_shape = self.kernel_size + (self.filters, self.filters * 3)
 
-      # print("building ConvGRU2DCell")
-      if self.data_format == 'channels_first':
-          channel_axis = 1
-      else:
-          channel_axis = -1
-      if input_shape[channel_axis] is None:
-          raise ValueError('The channel dimension of the inputs '
-                           'should be defined. Found `None`.')
-      input_dim = input_shape[channel_axis]
-      kernel_shape = self.kernel_size + (input_dim, self.filters * 3)
-      self.kernel_shape = kernel_shape
-      recurrent_kernel_shape = self.kernel_size + (self.filters, self.filters * 3)
-
-      self.kernel = self.add_weight(shape=kernel_shape,
+        self.kernel = self.add_weight(shape=kernel_shape,
                                       initializer=self.kernel_initializer,
                                       name='kernel',
                                       regularizer=self.kernel_regularizer,
                                       constraint=self.kernel_constraint)
-      self.recurrent_kernel = self.add_weight(
+        self.recurrent_kernel = self.add_weight(
             shape=recurrent_kernel_shape,
             initializer=self.recurrent_initializer,
             name='recurrent_kernel',
             regularizer=self.recurrent_regularizer,
             constraint=self.recurrent_constraint)
 
-      if self.use_bias:
-          bias_initializer = self.bias_initializer
-          self.bias = self.add_weight(
-                shape=(self.filters * 3,), 
+        if self.use_bias:
+            self.bias = self.add_weight(
+                shape=(self.filters * 3,),
                 name='bias',
-                initializer= self.bias_initializer,
+                initializer=self.bias_initializer,
                 regularizer=self.bias_regularizer,
                 constraint=self.bias_constraint)
-      else:
-          self.bias = None
+        else:
+            self.bias = None
 
-      # update gate
-      self.kernel_z = self.kernel[:, :, :, :self.filters]
-      self.recurrent_kernel_z = self.recurrent_kernel[:, :, :, :self.filters]
-      # reset gate
-      self.kernel_r = self.kernel[:, :, :, self.filters: self.filters * 2]
-      self.recurrent_kernel_r = self.recurrent_kernel[:, :, :, self.filters:
-                                                        self.filters * 2]
-      # new gate 
-      self.kernel_h = self.kernel[:, :, :, self.filters * 2:]
-      self.recurrent_kernel_h = self.recurrent_kernel[:, :, :, self.filters * 2:]
+        self.built = True
 
-      if self.use_bias:
-          # bias for inputs
-          self.bias_z = self.bias[:self.filters]
-          self.bias_r = self.bias[self.filters: self.filters * 2]
-          self.bias_h = self.bias[self.filters * 2:]
-      else:
-          self.bias_z = None
-          self.bias_r = None
-          self.bias_h = None
-      self.built = True
-
-        
-        
     def call(self, inputs, states, training=None):
         h_tm1 = states[0]  # previous memory state
 
-        if 0 < self.dropout < 1 and self._dropout_mask is None:
-            self._dropout_mask = _generate_dropout_mask(
-                K.ones_like(inputs),
-                self.dropout,
-                training=training,
-                count=3)
-        if (0 < self.recurrent_dropout < 1 and
-            self._recurrent_dropout_mask is None):
-            self._recurrent_dropout_mask = _generate_dropout_mask(
-                K.ones_like(h_tm1),
-                self.recurrent_dropout,
-                training=training,
-                count=3)
-
         # dropout matrices for input units
-        dp_mask = self._dropout_mask
+        dp_mask = self.get_dropout_mask_for_cell(
+            inputs, training=training, count=3)
 
         # dropout matrices for recurrent units
-        rec_dp_mask = self._recurrent_dropout_mask
+        rec_dp_mask = self.get_recurrent_dropout_mask_for_cell(
+            h_tm1, training=training, count=3)
 
         if 0. < self.dropout < 1.:
             inputs_z = inputs * dp_mask[0]
@@ -215,51 +179,52 @@ class ConvGRU2DCell(Layer):
             h_tm1_r = h_tm1
             h_tm1_h = h_tm1
 
-        x_z = self.input_conv(inputs_z, self.kernel_z, self.bias_z,
-                            padding=self.padding)
-        x_r = self.input_conv(inputs_r, self.kernel_r, self.bias_r,
-                            padding=self.padding)
-        x_h = self.input_conv(inputs_h, self.kernel_h, self.bias_h,
-                            padding=self.padding)
-      
-        h_z = self.recurrent_conv(h_tm1_z,
-                                self.recurrent_kernel_z)
-        h_r = self.recurrent_conv(h_tm1_r,
-                                self.recurrent_kernel_r)
+        (kernel_z, kernel_r, kernel_h) = tf.split(self.kernel, 3, axis=3)
+        (recurrent_kernel_z,
+         recurrent_kernel_r,
+         recurrent_kernel_h) = tf.split(self.recurrent_kernel, 3, axis=3)
+
+        if self.use_bias:
+            bias_z, bias_r, bias_h = tf.split(self.bias, 3)
+        else:
+            bias_z, bias_r, bias_h = None, None, None
+
+        x_z = self.input_conv(inputs_z, kernel_z, bias_z, padding=self.padding)
+        x_r = self.input_conv(inputs_r, kernel_r, bias_r, padding=self.padding)
+        x_h = self.input_conv(inputs_h, kernel_h, bias_h, padding=self.padding)
+
+        h_z = self.recurrent_conv(h_tm1_z, recurrent_kernel_z)
+        h_r = self.recurrent_conv(h_tm1_r, recurrent_kernel_r)
 
         z = self.recurrent_activation(x_z + h_z)
         r = self.recurrent_activation(x_r + h_r)
 
-        h_h = self.recurrent_conv(r * h_tm1_h,
-                                self.recurrent_kernel_h)
-
-        hh = self.recurrent_activation(x_h + h_h)
+        h_h = self.recurrent_conv(r * h_tm1_h, recurrent_kernel_h)
 
         # previous and candidate state mixed by update gate
-        h = z * h_tm1 + (1 - z) * hh
+        h = (1 - z) * h_tm1 + z * self.activation(x_h + h_h)
 
-        if 0 < self.dropout + self.recurrent_dropout:
+        if self.dropout + self.recurrent_dropout > 0:
             if training is None:
                 h._uses_learning_phase = True
 
-        return h, [h,hh]
+        return h, [h]
 
     def input_conv(self, x, w, b=None, padding='valid'):
         conv_out = K.conv2d(x, w, strides=self.strides,
-                          padding=padding,
-                          data_format=self.data_format,
-                          dilation_rate=self.dilation_rate)
+                            padding=padding,
+                            data_format=self.data_format,
+                            dilation_rate=self.dilation_rate)
         if b is not None:
             conv_out = K.bias_add(conv_out, b,
-                              data_format=self.data_format)
+                                  data_format=self.data_format)
         return conv_out
 
     def recurrent_conv(self, x, w):
         conv_out = K.conv2d(x, w, strides=(1, 1),
-                          padding='same',
-                          data_format=self.data_format)
+                            padding='same',
+                            data_format=self.data_format)
         return conv_out
-    
 
     def get_config(self):
         config = {'filters': self.filters,
@@ -286,73 +251,77 @@ class ConvGRU2DCell(Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
-
 class ConvGRU2D(ConvRNN2D):
     def __init__(self,
-               filters,
-               kernel_size,
-               strides=(1, 1),
-               padding='valid',
-               data_format=None,
-               dilation_rate=(1, 1),
-               activation='tanh',
-               recurrent_activation='hard_sigmoid',
-               use_bias=True,
-               kernel_initializer='glorot_uniform',
-               recurrent_initializer='orthogonal',
-               bias_initializer='zeros',
-               kernel_regularizer=None,
-               recurrent_regularizer=None,
-               bias_regularizer=None,
-               activity_regularizer=None,
-               kernel_constraint=None,
-               recurrent_constraint=None,
-               bias_constraint=None,
-               return_sequences=False,
-               go_backwards=False,
-               stateful=False,
-               dropout=0.,
-               recurrent_dropout=0.,
-               **kwargs):
+                 filters,
+                 kernel_size,
+                 strides=(1, 1),
+                 padding='valid',
+                 data_format=None,
+                 dilation_rate=(1, 1),
+                 activation='tanh',
+                 recurrent_activation='hard_sigmoid',
+                 use_bias=True,
+                 kernel_initializer='glorot_uniform',
+                 recurrent_initializer='orthogonal',
+                 bias_initializer='zeros',
+                 kernel_regularizer=None,
+                 recurrent_regularizer=None,
+                 bias_regularizer=None,
+                 activity_regularizer=None,
+                 kernel_constraint=None,
+                 recurrent_constraint=None,
+                 bias_constraint=None,
+                 return_sequences=False,
+                 return_state=False,
+                 go_backwards=False,
+                 stateful=False,
+                 dropout=0.,
+                 recurrent_dropout=0.,
+                 **kwargs):
         cell = ConvGRU2DCell(filters=filters,
                              kernel_size=kernel_size,
                              strides=strides,
-                            padding=padding,
-                            data_format=data_format,
-                            dilation_rate=dilation_rate,
-                            activation=activation,
-                            recurrent_activation=recurrent_activation,
-                            use_bias=use_bias,
-                            kernel_initializer=kernel_initializer,
-                            recurrent_initializer=recurrent_initializer,
-                            bias_initializer=bias_initializer,
-                            kernel_regularizer=kernel_regularizer,
-                            recurrent_regularizer=recurrent_regularizer,
-                            bias_regularizer=bias_regularizer,
-                            kernel_constraint=kernel_constraint,
-                            recurrent_constraint=recurrent_constraint,
-                            bias_constraint=bias_constraint,
-                            dropout=dropout,
-                            recurrent_dropout=recurrent_dropout)
-    
+                             padding=padding,
+                             data_format=data_format,
+                             dilation_rate=dilation_rate,
+                             activation=activation,
+                             recurrent_activation=recurrent_activation,
+                             use_bias=use_bias,
+                             kernel_initializer=kernel_initializer,
+                             recurrent_initializer=recurrent_initializer,
+                             bias_initializer=bias_initializer,
+                             kernel_regularizer=kernel_regularizer,
+                             recurrent_regularizer=recurrent_regularizer,
+                             bias_regularizer=bias_regularizer,
+                             kernel_constraint=kernel_constraint,
+                             recurrent_constraint=recurrent_constraint,
+                             bias_constraint=bias_constraint,
+                             dropout=dropout,
+                             recurrent_dropout=recurrent_dropout)
+
         super(ConvGRU2D, self).__init__(cell,
                                         return_sequences=return_sequences,
+                                        return_state=return_state,
                                         go_backwards=go_backwards,
                                         stateful=stateful,
                                         **kwargs)
+
         self.activity_regularizer = regularizers.get(activity_regularizer)
-        
+
     def call(self, inputs, mask=None, training=None, initial_state=None):
-        result = super(ConvGRU2D, self).call(inputs, 
-                                          mask=mask,
-                                          training=training, 
-                                          initial_state=initial_state)
+        self.cell.reset_dropout_mask()
+        self.cell.reset_recurrent_dropout_mask()
+        result = super(ConvGRU2D, self).call(inputs,
+                                             mask=mask,
+                                             training=training,
+                                             initial_state=initial_state)
         return result
 
     @property
     def filters(self):
         return self.cell.filters
-    
+
     @property
     def kernel_size(self):
         return self.cell.kernel_size
@@ -398,10 +367,6 @@ class ConvGRU2D(ConvRNN2D):
         return self.cell.bias_initializer
 
     @property
-    def unit_forget_bias(self):
-        return self.cell.unit_forget_bias
-
-    @property
     def kernel_regularizer(self):
         return self.cell.kernel_regularizer
 
@@ -441,28 +406,20 @@ class ConvGRU2D(ConvRNN2D):
                   'data_format': self.data_format,
                   'dilation_rate': self.dilation_rate,
                   'activation': activations.serialize(self.activation),
-                  'recurrent_activation': activations.serialize(
-                  self.recurrent_activation),
-              'use_bias': self.use_bias,
-              'kernel_initializer': initializers.serialize(
-                  self.kernel_initializer),
-              'recurrent_initializer': initializers.serialize(
-                  self.recurrent_initializer),
-              'bias_initializer': initializers.serialize(self.bias_initializer),
-              'kernel_regularizer': regularizers.serialize(
-                  self.kernel_regularizer),
-              'recurrent_regularizer': regularizers.serialize(
-                  self.recurrent_regularizer),
-              'bias_regularizer': regularizers.serialize(self.bias_regularizer),
-              'activity_regularizer': regularizers.serialize(
-                  self.activity_regularizer),
-              'kernel_constraint': constraints.serialize(
-                  self.kernel_constraint),
-              'recurrent_constraint': constraints.serialize(
-                  self.recurrent_constraint),
-              'bias_constraint': constraints.serialize(self.bias_constraint),
-              'dropout': self.dropout,
-              'recurrent_dropout': self.recurrent_dropout}
+                  'recurrent_activation': activations.serialize(self.recurrent_activation),
+                  'use_bias': self.use_bias,
+                  'kernel_initializer': initializers.serialize(self.kernel_initializer),
+                  'recurrent_initializer': initializers.serialize(self.recurrent_initializer),
+                  'bias_initializer': initializers.serialize(self.bias_initializer),
+                  'kernel_regularizer': regularizers.serialize(self.kernel_regularizer),
+                  'recurrent_regularizer': regularizers.serialize(self.recurrent_regularizer),
+                  'bias_regularizer': regularizers.serialize(self.bias_regularizer),
+                  'activity_regularizer': regularizers.serialize(self.activity_regularizer),
+                  'kernel_constraint': constraints.serialize(self.kernel_constraint),
+                  'recurrent_constraint': constraints.serialize(self.recurrent_constraint),
+                  'bias_constraint': constraints.serialize(self.bias_constraint),
+                  'dropout': self.dropout,
+                  'recurrent_dropout': self.recurrent_dropout}
         base_config = super(ConvGRU2D, self).get_config()
         del base_config['cell']
         return dict(list(base_config.items()) + list(config.items()))
@@ -470,9 +427,3 @@ class ConvGRU2D(ConvRNN2D):
     @classmethod
     def from_config(cls, config):
         return cls(**config)
-
-
-
-
-
-
