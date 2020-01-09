@@ -211,7 +211,6 @@ def retinanet_mask(inputs,
                    backbone_dict,
                    num_classes,
                    frames_per_batch=1,
-                   temporal_mode=None,
                    backbone_levels=['C3', 'C4', 'C5'],
                    pyramid_levels=['P3', 'P4', 'P5', 'P6', 'P7'],
                    retinanet_model=None,
@@ -282,7 +281,6 @@ def retinanet_mask(inputs,
             panoptic=panoptic,
             num_anchors=anchor_params.num_anchors(),
             frames_per_batch=frames_per_batch,
-            temporal_mode=temporal_mode,
             **kwargs
         )
 
