@@ -92,6 +92,7 @@ def get_anchor_parameters(y):
     areas, aspects = [], []
     for batch in range(y.shape[0]):
         y_batch = y[batch, ..., 0]
+        y_batch = y_batch.astype(np.int64)
         for prop in sk.measure.regionprops(y_batch):
             width = np.float(prop.bbox[2] - prop.bbox[0])
             height = np.float(prop.bbox[3] - prop.bbox[1])
