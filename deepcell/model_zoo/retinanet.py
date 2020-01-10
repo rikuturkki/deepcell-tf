@@ -35,7 +35,7 @@ from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.layers import Conv2D, Conv3D, TimeDistributed, ConvLSTM2D
 from tensorflow.python.keras.layers import Input, Concatenate, BatchNormalization
-from tensorflow.python.keras.layers import Permute, Reshape
+from tensorflow.python.keras.layers import Add, Permute, Reshape
 from tensorflow.python.keras.layers import Activation, Lambda
 from tensorflow.python.keras.initializers import RandomNormal
 
@@ -313,16 +313,15 @@ def __merge_temporal_features(feature, mode='conv', residual=False, n_filters=25
         mode = str(mode).lower()
         if mode == 'conv':
             x = Conv3D(n_filters, (n_frames, temporal_kernel_size, temporal_kernel_size),
-                       kernel_initializer=init, padding='same', activation='relu',
-                       kernel_regularizer=l2(reg))(feature)
+                       padding='same', activation='relu')(feature)
         elif mode == 'lstm':
             x = ConvLSTM2D(filters=n_filters, kernel_size=temporal_kernel_size,
-                           padding='same', kernel_initializer=init, activation='relu',
-                           kernel_regularizer=l2(reg), return_sequences=True)(feature)
+                           padding='same', activation='relu',
+                           return_sequences=True)(feature)
         elif mode == 'gru':
             x = ConvGRU2D(filters=n_filters, kernel_size=temporal_kernel_size,
-                          padding='same', kernel_initializer=init, activation='relu',
-                          kernel_regularizer=l2(reg), return_sequences=True)(feature)
+                          padding='same', activation='relu',
+                          return_sequences=True)(feature)
         else:
             raise ValueError('`temporal` must be one of "conv", "lstm", "gru" or None')
 
@@ -330,6 +329,8 @@ def __merge_temporal_features(feature, mode='conv', residual=False, n_filters=25
             temporal_feature = Add()([feature, x])
         else:
             temporal_feature = x
+        
+        channel_axis = 1 if K.image_data_format() == 'channels_first' else -1
         temporal_feature_normed = BatchNormalization(axis=channel_axis)(temporal_feature)
         return temporal_feature_normed
 
