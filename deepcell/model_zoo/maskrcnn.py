@@ -366,7 +366,6 @@ def RetinaMask(backbone,
                mask_dtype=K.floatx(),
                required_channels=3,
                frames_per_batch=1,
-               temporal_mode=None,
                **kwargs):
     """Constructs a mrcnn model using a backbone from keras-applications.
 
@@ -441,7 +440,6 @@ def RetinaMask(backbone,
     _, backbone_dict = get_backbone(backbone, fixed_inputs,
                                     use_imagenet=use_imagenet,
                                     frames_per_batch=frames_per_batch,
-                                    temporal_mode=temporal_mode,
                                     return_dict=True, **model_kwargs)
 
     # create the full model

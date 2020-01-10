@@ -33,8 +33,8 @@ import re
 
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.models import Model
-from tensorflow.python.keras.layers import Conv2D, Conv3D, TimeDistributed
-from tensorflow.python.keras.layers import Input, Concatenate
+from tensorflow.python.keras.layers import Conv2D, Conv3D, TimeDistributed, ConvLSTM2D
+from tensorflow.python.keras.layers import Input, Concatenate, BatchNormalization
 from tensorflow.python.keras.layers import Permute, Reshape
 from tensorflow.python.keras.layers import Activation, Lambda
 from tensorflow.python.keras.initializers import RandomNormal
@@ -44,6 +44,8 @@ from deepcell.layers import TensorProduct
 from deepcell.layers import FilterDetections
 from deepcell.layers import ImageNormalization2D, Location2D
 from deepcell.layers import Anchors, RegressBoxes, ClipBoxes
+from deepcell.layers import ConvGRU2D
+
 from deepcell.utils.retinanet_anchor_utils import AnchorParameters
 from deepcell.model_zoo.fpn import __create_semantic_head
 from deepcell.model_zoo.fpn import __create_pyramid_features
@@ -303,6 +305,33 @@ def __build_anchors(anchor_parameters, features, frames_per_batch=1):
             ]
         return Concatenate(axis=-2, name='anchors')(anchors)
 
+def __merge_temporal_features(feature, mode='conv', residual=False, n_filters=256,
+                                  n_frames=3, padding=True, temporal_kernel_size=3):
+        if mode is None:
+            return feature
+
+        mode = str(mode).lower()
+        if mode == 'conv':
+            x = Conv3D(n_filters, (n_frames, temporal_kernel_size, temporal_kernel_size),
+                       kernel_initializer=init, padding='same', activation='relu',
+                       kernel_regularizer=l2(reg))(feature)
+        elif mode == 'lstm':
+            x = ConvLSTM2D(filters=n_filters, kernel_size=temporal_kernel_size,
+                           padding='same', kernel_initializer=init, activation='relu',
+                           kernel_regularizer=l2(reg), return_sequences=True)(feature)
+        elif mode == 'gru':
+            x = ConvGRU2D(filters=n_filters, kernel_size=temporal_kernel_size,
+                          padding='same', kernel_initializer=init, activation='relu',
+                          kernel_regularizer=l2(reg), return_sequences=True)(feature)
+        else:
+            raise ValueError('`temporal` must be one of "conv", "lstm", "gru" or None')
+
+        if residual is True:
+            temporal_feature = Add()([feature, x])
+        else:
+            temporal_feature = x
+        temporal_feature_normed = BatchNormalization(axis=channel_axis)(temporal_feature)
+        return temporal_feature_normed
 
 def retinanet(inputs,
               backbone_dict,
@@ -317,6 +346,8 @@ def retinanet(inputs,
               num_semantic_classes=[3],
               submodels=None,
               frames_per_batch=1,
+              temporal_mode=None,
+              temporal_kernel_size=3,
               name='retinanet'):
     """Construct a RetinaNet model on top of a backbone.
 
@@ -376,6 +407,13 @@ def retinanet(inputs,
 
     # for the desired pyramid levels, run available submodels
     features = [pyramid_dict[key] for key in pyramid_levels]
+    
+    if frames_per_batch > 1:
+        if temporal_mode in ['conv', 'lstm', 'gru']:
+            temporal_features = [__merge_temporal_features(feature, mode=temporal_mode, 
+                                                           temporal_kernel_size=temporal_kernel_size) for feature in features]
+            features = temporal_features
+
     object_head = __build_pyramid(submodels, features)
 
     if panoptic:
@@ -552,9 +590,9 @@ def RetinaNet(backbone,
             else:
                 input_shape_with_time = tuple(
                     [frames_per_batch] + list(input_shape))
-            inputs = Input(shape=input_shape_with_time)
+            inputs = Input(shape=input_shape_with_time, name='image_input')
         else:
-            inputs = Input(shape=input_shape)
+            inputs = Input(shape=input_shape, name='image_input')
 
     if location:
         if frames_per_batch > 1:
