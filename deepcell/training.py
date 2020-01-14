@@ -696,6 +696,12 @@ def train_model_retinanet(model,
                 y_pred, y_true, n_classes=n_classes)
         return _semantic_loss
 
+    def association_loss():
+        def _association_loss(y_pred, y_pred_prev):
+            return panoptic_weight * losses.binary_crossentropy(
+                y_pred, y_pred_prev, from_logits=False)
+        return _association_loss
+
     loss = {
         'regression': retinanet_losses.regress_loss,
         'classification': retinanet_losses.classification_loss
@@ -710,6 +716,9 @@ def train_model_retinanet(model,
             if 'semantic' in layer.name:
                 n_classes = layer.output_shape[channel_axis]
                 loss[layer.name] = semantic_loss(n_classes)
+            if 'association' in layer.name:
+                n_classes = layer.output_shape[channel_axis]
+                loss[layer.name] = association_loss(n_classes)
 
     model.compile(loss=loss, optimizer=optimizer)
 

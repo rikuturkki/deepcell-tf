@@ -116,9 +116,11 @@ class RetinaNetGenerator(ImageFullyConvDataGenerator):
              num_classes=1,
              clear_borders=False,
              include_masks=False,
+             include_final_detection_layer=False,
              panoptic=False,
              transforms=['watershed'],
              transforms_kwargs={},
+             assoc_head=False,
              anchor_params=None,
              pyramid_levels=['P3', 'P4', 'P5', 'P6', 'P7'],
              batch_size=32,
@@ -160,9 +162,11 @@ class RetinaNetGenerator(ImageFullyConvDataGenerator):
             num_classes=num_classes,
             clear_borders=clear_borders,
             include_masks=include_masks,
+            include_final_detection_layer=include_final_detection_layer,
             panoptic=panoptic,
             transforms=transforms,
             transforms_kwargs=transforms_kwargs,
+            assoc_head=assoc_head,
             anchor_params=anchor_params,
             pyramid_levels=pyramid_levels,
             batch_size=batch_size,
@@ -213,8 +217,10 @@ class RetinaNetIterator(Iterator):
                  clear_borders=False,
                  include_masks=False,
                  panoptic=False,
+                 include_final_detection_layer=False,
                  transforms=['watershed'],
                  transforms_kwargs={},
+                 assoc_head=False,
                  batch_size=32,
                  shuffle=False,
                  seed=None,
@@ -244,9 +250,11 @@ class RetinaNetIterator(Iterator):
         self.min_objects = min_objects
         self.num_classes = num_classes
         self.include_masks = include_masks
+        self.include_final_detection_layer = include_final_detection_layer
         self.panoptic = panoptic
         self.transforms = transforms
         self.transforms_kwargs = transforms_kwargs
+        self.assoc_head = assoc_head
         self.channel_axis = 3 if data_format == 'channels_last' else 1
         self.image_data_generator = image_data_generator
         self.data_format = data_format
@@ -421,6 +429,9 @@ class RetinaNetIterator(Iterator):
             self.num_classes)
 
         max_shape = tuple(max_shape)  # was a list for max shape indexing
+        
+        if self.assoc_head:
+            # TODO
 
         if self.include_masks:
             # masks_batch has shape: (batch size, max_annotations,
@@ -455,14 +466,19 @@ class RetinaNetIterator(Iterator):
                     format=self.save_format)
                 img.save(os.path.join(self.save_to_dir, fname))
 
+        batch_inputs = batch_x
         batch_outputs = [regressions, labels]
-
+        
+        if self.assoc_head:
+            batch_inputs = [batch_x, batch_x_bbox]
         if self.include_masks:
+            batch_outputs.append(masks_batch)
+        if self.include_final_detection_layer:
             batch_outputs.append(masks_batch)
 
         batch_outputs.extend(batch_y_semantic_list)
+        return batch_inputs, batch_outputs
 
-        return batch_x, batch_outputs
 
     def next(self):
         """For python 2.x. Returns the next batch.
@@ -516,6 +532,7 @@ class RetinaMovieIterator(Iterator):
                  clear_borders=False,
                  include_masks=False,
                  include_final_detection_layer=False,
+                 assoc_head=False,
                  panoptic=False,
                  transforms=['watershed'],
                  transforms_kwargs={},
@@ -535,7 +552,7 @@ class RetinaMovieIterator(Iterator):
 
         if X.ndim != 5:
             raise ValueError('Input data in `RetinaNetIterator` '
-                             'should have rank 4. You passed an array '
+                             'should have rank 5. You passed an array '
                              'with shape', X.shape)
 
         self.x = np.asarray(X, dtype=K.floatx())
@@ -550,6 +567,7 @@ class RetinaMovieIterator(Iterator):
         self.frames_per_batch = frames_per_batch
         self.include_masks = include_masks
         self.include_final_detection_layer = include_final_detection_layer
+        self.assoc_head = assoc_head
         self.panoptic = panoptic
         self.transforms = transforms
         self.transforms_kwargs = transforms_kwargs
@@ -805,6 +823,17 @@ class RetinaMovieIterator(Iterator):
         max_shape = tuple([max_shape[self.row_axis - 1],
                            max_shape[self.col_axis - 1]])
 
+        if self.assoc_head:
+            flatten = lambda l: [item for sublist in l for item in sublist]
+            annotations_list_flatten = flatten(annotations_list)
+            max_annotations = max(len(a['masks']) for a in annotations_list_flatten)
+            batch_x_bbox_shape = (len(index_array), self.frames_per_batch, max_annotations, 4)
+            batch_x_bbox = np.zeros(batch_x_bbox_shape, dtype=K.floatx())
+            for idx_time, time in enumerate(times):
+                annotations_frame = annotations_list[idx_time]
+                for idx_batch, ann in enumerate(annotations_frame):
+                    batch_x_bbox[idx_batch, idx_time, :ann['bboxes'].shape[0], :4] = ann['bboxes']
+
         if self.include_masks:
             # masks_batch has shape: (batch size, max_annotations,
             #     bbox_x1 + bbox_y1 + bbox_x2 + bbox_y2 + label +
@@ -843,15 +872,18 @@ class RetinaMovieIterator(Iterator):
                         format=self.save_format)
                     img.save(os.path.join(self.save_to_dir, fname))
 
+        batch_inputs = batch_x
         batch_outputs = [regressions, labels]
+        
+        if self.assoc_head:
+            batch_inputs = [batch_x, batch_x_bbox]
         if self.include_masks:
             batch_outputs.append(masks_batch)
         if self.include_final_detection_layer:
             batch_outputs.append(masks_batch)
         if self.panoptic:
             batch_outputs += batch_y_semantic_list
-
-        return batch_x, batch_outputs
+        return batch_inputs, batch_outputs
 
     def next(self):
         """For python 2.x. Returns the next batch.
@@ -934,6 +966,7 @@ class RetinaMovieDataGenerator(MovieDataGenerator):
              include_masks=False,
              include_final_detection_layer=False,
              panoptic=False,
+             assoc_head=False,
              transforms=['watershed'],
              transforms_kwargs={},
              anchor_params=None,
@@ -973,6 +1006,7 @@ class RetinaMovieDataGenerator(MovieDataGenerator):
             clear_borders=clear_borders,
             include_masks=include_masks,
             include_final_detection_layer=include_final_detection_layer,
+            assoc_head=assoc_head,
             panoptic=panoptic,
             transforms=transforms,
             transforms_kwargs=transforms_kwargs,

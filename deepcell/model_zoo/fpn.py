@@ -393,6 +393,25 @@ def __create_semantic_head(pyramid_dict,
     return x
 
 
+def __create_association_head(pyramid_dict,
+                           input_target=None,
+                           target_level=2,
+                           n_classes=3,
+                           n_filters=128,
+                           ndim=2):
+    """
+    Creates a association head from a feature pyramid network
+    
+    Returns:
+        keras.layers.Layer: The association head
+    """
+    #  Get fully connected layer and bbox ids
+
+    # One hot encode?
+
+    return x
+
+
 def FPNet(backbone,
           input_shape,
           inputs=None,
