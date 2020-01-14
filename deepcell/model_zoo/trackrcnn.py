@@ -23,7 +23,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""MaskRCNN models adapted from https://github.com/fizyr/keras-maskrcnn"""
+"""TrackRCNN models adapted from MaskRCNN models and https://github.com/fizyr/keras-maskrcnn"""
 
 from __future__ import absolute_import
 from __future__ import print_function
@@ -289,12 +289,17 @@ def retinanet_mask(inputs,
     classification = retinanet_model.outputs[1]
 
     if panoptic:
-        # Determine the number of semantic heads
+        # Determine the number of semantic and association heads
         n_semantic_heads = len([1 for layer in retinanet_model.layers if 'semantic' in layer.name])
 
+        n_association_heads = len([1 for layer in retinanet_model.layers if 'association' in layer.name])
+
+        n_total_heads = n_semantic_heads + n_association_heads
+
         # The  panoptic output should not be sent to filter detections
-        other = retinanet_model.outputs[2:-n_semantic_heads]
-        semantic = retinanet_model.outputs[-n_semantic_heads:]
+        other = retinanet_model.outputs[2:-n_total_heads]
+        semantic = retinanet_model.outputs[-n_total_heads:-n_association_heads]
+        association = retinanet_model.outputs[-n_association_heads:]
     else:
         other = retinanet_model.outputs[2:]
 
@@ -330,20 +335,21 @@ def retinanet_mask(inputs,
     fpn = UpsampleLike()([fpn, image])
     rois = RoiAlign(crop_size=crop_size)([boxes, fpn])
 
-    # execute maskrcnn submodels
-    maskrcnn_outputs = [submodel(rois) for _, submodel in roi_submodels]
+    # execute trackrcnn submodels
+    trackrcnn_outputs = [submodel(rois) for _, submodel in roi_submodels]
 
     # concatenate boxes for loss computation
     trainable_outputs = [ConcatenateBoxes(name=name)([boxes, output])
                          for (name, _), output in zip(
-                             roi_submodels, maskrcnn_outputs)]
+                             roi_submodels, trackrcnn_outputs)]
 
     # reconstruct the new output
     outputs = [regression, classification] + other + trainable_outputs + \
-        detections + maskrcnn_outputs
+        detections + trackrcnn_outputs
 
     if panoptic:
         outputs += list(semantic)
+        outputs += list(association)
 
     model = Model(inputs=inputs, outputs=outputs, name=name)
     model.backbone_levels = backbone_levels
