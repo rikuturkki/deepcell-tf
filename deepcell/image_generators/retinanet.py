@@ -365,7 +365,6 @@ class RetinaNetIterator(Iterator):
         bboxes = np.reshape(bboxes, (bboxes.shape[0], 4))
 
         annotations = {'labels': labels, 'bboxes': bboxes}
-
         if self.include_masks:
             annotations['masks'] = masks
 
@@ -429,9 +428,6 @@ class RetinaNetIterator(Iterator):
             self.num_classes)
 
         max_shape = tuple(max_shape)  # was a list for max shape indexing
-        
-        if self.assoc_head:
-            # TODO
 
         if self.include_masks:
             # masks_batch has shape: (batch size, max_annotations,

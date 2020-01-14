@@ -40,7 +40,7 @@ from tensorflow.python.keras.optimizers import SGD
 from deepcell import losses
 from deepcell import image_generators
 from deepcell.callbacks import RedirectModel, Evaluate
-from deepcell.model_zoo import retinanet_bbox
+from deepcell.model_zoo import retinanet_bbox, association_head
 from deepcell.utils.retinanet_anchor_utils import make_shapes_callback
 from deepcell.utils.retinanet_anchor_utils import guess_shapes
 from deepcell.utils.retinanet_anchor_utils import evaluate
@@ -558,6 +558,7 @@ def train_model_retinanet(model,
                           panoptic_weight=0.1,
                           transforms=['watershed'],
                           transforms_kwargs={},
+                          assoc_head=False,
                           anchor_params=None,
                           pyramid_levels=['P3', 'P4', 'P5', 'P6', 'P7'],
                           min_objects=3,
@@ -654,8 +655,11 @@ def train_model_retinanet(model,
     if panoptic:
         n_semantic_classes = [layer.output_shape[channel_axis]
                               for layer in model.layers if 'semantic' in layer.name]
+        n_association_heads = [layer.output_shape[channel_axis]
+                              for layer in model.layers if 'association' in layer.name]
     else:
         n_semantic_classes = []
+        n_association_heads = []
 
     # the data, shuffled and split between train and test sets
     print('X_train shape:', train_dict['X'].shape)
@@ -675,7 +679,16 @@ def train_model_retinanet(model,
     print('Training on {} GPUs'.format(num_gpus))
 
     # evaluation of model is done on `retinanet_bbox`
-    if include_masks:
+    if assoc_head:
+        prediction_model = association_head(
+            model,
+            nms=True,
+            anchor_params=anchor_params,
+            num_semantic_heads=len(n_semantic_classes),
+            num_association_heads=n_association_heads,
+            panoptic=panoptic,
+            class_specific_filter=False)
+    elif include_masks:
         prediction_model = model
     else:
         prediction_model = retinanet_bbox(
