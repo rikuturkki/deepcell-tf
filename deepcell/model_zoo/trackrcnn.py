@@ -23,7 +23,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""TrackRCNN models adapted from MaskRCNN models and https://github.com/fizyr/keras-maskrcnn"""
+"""TrackRCNN models adapted from MaskRCNN and https://github.com/fizyr/keras-maskrcnn"""
 
 from __future__ import absolute_import
 from __future__ import print_function
@@ -191,11 +191,11 @@ def default_roi_submodels(num_classes,
         return [
             ('masks', TimeDistributed(
                 default_mask_model(num_classes,
+                                   name='mask_submodel_0',
                                    roi_size=roi_size,
                                    mask_size=mask_size,
                                    mask_dtype=mask_dtype,
-                                   retinanet_dtype=retinanet_dtype), 
-                name='mask_submodel')),
+                                   retinanet_dtype=retinanet_dtype), name='mask_submodel')),
             ('final_detection', TimeDistributed(
                 default_final_detection_model(roi_size=roi_size)))
         ]
@@ -204,9 +204,14 @@ def default_roi_submodels(num_classes,
                                      roi_size=roi_size,
                                      mask_size=mask_size,
                                      mask_dtype=mask_dtype,
-                                     retinanet_dtype=retinanet_dtype)),
-    ]
+                                     retinanet_dtype=retinanet_dtype))
+        # ('final_detection', default_final_detection_model(roi_size=roi_size))
+        ]
 
+
+def association_embedding_model(roi_size=(14, 14),
+                                name='final_detection_submodel'):
+    return None
 
 def retinanet_mask(inputs,
                    backbone_dict,
@@ -218,7 +223,7 @@ def retinanet_mask(inputs,
                    anchor_params=None,
                    nms=True,
                    panoptic=False,
-                   assoc_head=False,
+                   shape_mask=False,
                    class_specific_filter=True,
                    crop_size=(14, 14),
                    mask_size=(28, 28),
@@ -291,17 +296,12 @@ def retinanet_mask(inputs,
     classification = retinanet_model.outputs[1]
 
     if panoptic:
-        # Determine the number of semantic and association heads
+        # Determine the number of semantic heads
         n_semantic_heads = len([1 for layer in retinanet_model.layers if 'semantic' in layer.name])
 
-        n_association_heads = len([1 for layer in retinanet_model.layers if 'association' in layer.name])
-
-        n_total_heads = n_semantic_heads + n_association_heads
-
         # The  panoptic output should not be sent to filter detections
-        other = retinanet_model.outputs[2:-n_total_heads]
-        semantic = retinanet_model.outputs[-n_total_heads:-n_association_heads]
-        association = retinanet_model.outputs[-n_association_heads:]
+        other = retinanet_model.outputs[2:-n_semantic_heads]
+        semantic = retinanet_model.outputs[-n_semantic_heads:]
     else:
         other = retinanet_model.outputs[2:]
 
@@ -313,49 +313,39 @@ def retinanet_mask(inputs,
                               frames_per_batch=frames_per_batch)
     boxes = RegressBoxes(name='boxes')([anchors, regression])
     boxes = ClipBoxes(name='clipped_boxes')([image, boxes])
-    
-    if assoc_head:
-        if frames_per_batch == 1:
-            boxes = Input(shape=(None, 4), name='boxes_input')
-        else:
-            boxes = Input(shape=(None, None, 4), name='boxes_input')
-        inputs = [image, boxes]
-    else:
-        # split up in known outputs and "other"
-        # filter detections (apply NMS / score threshold / select top-k)
-        detections = FilterDetections(
-            nms=nms,
-            nms_threshold=nms_threshold,
-            score_threshold=score_threshold,
-            class_specific_filter=class_specific_filter,
-            max_detections=max_detections,
-            name='filtered_detections'
-        )([boxes, classification] + other)
 
-    # split up in known outputs and "other"
-    boxes = detections[0]
+    # filter detections (apply NMS / score threshold / select top-k)
+    # use ground truth boxes
+    if frames_per_batch == 1:
+      boxes = Input(shape=(None, 4), name='boxes_input')
+    else:
+      boxes = Input(shape=(None, None, 4), name='boxes_input')
+    inputs = [image, boxes]
 
     fpn = features[0]
     fpn = UpsampleLike(name='upsamplelike')([fpn, image])
     rois = RoiAlign(crop_size=crop_size, name='roialign')([boxes, fpn])
+    print("rois.shape", rois.shape)
 
     # execute trackrcnn submodels
     trackrcnn_outputs = [submodel(rois) for _, submodel in roi_submodels]
+    association_head = association_embedding_model(rois)
+    trackrcnn_outputs.append(association_head)
 
     # concatenate boxes for loss computation
     trainable_outputs = [ConcatenateBoxes(name=name)([boxes, output])
                          for (name, _), output in zip(
                              roi_submodels, trackrcnn_outputs)]
-    if assoc_head:
-        detections = []
-        
+
     # reconstruct the new output
+    if shape_mask:
+        detections = []
+
     outputs = [regression, classification] + other + trainable_outputs + \
         detections + trackrcnn_outputs
 
     if panoptic:
         outputs += list(semantic)
-        outputs += list(association)
 
     model = Model(inputs=inputs, outputs=outputs, name=name)
     model.backbone_levels = backbone_levels
@@ -363,91 +353,6 @@ def retinanet_mask(inputs,
 
     return model
 
-
-def association_head(model=None,
-                   nms=True,
-                   panoptic=False,
-                   num_semantic_heads=1,
-                   num_association_heads=1,
-                   name='association-head',
-                   anchor_params=None,
-                   max_detections=300,
-                   frames_per_batch=1,
-                   crop_size=(14, 14),
-                   **kwargs):
-
-    # if no anchor parameters are passed, use default values
-    if anchor_params is None:
-        anchor_params = AnchorParameters.default
-
-    # create RetinaNet model
-    names = ('regression', 'classification')
-    if not all(output in model.output_names for output in names):
-        raise ValueError('Input is not a training model (no `regression` '
-                         'and `classification` outputs were found, '
-                         'outputs are: {}).'.format(model.output_names))
-
-    # compute the anchors
-    features = [model.get_layer(l).output for l in model.pyramid_levels]
-    anchors = __build_anchors(anchor_params, features,
-                              frames_per_batch=frames_per_batch)
-
-    # we expect anchors, regression. and classification values as first output
-    regression = model.outputs[0]
-    classification = model.outputs[1]
-
-    # "other" can be any additional output from custom submodels, by default []
-    if panoptic:
-        # The last output is the panoptic output, which should not be
-        # sent to filter detections
-        n_total_heads = num_semantic_heads + num_association_heads
-        other = model.outputs[2:-n_total_heads]
-        semantic = assoc_head = model.outputs[-n_total_heads:-num_association_heads]
-        assoc_head = model.outputs[-num_association_heads:]
-    else:
-        other = model.outputs[2:]
-
-    # apply predicted regression to anchors
-    boxes = RegressBoxes(name='boxes')([anchors, regression])
-    boxes = ClipBoxes(name='clipped_boxes')([model.inputs[0], boxes])
-
-    # filter detections (apply NMS / score threshold / select top-k)
-    detections = FilterDetections(
-        nms=nms,
-        class_specific_filter=class_specific_filter,
-        max_detections=max_detections,
-        name='filtered_detections'
-    )([boxes, classification])
-
-    # apply submodels to detections
-    image = model.layers[0].output
-    boxes = detections[0]
-
-    fpn = features[0]
-    fpn = UpsampleLike()([fpn, image])
-    rois = RoiAlign(crop_size=crop_size)([boxes, fpn])
-
-    mask_submodel = model.get_layer('mask_submodel')
-    masks = [mask_submodel(rois)]
-
-    # add the semantic head's output if needed
-    if panoptic:
-        outputs = detections + list(masks) + list(semantic) + list(assoc_head)
-    else:
-        outputs = detections + list(masks)
-
-    # construct the model
-    new_model = Model(inputs=model.inputs, outputs=outputs, name=name)
-
-    image_input = model.inputs[0]
-    if frames_per_batch == 1:
-        temp_boxes = tf.zeros([1,1,4])
-    else:
-        temp_boxes = tf.zeros([1,1,1,4])
-    new_inputs = [image_input, temp_boxes]
-
-    final_model = new_model(new_inputs)
-    return Model(inputs=image_input, outputs=final_model)
 
 def RetinaMask(backbone,
                num_classes,
@@ -499,9 +404,9 @@ def RetinaMask(backbone,
             else:
                 input_shape_with_time = tuple(
                     [frames_per_batch] + list(input_shape))
-            inputs = Input(shape=input_shape_with_time)
+            inputs = Input(shape=input_shape_with_time, name='image_input')
         else:
-            inputs = Input(shape=input_shape)
+            inputs = Input(shape=input_shape, name='image_input')
 
     if location:
         if frames_per_batch > 1:
