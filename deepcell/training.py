@@ -40,7 +40,7 @@ from tensorflow.python.keras.optimizers import SGD
 from deepcell import losses
 from deepcell import image_generators
 from deepcell.callbacks import RedirectModel, Evaluate
-from deepcell.model_zoo import retinanet_bbox, association_head
+from deepcell.model_zoo import retinanet_bbox
 from deepcell.utils.retinanet_anchor_utils import make_shapes_callback
 from deepcell.utils.retinanet_anchor_utils import guess_shapes
 from deepcell.utils.retinanet_anchor_utils import evaluate

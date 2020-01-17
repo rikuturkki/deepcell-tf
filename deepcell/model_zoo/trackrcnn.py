@@ -40,7 +40,7 @@ from tensorflow.python.keras.initializers import normal
 from deepcell.layers import Cast, Shape, UpsampleLike
 from deepcell.layers import Upsample, RoiAlign, ConcatenateBoxes
 from deepcell.layers import ClipBoxes, RegressBoxes, FilterDetections
-from deepcell.layers import TensorProduct, ImageNormalization2D, Location2D
+from deepcell.layers import TensorProduct, ImageNormalization2D, Location2D, ImageNormalization3D
 from deepcell.model_zoo.retinanet import retinanet, __build_anchors
 from deepcell.utils.retinanet_anchor_utils import AnchorParameters
 from deepcell.utils.backbone_utils import get_backbone
@@ -338,8 +338,7 @@ def retinanet_mask(inputs,
                              roi_submodels, trackrcnn_outputs)]
 
     # reconstruct the new output
-    if shape_mask:
-        detections = []
+    detections = []
 
     outputs = [regression, classification] + other + trainable_outputs + \
         detections + trackrcnn_outputs
@@ -420,10 +419,10 @@ def RetinaMask(backbone,
 
     # force the channel size for backbone input to be `required_channels`
     if frames_per_batch > 1:
-        norm = TimeDistributed(ImageNormalization2D(norm_method=norm_method))(concat)
+        norm = TimeDistributed(ImageNormalization3D(norm_method=norm_method))(concat)
         fixed_inputs = TimeDistributed(TensorProduct(required_channels))(norm)
     else:
-        norm = ImageNormalization2D(norm_method=norm_method)(concat)
+        norm = ImageNormalization3D(norm_method=norm_method)(concat)
         fixed_inputs = TensorProduct(required_channels)(norm)
 
     # force the input shape
