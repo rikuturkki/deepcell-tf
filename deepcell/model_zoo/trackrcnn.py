@@ -31,16 +31,18 @@ from __future__ import division
 
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
+from tensorflow.python.keras.layers import Add, Flatten
 from tensorflow.python.keras.layers import Input, Concatenate
-from tensorflow.python.keras.layers import TimeDistributed, Conv2D
-from tensorflow.python.keras.layers import MaxPool2D, Lambda
+from tensorflow.python.keras.layers import TimeDistributed, Conv2D, Conv3D
+from tensorflow.python.keras.layers import AveragePooling2D, MaxPool2D, MaxPool3D, Lambda
 from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.initializers import normal
 
 from deepcell.layers import Cast, Shape, UpsampleLike
 from deepcell.layers import Upsample, RoiAlign, ConcatenateBoxes
 from deepcell.layers import ClipBoxes, RegressBoxes, FilterDetections
-from deepcell.layers import TensorProduct, ImageNormalization2D, Location2D, ImageNormalization3D
+from deepcell.layers import TensorProduct, ImageNormalization2D, Location2D
+from deepcell.layers import ImageNormalization3D, Location3D
 from deepcell.model_zoo.retinanet import retinanet, __build_anchors
 from deepcell.utils.retinanet_anchor_utils import AnchorParameters
 from deepcell.utils.backbone_utils import get_backbone
@@ -209,9 +211,58 @@ def default_roi_submodels(num_classes,
         ]
 
 
-def association_embedding_model(roi_size=(14, 14),
-                                name='final_detection_submodel'):
-    return None
+def association_vector_model(roi_size=(14, 14),
+                             pyramid_feature_size=256,
+                             num_association_features=128,
+                             name='association_vector_model'):
+    options = {
+        'kernel_size': 3,
+        'strides': 1,
+        'padding': 'same',
+        'kernel_initializer': normal(mean=0.0, stddev=0.01, seed=None),
+        'bias_initializer': 'zeros',
+        'activation': 'relu'
+    }
+
+    inputs = Input(shape=(None, roi_size[0], roi_size[1], pyramid_feature_size))
+    outputs = inputs
+
+    conv1 = TimeDistributed(Conv2D(
+        filters=final_detection_feature_size,
+        **options
+    ), name='association_vector_submodel_conv1')(inputs)
+    conv2 = TimeDistributed(Conv2D(
+        filters=final_detection_feature_size,
+        **options
+    ), name='association_vector_submodel_conv2')(conv1)
+    x = TimeDistributed(MaxPool2D(
+    ), name='association_vector_submodel_pool1')(conv2)
+
+    # Residuals
+    for i in range(2):
+        x = TimeDistributed(Conv2D(filters=association_feature_size,
+                                   kernel_size=3,
+                                   padding='valid',
+                                   kernel_initializer=normal(mean=0.0, stddev=0.01, seed=None),
+                                   bias_initializer='zeros',
+                                   activation='relu', 
+                                   name='association_vector_residual_conv1_block{}'.format(i)))(maxpool3)
+        y = TimeDistributed(Conv2D(filters=association_feature_size,
+                                   kernel_size=3,
+                                   padding='valid',
+                                   kernel_initializer=normal(mean=0.0, stddev=0.01, seed=None),
+                                   bias_initializer='zeros',
+                                   activation='relu',
+                                   name='association_vector_residual_conv2_block{}'.format(i)))(x)
+        x = Add([x, y], name='association_vector_residual_add_block{}'.format(i))
+        x = Activation('relu')(x)                          
+
+    x = AveragePooling2D(pool_size=8)(x)
+    y = Flatten()(x)
+    outputs = Dense(num_association_features,
+                    activation='softmax',
+                    kernel_initializer='he_normal')(y)
+    return Model(inputs=inputs, outputs=outputs, name=name)
 
 def retinanet_mask(inputs,
                    backbone_dict,
@@ -317,9 +368,9 @@ def retinanet_mask(inputs,
     # filter detections (apply NMS / score threshold / select top-k)
     # use ground truth boxes
     if frames_per_batch == 1:
-      boxes = Input(shape=(None, 4), name='boxes_input')
+        boxes = Input(shape=(None, 4), name='boxes_input')
     else:
-      boxes = Input(shape=(None, None, 4), name='boxes_input')
+        boxes = Input(shape=(None, None, 4), name='boxes_input')
     inputs = [image, boxes]
 
     fpn = features[0]
@@ -329,7 +380,7 @@ def retinanet_mask(inputs,
 
     # execute trackrcnn submodels
     trackrcnn_outputs = [submodel(rois) for _, submodel in roi_submodels]
-    association_head = association_embedding_model(rois)
+    association_head = association_vector_model(rois)
     trackrcnn_outputs.append(association_head)
 
     # concatenate boxes for loss computation
@@ -419,10 +470,10 @@ def RetinaMask(backbone,
 
     # force the channel size for backbone input to be `required_channels`
     if frames_per_batch > 1:
-        norm = TimeDistributed(ImageNormalization3D(norm_method=norm_method))(concat)
+        norm = TimeDistributed(ImageNormalization2D(norm_method=norm_method))(concat)
         fixed_inputs = TimeDistributed(TensorProduct(required_channels))(norm)
     else:
-        norm = ImageNormalization3D(norm_method=norm_method)(concat)
+        norm = ImageNormalization2D(norm_method=norm_method)(concat)
         fixed_inputs = TensorProduct(required_channels)(norm)
 
     # force the input shape
