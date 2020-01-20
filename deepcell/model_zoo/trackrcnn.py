@@ -31,7 +31,7 @@ from __future__ import division
 
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
-from tensorflow.python.keras.layers import Add, Activation, Flatten
+from tensorflow.python.keras.layers import Add, Activation, Flatten, Dense
 from tensorflow.python.keras.layers import Input, Concatenate
 from tensorflow.python.keras.layers import TimeDistributed, Conv2D, Conv3D
 from tensorflow.python.keras.layers import AveragePooling2D, AveragePooling3D 
@@ -202,7 +202,8 @@ def default_roi_submodels(num_classes,
             ('final_detection', TimeDistributed(
                 default_final_detection_model(roi_size=roi_size))),
             ('association_features', TimeDistributed(
-                association_vector_model(roi_size=roi_size)))
+                association_vector_model(roi_size=roi_size,
+                                        frames_per_batch=frames_per_batch)))
         ]
     return [
         ('masks', default_mask_model(num_classes,
@@ -215,6 +216,7 @@ def default_roi_submodels(num_classes,
 
 
 def association_vector_model(roi_size=(14, 14),
+                             frames_per_batch=1,
                              num_association_features=128,
                              pyramid_feature_size=256,
                              name='association_vector_model'):
@@ -260,11 +262,12 @@ def association_vector_model(roi_size=(14, 14),
         x = Add(name='association_vector_residual_add_block{}'.format(i))([x, y])
         x = Activation('relu')(x)                          
 
-    x = AveragePooling3D(pool_size=3)(x)
-    y = Flatten()(x)
+    y = AveragePooling3D(pool_size=3)(x)
+#     y = Flatten()(y)
     outputs = Dense(num_association_features,
                     activation='softmax',
                     kernel_initializer='he_normal')(y)
+    outputs = y
     return Model(inputs=inputs, outputs=outputs, name=name)
 
 

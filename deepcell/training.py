@@ -548,10 +548,12 @@ def train_model_siamese_daughter(model,
 
 def train_model_retinanet(model,
                           dataset,
+                          mode='sample',
                           expt='',
                           test_size=.2,
                           n_epoch=10,
                           batch_size=1,
+                          frames_per_batch=5,
                           num_gpus=None,
                           include_masks=False,
                           panoptic=False,
@@ -647,7 +649,7 @@ def train_model_retinanet(model,
     model_path = os.path.join(model_dir, '{}.h5'.format(model_name))
     loss_path = os.path.join(model_dir, '{}.npz'.format(model_name))
 
-    train_dict, test_dict = get_data(dataset, seed=seed, test_size=test_size)
+    train_dict, test_dict = get_data(dataset, mode=mode, seed=seed, test_size=test_size)
 
     channel_axis = 1 if is_channels_first else -1
     n_classes = model.layers[-1].output_shape[channel_axis]
@@ -751,21 +753,37 @@ def train_model_retinanet(model,
             train_dict['X'] = train_dict['X'][:nb_samples]
 
     # this will do preprocessing and realtime data augmentation
-    datagen = image_generators.RetinaNetGenerator(
-        # fill_mode='constant',  # for rotations
-        rotation_range=rotation_range,
-        shear_range=shear,
-        zoom_range=zoom_range,
-        horizontal_flip=flip,
-        vertical_flip=flip)
+    if train_dict['X'].ndim == 5:
+        datagen = image_generators.RetinaMovieDataGenerator(
+            rotation_range=rotation_range,
+            shear_range=shear,
+            zoom_range=zoom_range,
+            horizontal_flip=flip,
+            vertical_flip=flip)
 
-    datagen_val = image_generators.RetinaNetGenerator(
-        # fill_mode='constant',  # for rotations
-        rotation_range=0,
-        shear_range=0,
-        zoom_range=0,
-        horizontal_flip=0,
-        vertical_flip=0)
+        datagen_val = image_generators.RetinaMovieDataGenerator(
+            # fill_mode='constant',  # for rotations
+            rotation_range=0,
+            shear_range=0,
+            zoom_range=0,
+            horizontal_flip=0,
+            vertical_flip=0)
+    else:
+        datagen = image_generators.RetinaNetGenerator(
+            # fill_mode='constant',  # for rotations
+            rotation_range=rotation_range,
+            shear_range=shear,
+            zoom_range=zoom_range,
+            horizontal_flip=flip,
+            vertical_flip=flip)
+
+        datagen_val = image_generators.RetinaNetGenerator(
+            # fill_mode='constant',  # for rotations
+            rotation_range=0,
+            shear_range=0,
+            zoom_range=0,
+            horizontal_flip=0,
+            vertical_flip=0)
 
     # if 'vgg' in backbone or 'densenet' in backbone:
     #     compute_shapes = make_shapes_callback(model)
@@ -773,32 +791,53 @@ def train_model_retinanet(model,
     #     compute_shapes = guess_shapes
 
     compute_shapes = guess_shapes
+    
+    if train_dict['X'].ndim == 5:
+        train_data = datagen.flow(
+            train_dict,
+            batch_size=batch_size,
+            include_masks=include_masks,
+            include_final_detection_layer=False,
+            frames_per_batch=frames_per_batch,
+            pyramid_levels=pyramid_levels,
+            anchor_params=anchor_params)
 
-    train_data = datagen.flow(
-        train_dict,
-        seed=seed,
-        include_masks=include_masks,
-        panoptic=panoptic,
-        transforms=transforms,
-        transforms_kwargs=transforms_kwargs,
-        pyramid_levels=pyramid_levels,
-        min_objects=min_objects,
-        anchor_params=anchor_params,
-        compute_shapes=compute_shapes,
-        batch_size=batch_size)
+        val_data = datagen_val.flow(
+            train_dict,
+            batch_size=batch_size,
+            include_masks=include_masks,
+            include_final_detection_layer=False,
+            frames_per_batch=frames_per_batch,
+            pyramid_levels=pyramid_levels,
+            anchor_params=anchor_params)
 
-    val_data = datagen_val.flow(
-        test_dict,
-        seed=seed,
-        include_masks=include_masks,
-        panoptic=panoptic,
-        transforms=transforms,
-        transforms_kwargs=transforms_kwargs,
-        pyramid_levels=pyramid_levels,
-        min_objects=min_objects,
-        anchor_params=anchor_params,
-        compute_shapes=compute_shapes,
-        batch_size=batch_size)
+    else:
+        train_data = datagen.flow(
+            train_dict,
+            seed=seed,
+            include_masks=include_masks,
+            panoptic=panoptic,
+            transforms=transforms,
+            transforms_kwargs=transforms_kwargs,
+            pyramid_levels=pyramid_levels,
+            min_objects=min_objects,
+            anchor_params=anchor_params,
+            compute_shapes=compute_shapes,
+            batch_size=batch_size)
+
+        val_data = datagen_val.flow(
+            test_dict,
+            seed=seed,
+            include_masks=include_masks,
+            panoptic=panoptic,
+            transforms=transforms,
+            transforms_kwargs=transforms_kwargs,
+            pyramid_levels=pyramid_levels,
+            min_objects=min_objects,
+            anchor_params=anchor_params,
+            compute_shapes=compute_shapes,
+            batch_size=batch_size)
+    
 
     train_callbacks = get_callbacks(
         model_path, lr_sched=lr_sched,
