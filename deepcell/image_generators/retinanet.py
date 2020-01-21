@@ -429,6 +429,16 @@ class RetinaNetIterator(Iterator):
 
         max_shape = tuple(max_shape)  # was a list for max shape indexing
 
+        print("annotations_list: ", annotations_list)
+
+        if self.assoc_head:
+            max_annotations = max(len(a['masks']) for a in annotations_list)
+            batch_x_bbox_shape = (len(index_array), max_annotations, 4)
+            batch_x_bbox = np.zeros(batch_x_bbox_shape, dtype=K.floatx())
+            
+            for i, ann in enumerate(annotations_list):
+                batch_x_bbox[i,:ann['bboxes'].shape[0], :4] = ann['bboxes']            
+
         if self.include_masks:
             # masks_batch has shape: (batch size, max_annotations,
             #     bbox_x1 + bbox_y1 + bbox_x2 + bbox_y2 + label +
@@ -467,12 +477,14 @@ class RetinaNetIterator(Iterator):
         
         if self.assoc_head:
             batch_inputs = [batch_x, batch_x_bbox]
-        if self.include_masks:
-            batch_outputs.append(masks_batch)
-        if self.include_final_detection_layer:
+        if self.include_masks or self.include_final_detection_layer:
             batch_outputs.append(masks_batch)
 
         batch_outputs.extend(batch_y_semantic_list)
+
+        print("batch_inputs: ", batch_inputs)
+        print("batch_outputs: ", batch_outputs)
+
         return batch_inputs, batch_outputs
 
 
@@ -813,7 +825,9 @@ class RetinaMovieIterator(Iterator):
             labels_list.append(labels)
 
         regressions = np.stack(regressions_list, axis=self.time_axis)
+        print("regressions.shape: ", regressions.shape)
         labels = np.stack(labels_list, axis=self.time_axis)
+        print("labels.shape: ", labels.shape)
 
         # was a list for max shape indexing
         max_shape = tuple([max_shape[self.row_axis - 1],
@@ -840,6 +854,7 @@ class RetinaMovieIterator(Iterator):
             max_annotations = max(len(a['masks']) for a in annotations_list_flatten)
             masks_batch_shape = (len(index_array), self.frames_per_batch, max_annotations,
                                  5 + 2 + max_shape[0] * max_shape[1])
+            print("masks_batch_shape: ", masks_batch_shape)
             masks_batch = np.zeros(masks_batch_shape, dtype=K.floatx())
 
             for idx_time, time in enumerate(times):
@@ -873,9 +888,7 @@ class RetinaMovieIterator(Iterator):
         
         if self.assoc_head:
             batch_inputs = [batch_x, batch_x_bbox]
-        if self.include_masks:
-            batch_outputs.append(masks_batch)
-        if self.include_final_detection_layer:
+        if self.include_masks or self.include_final_detection_layer:
             batch_outputs.append(masks_batch)
         if self.panoptic:
             batch_outputs += batch_y_semantic_list
