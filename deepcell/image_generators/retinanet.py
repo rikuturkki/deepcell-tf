@@ -40,6 +40,7 @@ from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.preprocessing.image import array_to_img
 from tensorflow.python.keras.preprocessing.image import Iterator
 from tensorflow.python.platform import tf_logging as logging
+from tensorflow.python.keras.utils import to_categorical
 
 from deepcell.utils.retinanet_anchor_utils import anchor_targets_bbox
 from deepcell.utils.retinanet_anchor_utils import anchors_for_shape
@@ -432,12 +433,12 @@ class RetinaNetIterator(Iterator):
         print("annotations_list: ", annotations_list)
 
         if self.assoc_head:
-            max_annotations = max(len(a['masks']) for a in annotations_list)
+            max_annotations = max(len(a['assoc_head']) for a in annotations_list)
             batch_x_bbox_shape = (len(index_array), max_annotations, 4)
             batch_x_bbox = np.zeros(batch_x_bbox_shape, dtype=K.floatx())
             
             for i, ann in enumerate(annotations_list):
-                batch_x_bbox[i,:ann['bboxes'].shape[0], :4] = ann['bboxes']            
+                batch_x_bbox[i,:ann['bboxes'].shape[0], :4] = ann['assoc_head']            
 
         if self.include_masks:
             # masks_batch has shape: (batch size, max_annotations,
@@ -477,7 +478,9 @@ class RetinaNetIterator(Iterator):
         
         if self.assoc_head:
             batch_inputs = [batch_x, batch_x_bbox]
-        if self.include_masks or self.include_final_detection_layer:
+        if self.include_masks:
+            batch_outputs.append(masks_batch)
+        if self.include_final_detection_layer:
             batch_outputs.append(masks_batch)
 
         batch_outputs.extend(batch_y_semantic_list)
@@ -598,6 +601,9 @@ class RetinaMovieIterator(Iterator):
 
         # Add semantic segmentation targets if panoptic segmentation
         # flag is True
+        print("train_dict keys :")
+        for key in train_dict:
+            print(key)
         if panoptic:
             # Create a list of all the semantic targets. We need to be able
             # to have multiple semantic heads
@@ -692,7 +698,7 @@ class RetinaMovieIterator(Iterator):
         Returns:
             annotations: dict of `bboxes` and `labels`
         """
-        labels, bboxes, masks = [], [], []
+        labels, bboxes, masks, assoc_head = [], [], [], []
         for prop in regionprops(np.squeeze(y.astype('int'))):
             y1, x1, y2, x2 = prop.bbox
             bboxes.append([x1, y1, x2, y2])
@@ -702,6 +708,7 @@ class RetinaMovieIterator(Iterator):
         labels = np.array(labels)
         bboxes = np.array(bboxes)
         masks = np.array(masks).astype('uint8')
+        assoc_head = np.array(masks).astype('uint8')
 
         # reshape bboxes in case it is empty.
         bboxes = np.reshape(bboxes, (bboxes.shape[0], 4))
@@ -710,6 +717,12 @@ class RetinaMovieIterator(Iterator):
 
         if self.include_masks:
             annotations['masks'] = masks
+
+        if self.assoc_head:
+            y_transform = to_categorical(y.squeeze(channel_axis))
+            if self.data_format == 'channels_first':
+                y_transform = np.rollaxis(y_transform, y.ndim - 1, 1)
+            annotations['assoc_head'] = y_transform
 
         annotations = self.filter_annotations(y, annotations)
         return annotations
@@ -833,16 +846,20 @@ class RetinaMovieIterator(Iterator):
         max_shape = tuple([max_shape[self.row_axis - 1],
                            max_shape[self.col_axis - 1]])
 
+
+        print("annotations_list: ", annotations_list)
+
         if self.assoc_head:
             flatten = lambda l: [item for sublist in l for item in sublist]
             annotations_list_flatten = flatten(annotations_list)
-            max_annotations = max(len(a['masks']) for a in annotations_list_flatten)
-            batch_x_bbox_shape = (len(index_array), self.frames_per_batch, max_annotations, 4)
+            max_annotations = max(len(a['assoc_head']) for a in annotations_list_flatten)
+            batch_x_bbox_shape = (len(index_array), max_annotations, 4)
             batch_x_bbox = np.zeros(batch_x_bbox_shape, dtype=K.floatx())
             for idx_time, time in enumerate(times):
                 annotations_frame = annotations_list[idx_time]
                 for idx_batch, ann in enumerate(annotations_frame):
-                    batch_x_bbox[idx_batch, idx_time, :ann['bboxes'].shape[0], :4] = ann['bboxes']
+                    batch_x_bbox[idx_batch, idx_time, :ann['bboxes'].shape[0], :4] = ann['assoc_head']
+
 
         if self.include_masks:
             # masks_batch has shape: (batch size, max_annotations,
@@ -886,10 +903,14 @@ class RetinaMovieIterator(Iterator):
         batch_inputs = batch_x
         batch_outputs = [regressions, labels]
         
-        if self.assoc_head:
-            batch_inputs = [batch_x, batch_x_bbox]
-        if self.include_masks or self.include_final_detection_layer:
+        # if self.assoc_head:
+        #     batch_inputs = [batch_x, batch_x_bbox]
+        if self.include_masks:
             batch_outputs.append(masks_batch)
+        if self.include_final_detection_layer:
+            batch_outputs.append(masks_batch)
+        if self.assoc_head:
+            batch_outputs.append()
         if self.panoptic:
             batch_outputs += batch_y_semantic_list
         return batch_inputs, batch_outputs
