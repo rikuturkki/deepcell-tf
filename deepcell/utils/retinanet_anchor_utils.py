@@ -1014,7 +1014,7 @@ def evaluate(generator, model,
         average_precision = _compute_ap(recall, precision)
         average_precisions[label] = average_precision, num_annotations
 
-    return average_precisions
+    return recall, precision, average_precisions 
 
 
 def evaluate_mask(generator, model,
