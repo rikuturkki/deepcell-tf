@@ -699,6 +699,8 @@ class RetinaMovieIterator(Iterator):
             annotations: dict of `bboxes` and `labels`
         """
         labels, bboxes, masks, assoc_head = [], [], [], []
+        channel_axis = 1 if self.data_format == 'channels_first' else -1
+        
         for prop in regionprops(np.squeeze(y.astype('int'))):
             y1, x1, y2, x2 = prop.bbox
             bboxes.append([x1, y1, x2, y2])
@@ -723,6 +725,8 @@ class RetinaMovieIterator(Iterator):
             if self.data_format == 'channels_first':
                 y_transform = np.rollaxis(y_transform, y.ndim - 1, 1)
             annotations['assoc_head'] = y_transform
+            print("y shape: ", y.shape)
+            print("y_transform shape: ", y_transform.shape)
 
         annotations = self.filter_annotations(y, annotations)
         return annotations
@@ -847,18 +851,25 @@ class RetinaMovieIterator(Iterator):
                            max_shape[self.col_axis - 1]])
 
 
-        print("annotations_list: ", annotations_list)
+        # print("annotations_list: ", annotations_list)
 
         if self.assoc_head:
             flatten = lambda l: [item for sublist in l for item in sublist]
             annotations_list_flatten = flatten(annotations_list)
             max_annotations = max(len(a['assoc_head']) for a in annotations_list_flatten)
-            batch_x_bbox_shape = (len(index_array), max_annotations, 4)
-            batch_x_bbox = np.zeros(batch_x_bbox_shape, dtype=K.floatx())
+            assoc_heads_batch_shape = (len(index_array), self.frames_per_batch, 
+                                max_annotations, 2366)
+            assoc_heads_batch = np.zeros(assoc_heads_batch_shape, dtype=K.floatx())
+            print("assoc_heads_batch_shape: ", assoc_heads_batch_shape)
             for idx_time, time in enumerate(times):
                 annotations_frame = annotations_list[idx_time]
                 for idx_batch, ann in enumerate(annotations_frame):
-                    batch_x_bbox[idx_batch, idx_time, :ann['bboxes'].shape[0], :4] = ann['assoc_head']
+                    print("ann['assoc_head'].shape: ", ann['assoc_head'].shape)
+                    # add flattened association head
+                    temp_max = max([len(ann['assoc_head'][i].flatten()) for i in range(len(ann['assoc_head']))])
+                    print("temp_max", temp_max)
+                    for idx_mask, assoc_head in enumerate(ann['assoc_head']):
+                        assoc_heads_batch[idx_batch, idx_time, idx_mask, :] = assoc_head.flatten()
 
 
         if self.include_masks:
