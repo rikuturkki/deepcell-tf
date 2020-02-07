@@ -430,15 +430,7 @@ class RetinaNetIterator(Iterator):
 
         max_shape = tuple(max_shape)  # was a list for max shape indexing
 
-        print("annotations_list: ", annotations_list)
-
-        if self.assoc_head:
-            max_annotations = max(len(a['assoc_head']) for a in annotations_list)
-            batch_x_bbox_shape = (len(index_array), max_annotations, 4)
-            batch_x_bbox = np.zeros(batch_x_bbox_shape, dtype=K.floatx())
-            
-            for i, ann in enumerate(annotations_list):
-                batch_x_bbox[i,:ann['bboxes'].shape[0], :4] = ann['assoc_head']            
+        print("annotations_list: ", annotations_list)          
 
         if self.include_masks:
             # masks_batch has shape: (batch size, max_annotations,
@@ -477,7 +469,8 @@ class RetinaNetIterator(Iterator):
         batch_outputs = [regressions, labels]
         
         if self.assoc_head:
-            batch_inputs = [batch_x, batch_x_bbox]
+            # batch_inputs = [batch_x, batch_x_bbox]
+            batch_outputs.append(masks_batch)
         if self.include_masks:
             batch_outputs.append(masks_batch)
         if self.include_final_detection_layer:
@@ -721,12 +714,16 @@ class RetinaMovieIterator(Iterator):
             annotations['masks'] = masks
 
         if self.assoc_head:
-            y_transform = to_categorical(y.squeeze(channel_axis))
+#             y_transform = to_categorical(y.squeeze(channel_axis))
+#             if self.data_format == 'channels_first':
+#                 y_transform = np.rollaxis(y_transform, y.ndim - 1, 1)
+#             annotations['assoc_head'] = y_transform
+#             print("annotations['assoc_head'] shape: ", annotations['assoc_head'].shape)
+            masks_transform = to_categorical(masks.squeeze(channel_axis))
             if self.data_format == 'channels_first':
-                y_transform = np.rollaxis(y_transform, y.ndim - 1, 1)
-            annotations['assoc_head'] = y_transform
-            print("y shape: ", y.shape)
-            print("y_transform shape: ", y_transform.shape)
+                masks_transform = np.rollaxis(masks_transform, masks.ndim - 1, 1)
+            annotations['assoc_head'] = masks_transform
+            print("annotations['assoc_head'] shape: ", annotations['assoc_head'].shape)
 
         annotations = self.filter_annotations(y, annotations)
         return annotations
@@ -856,19 +853,20 @@ class RetinaMovieIterator(Iterator):
         if self.assoc_head:
             flatten = lambda l: [item for sublist in l for item in sublist]
             annotations_list_flatten = flatten(annotations_list)
+#             print("len(annotations_list_flatten)", len(annotations_list_flatten))
             max_annotations = max(len(a['assoc_head']) for a in annotations_list_flatten)
             assoc_heads_batch_shape = (len(index_array), self.frames_per_batch, 
-                                max_annotations, 2366)
+                                max_annotations, 2 * max_shape[0] * max_shape[1])
             assoc_heads_batch = np.zeros(assoc_heads_batch_shape, dtype=K.floatx())
-            print("assoc_heads_batch_shape: ", assoc_heads_batch_shape)
+#             print("assoc_heads_batch_shape: ", assoc_heads_batch_shape)
             for idx_time, time in enumerate(times):
                 annotations_frame = annotations_list[idx_time]
                 for idx_batch, ann in enumerate(annotations_frame):
-                    print("ann['assoc_head'].shape: ", ann['assoc_head'].shape)
+#                     print("ann['assoc_head'].shape: ", ann['assoc_head'].shape)
                     # add flattened association head
-                    temp_max = max([len(ann['assoc_head'][i].flatten()) for i in range(len(ann['assoc_head']))])
-                    print("temp_max", temp_max)
                     for idx_mask, assoc_head in enumerate(ann['assoc_head']):
+#                         print("idx_mask", idx_mask)
+#                         print("assoc_head.flatten().shape", assoc_head.flatten().shape)
                         assoc_heads_batch[idx_batch, idx_time, idx_mask, :] = assoc_head.flatten()
 
 
@@ -882,7 +880,7 @@ class RetinaMovieIterator(Iterator):
             max_annotations = max(len(a['masks']) for a in annotations_list_flatten)
             masks_batch_shape = (len(index_array), self.frames_per_batch, max_annotations,
                                  5 + 2 + max_shape[0] * max_shape[1])
-            print("masks_batch_shape: ", masks_batch_shape)
+            # print("masks_batch_shape: ", masks_batch_shape)
             masks_batch = np.zeros(masks_batch_shape, dtype=K.floatx())
 
             for idx_time, time in enumerate(times):
@@ -914,14 +912,13 @@ class RetinaMovieIterator(Iterator):
         batch_inputs = batch_x
         batch_outputs = [regressions, labels]
         
-        # if self.assoc_head:
-        #     batch_inputs = [batch_x, batch_x_bbox]
+        if self.assoc_head:
+            batch_inputs = [batch_x, assoc_heads_batch]
+            # batch_outputs.append(assoc_heads_batch)
         if self.include_masks:
             batch_outputs.append(masks_batch)
         if self.include_final_detection_layer:
             batch_outputs.append(masks_batch)
-        if self.assoc_head:
-            batch_outputs.append()
         if self.panoptic:
             batch_outputs += batch_y_semantic_list
         return batch_inputs, batch_outputs
