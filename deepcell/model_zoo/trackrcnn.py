@@ -352,6 +352,7 @@ def retinanet_mask(inputs,
     # parse outputs
     regression = retinanet_model.outputs[0]
     classification = retinanet_model.outputs[1]
+    print("len(retinanet_model.outputs):", len(retinanet_model.outputs))
 
     if panoptic:
         # Determine the number of semantic heads
@@ -383,12 +384,9 @@ def retinanet_mask(inputs,
     fpn = features[0]
     fpn = UpsampleLike(name='upsamplelike')([fpn, image])
     rois = RoiAlign(crop_size=crop_size, name='roialign')([boxes, fpn])
-    print("rois.shape", rois.shape)
 
     # execute trackrcnn submodels
     trackrcnn_outputs = [submodel(rois) for _, submodel in roi_submodels]
-    # association_head = association_vector_model(rois)
-    # trackrcnn_outputs.append(association_head)
 
     # concatenate boxes for loss computation
     trainable_outputs = [ConcatenateBoxes(name=name)([boxes, output])
@@ -403,10 +401,11 @@ def retinanet_mask(inputs,
     detections = []
 
     outputs = [regression, classification] + other + trainable_outputs + \
-        detections + trackrcnn_outputs
+        detections # + trackrcnn_outputs
 
     if panoptic:
         outputs += list(semantic)
+    print("len(outputs):", len(outputs))
 
     model = Model(inputs=inputs, outputs=outputs, name=name)
     model.backbone_levels = backbone_levels
