@@ -395,6 +395,10 @@ def retinanet_mask(inputs,
                          for (name, _), output in zip(
                              roi_submodels, trackrcnn_outputs)]
 
+    print("roi_submodels names in trainable_outputs:")
+    for (name, _) in roi_submodels:
+        print(name)
+
     # reconstruct the new output
     detections = []
 
