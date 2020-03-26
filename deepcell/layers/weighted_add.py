@@ -29,7 +29,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.keras import backend as K
@@ -58,7 +57,7 @@ class WeightedAdd(Layer):
         return x
 
     def compute_output_shape(self, input_shape):
-        return input_shape[0]
+        return tensor_shape.TensorShape(input_shape[0])
 
     def get_config(self):
         config = {
