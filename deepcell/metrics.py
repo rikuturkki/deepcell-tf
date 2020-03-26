@@ -41,12 +41,13 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-import os
-import json
+from collections import Counter
 import datetime
-import operator
-import math
 import decimal
+import glob
+import json
+import operator
+import os
 
 import numpy as np
 import pandas as pd
@@ -55,11 +56,13 @@ import networkx as nx
 from scipy.optimize import linear_sum_assignment
 
 import skimage.io
-import skimage.measure
+from skimage.measure import regionprops
 from skimage.segmentation import relabel_sequential
+from skimage.external.tifffile import TiffFile
 from sklearn.metrics import confusion_matrix
-
 from tensorflow.python.platform import tf_logging as logging
+
+from deepcell.utils.compute_overlap import compute_overlap
 
 
 def stats_pixelbased(y_true, y_pred):
@@ -73,20 +76,20 @@ def stats_pixelbased(y_true, y_pred):
     BioRxiv 335216.
 
     Args:
-        y_true (3D np.array): Binary ground truth annotations for a single
+        y_true (numpy.array): Binary ground truth annotations for a single
             feature, (batch,x,y)
-        y_pred (3D np.array): Binary predictions for a single feature,
+        y_pred (numpy.array): Binary predictions for a single feature,
             (batch,x,y)
 
     Returns:
-        dictionary: Containing a set of calculated statistics
+        dict: Containing a set of calculated statistics
 
     Raises:
-        ValueError: Shapes of `y_true` and `y_pred` do not match.
+        ValueError: Shapes of y_true and y_pred do not match.
 
     Warning:
         Comparing labeled to unlabeled data will produce low accuracy scores.
-        Make sure to input the same type of data for `y_true` and `y_pred`
+        Make sure to input the same type of data for y_true and y_pred
     """
 
     if y_pred.shape != y_true.shape:
@@ -121,7 +124,7 @@ def stats_pixelbased(y_true, y_pred):
     }
 
 
-class ObjectAccuracy(object):
+class ObjectAccuracy(object):  # pylint: disable=useless-object-inheritance
     """Classifies object prediction errors as TP, FP, FN, merge or split
 
     The schema for this analysis was adopted from the description of
@@ -137,8 +140,8 @@ class ObjectAccuracy(object):
     Nature Methods 5, 695-702.
 
     Args:
-        y_true (2D np.array): Labeled ground truth annotation
-        y_pred (2D np.array): Labled object prediction, same size as y_true
+        y_true (numpy.array): Labeled ground truth annotation
+        y_pred (numpy.array): Labled object prediction, same size as y_true
         cutoff1 (:obj:`float`, optional): Threshold for overlap in cost matrix,
             smaller values are more conservative, default 0.4
         cutoff2 (:obj:`float`, optional): Threshold for overlap in unassigned
@@ -153,11 +156,8 @@ class ObjectAccuracy(object):
 
     Warning:
         Position indicies are not currently collected appropriately
-
-    Todo:
-        Implement recording of object indices for each error group
     """
-
+    # TODO: Implement recording of object indices for each error group
     def __init__(self,
                  y_true,
                  y_pred,
@@ -248,32 +248,58 @@ class ObjectAccuracy(object):
 
     def _calc_iou(self):
         """Calculates IoU matrix for each pairwise comparison between true and
-        predicted. Additionally, if `seg`==True, records a 1 for each pair of
-        objects where $|T\bigcap P| > 0.5 * |T|$
+        predicted. Additionally, if seg is True, records a 1 for each pair of
+        objects where $|Tbigcap P| > 0.5 * |T|$
         """
 
+        def get_box_labels(images):
+            props = regionprops(np.squeeze(images))
+            boxes, labels = [], []
+            for prop in props:
+                boxes.append(np.array(prop.bbox))
+                labels.append(int(prop.label))
+            boxes = np.array(boxes).astype('double')
+
+            return boxes, labels
+
         self.iou = np.zeros((self.n_true, self.n_pred))
-        if self.seg is True:
+
+        if self.seg:
             self.seg_thresh = np.zeros((self.n_true, self.n_pred))
 
-        # Make all pairwise comparisons to calc iou
-        for t in range(1, self.y_true.max() + 1):
-            for p in range(1, self.y_pred.max() + 1):
-                intersection = np.logical_and(self.y_true == t, self.y_pred == p)
-                union = np.logical_or(self.y_true == t, self.y_pred == p)
-                # Subtract 1 from index to account for skipping 0
-                self.iou[t - 1, p - 1] = intersection.sum() / union.sum()
-                if (self.seg is True) & \
-                   (intersection.sum() > 0.5 * np.sum(self.y_true == t)):
-                    self.seg_thresh[t - 1, p - 1] = 1
+        # Use bounding boxes to find masks that are likely to overlap
+        y_true_boxes, y_true_labels = get_box_labels(self.y_true.astype('int'))
+        y_pred_boxes, y_pred_labels = get_box_labels(self.y_pred.astype('int'))
+
+        # has the form [gt_bbox, res_bbox]
+        overlaps = compute_overlap(y_true_boxes, y_pred_boxes)
+
+        # Find the bboxes that have overlap at all
+        # (ind_ corresponds to box number - starting at 0)
+        ind_true, ind_pred = np.nonzero(overlaps)
+
+        for index in range(ind_true.shape[0]):
+
+            iou_y_true_idx = y_true_labels[ind_true[index]]
+            iou_y_pred_idx = y_pred_labels[ind_pred[index]]
+            intersection = np.logical_and(self.y_true == iou_y_true_idx,
+                                          self.y_pred == iou_y_pred_idx)
+            union = np.logical_or(self.y_true == iou_y_true_idx,
+                                  self.y_pred == iou_y_pred_idx)
+            # Subtract 1 from index to account for skipping 0
+            self.iou[iou_y_true_idx - 1, iou_y_pred_idx - 1] = intersection.sum() / union.sum()
+
+            if (self.seg) & \
+               (intersection.sum() > 0.5 * np.sum(self.y_true == index)):
+                self.seg_thresh[iou_y_true_idx - 1, iou_y_pred_idx - 1] = 1
 
     def _make_matrix(self):
         """Assembles cost matrix using the iou matrix and cutoff1
 
         The previously calculated iou matrix is cast into the top left and
         transposed for the bottom right corner. The diagonals of the two
-        remaining corners are populated according to `cutoff1`. The lower the
-        value of `cutoff1` the more likely it is for the linear sum assignment
+        remaining corners are populated according to cutoff1. The lower the
+        value of cutoff1 the more likely it is for the linear sum assignment
         to pick unmatched assignments for objects.
         """
 
@@ -320,8 +346,7 @@ class ObjectAccuracy(object):
         if self.seg is True:
             iou_mask = self.iou.copy()
             iou_mask[self.seg_thresh == 0] = np.nan
-            self.seg_score = np.nanmean(iou_mask[correct_index[0],
-                                        correct_index[1]])
+            self.seg_score = np.nanmean(iou_mask[correct_index[0], correct_index[1]])
 
         # Collect unassigned cells
         self.loners_pred, _ = np.where(
@@ -393,10 +418,7 @@ class ObjectAccuracy(object):
         """
 
         # Find subgraphs, e.g. merge/split
-
-        subgraphs = [self.G.subgraph(c) for c in nx.connected_components(self.G)]
-        for g in nx.connected_component_subgraphs(self.G):
-
+        for g in (self.G.subgraph(c) for c in nx.connected_components(self.G)):
             # Get the highest degree node
             k = max(dict(g.degree).items(), key=operator.itemgetter(1))[0]
 
@@ -462,34 +484,33 @@ class ObjectAccuracy(object):
             gained_label_image = np.zeros_like(self.y_pred)
             for l in self.gained_indices['y_pred']:
                 gained_label_image[self.y_pred == l] = l
-            self.gained_props = skimage.measure.regionprops(gained_label_image)
+            self.gained_props = regionprops(gained_label_image)
 
             missed_label_image = np.zeros_like(self.y_true)
             for l in self.missed_indices['y_true']:
                 missed_label_image[self.y_true == l] = l
-            self.missed_props = skimage.measure.regionprops(missed_label_image)
+            self.missed_props = regionprops(missed_label_image)
 
             merge_label_image = np.zeros_like(self.y_true)
             for l in self.merge_indices['y_true']:
                 merge_label_image[self.y_true == l] = l
-            self.merge_props = skimage.measure.regionprops(merge_label_image)
+            self.merge_props = regionprops(merge_label_image)
 
             split_label_image = np.zeros_like(self.y_true)
             for l in self.split_indices['y_true']:
                 split_label_image[self.y_true == l] = l
-            self.split_props = skimage.measure.regionprops(merge_label_image)
+            self.split_props = regionprops(merge_label_image)
 
     def print_report(self):
         """Print report of error types and frequency
         """
-
         print(self.save_to_dataframe())
 
     def save_to_dataframe(self):
         """Save error results to a pandas dataframe
 
         Returns:
-            pd.DataFrame: Single row dataframe with error types as columns
+            pandas.DataFrame: Single row dataframe with error types as columns
         """
         D = {
             'n_pred': self.n_pred,
@@ -531,7 +552,6 @@ def to_precision(x, p):
     Based on the webkit javascript implementation taken from here:
     https://code.google.com/p/webkit-mirror/source/browse/JavaScriptCore/kjs/number_object.cpp
     """
-
     decimal.getcontext().prec = p
     return decimal.Decimal(x)
 
@@ -564,7 +584,6 @@ class Metrics(object):
                 y_pred_lbl,
                 y_true_unlbl,
                 y_true_unlbl)
-
         >>> m.all_pixel_stats(y_true_unlbl,y_pred_unlbl)
         >>> m.calc_obj_stats(y_true_lbl,y_pred_lbl)
         >>> m.save_to_json(m.output)
@@ -581,7 +600,6 @@ class Metrics(object):
                  feature_key=[],
                  json_notes='',
                  seg=False):
-
         self.model_name = model_name
         self.outdir = outdir
         self.cutoff1 = cutoff1
@@ -602,11 +620,11 @@ class Metrics(object):
 
         y_true should have the appropriate transform applied to match y_pred.
         Each channel is converted to binary using the threshold
-        `pixel_threshold` prior to calculation of accuracy metrics.
+        'pixel_threshold' prior to calculation of accuracy metrics.
 
         Args:
-            y_true (4D np.array): Ground truth annotations after transform
-            y_pred (4D np.array): Model predictions without labeling
+            y_true (numpy.array): Ground truth annotations after transform
+            y_pred (numpy.array): Model predictions without labeling
 
         Raises:
             ValueError: If y_true and y_pred are not the same shape
@@ -651,7 +669,7 @@ class Metrics(object):
         """Output pandas df as a list of dictionary objects
 
         Args:
-            df (pd.DataFrame): Dataframe of statistics for each channel
+            df (pandas.DataFrame): Dataframe of statistics for each channel
 
         Returns:
             list: List of dictionaries
@@ -685,12 +703,12 @@ class Metrics(object):
         """Calculate confusion matrix for pixel classification data.
 
         Args:
-            y_true (4D np.array): Ground truth annotations after any
+            y_true (numpy.array): Ground truth annotations after any
                 necessary transformations
-            y_pred (4D np.array): Prediction array
+            y_pred (numpy.array): Prediction array
 
         Returns:
-            confusion_matrix: nxn array determined by number of features
+            numpy.array: nxn confusion matrix determined by number of features.
         """
 
         # Argmax collapses on feature dimension to assign class to each pixel
@@ -713,12 +731,12 @@ class Metrics(object):
         """Calculate object statistics and save to output
 
         Loops over each frame in the zeroth dimension, which should pass in
-        a series of 2D arrays for analysis. `metrics.split_stack` can be
+        a series of 2D arrays for analysis. 'metrics.split_stack' can be
         used to appropriately reshape the input array if necessary
 
         Args:
-            y_true (3D np.array): Labeled ground truth annotations
-            y_pred (3D np.array): Labeled prediction mask
+            y_true (numpy.array): Labeled ground truth annotations
+            y_pred (numpy.array): Labeled prediction mask
         """
         self.stats = pd.DataFrame()
 
@@ -775,29 +793,29 @@ class Metrics(object):
                      + self.stats['catastrophe'].sum())
 
         print('\nGained detections: {}\tPerc Error: {}%'.format(
-              int(self.stats['gained_detections'].sum()),
-              to_precision(100 * self.stats['gained_detections'].sum() / total_err, self.ndigits)))
+            int(self.stats['gained_detections'].sum()),
+            to_precision(100 * self.stats['gained_detections'].sum() / total_err, self.ndigits)))
         print('Missed detections: {}\tPerc Error: {}%'.format(
-              int(self.stats['missed_detections'].sum()),
-              to_precision(100 * self.stats['missed_detections'].sum() / total_err, self.ndigits)))
+            int(self.stats['missed_detections'].sum()),
+            to_precision(100 * self.stats['missed_detections'].sum() / total_err, self.ndigits)))
         print('Merges: {}\t\tPerc Error: {}%'.format(
-              int(self.stats['merge'].sum()),
-              to_precision(100 * self.stats['merge'].sum() / total_err, self.ndigits)))
+            int(self.stats['merge'].sum()),
+            to_precision(100 * self.stats['merge'].sum() / total_err, self.ndigits)))
         print('Splits: {}\t\tPerc Error: {}%'.format(
-              int(self.stats['split'].sum()),
-              to_precision(100 * self.stats['split'].sum() / total_err, self.ndigits)))
+            int(self.stats['split'].sum()),
+            to_precision(100 * self.stats['split'].sum() / total_err, self.ndigits)))
         print('Catastrophes: {}\t\tPerc Error: {}%\n'.format(
-              int(self.stats['catastrophe'].sum()),
-              to_precision(100 * self.stats['catastrophe'].sum() / total_err, self.ndigits)))
+            int(self.stats['catastrophe'].sum()),
+            to_precision(100 * self.stats['catastrophe'].sum() / total_err, self.ndigits)))
 
         print('Gained detections from splits: {}'.format(
-              int(self.stats['gained_det_from_split'].sum())))
+            int(self.stats['gained_det_from_split'].sum())))
         print('Missed detections from merges: {}'.format(
-              int(self.stats['missed_det_from_merge'].sum())))
+            int(self.stats['missed_det_from_merge'].sum())))
         print('True detections involved in catastrophes: {}'.format(
-              int(self.stats['true_det_in_catastrophe'].sum())))
+            int(self.stats['true_det_in_catastrophe'].sum())))
         print('Predicted detections involved in catastrophes: {}'.format(
-              int(self.stats['pred_det_in_catastrophe'].sum())), '\n')
+            int(self.stats['pred_det_in_catastrophe'].sum())), '\n')
 
         if self.seg is True:
             print('SEG:', to_precision(self.stats['seg'].mean(), self.ndigits), '\n')
@@ -813,13 +831,13 @@ class Metrics(object):
         """Runs pixel and object base statistics and ouputs to file
 
         Args:
-            y_true_lbl (3D np.array): Labeled ground truth annotation,
+            y_true_lbl (numpy.array): Labeled ground truth annotation,
                 (sample, x, y)
-            y_pred_lbl (3D np.array): Labeled prediction mask,
+            y_pred_lbl (numpy.array): Labeled prediction mask,
                 (sample, x, y)
-            y_true_unlbl (4D np.array): Ground truth annotation after necessary
+            y_true_unlbl (numpy.array): Ground truth annotation after necessary
                 transforms, (sample, x, y, feature)
-            y_pred_unlbl (4D np.array): Predictions, (sample, x, y, feature)
+            y_pred_unlbl (numpy.array): Predictions, (sample, x, y, feature)
         """
 
         logging.info('Starting pixel based statistics')
@@ -836,7 +854,6 @@ class Metrics(object):
         Args:
             L (list): List of metric dictionaries
         """
-
         todays_date = datetime.datetime.now().strftime('%Y-%m-%d')
         outname = os.path.join(
             self.outdir, self.model_name + '_' + todays_date + '.json')
@@ -865,7 +882,7 @@ def split_stack(arr, batch, n_split1, axis1, n_split2, axis2):
     a stack of smaller arrays
 
     Args:
-        arr (np.array): Array to be split with at least 2 dimensions
+        arr (numpy.array): Array to be split with at least 2 dimensions
         batch (bool): True if the zeroth dimension of arr is a batch or
             frame dimension
         n_split1 (int): Number of sections to produce from the first split axis
@@ -876,7 +893,7 @@ def split_stack(arr, batch, n_split1, axis1, n_split2, axis2):
         axis2 (int): Axis on which to perform first split
 
     Returns:
-        np.array: Array after dual splitting with frames in the zeroth dimension
+        numpy.array: Array after dual splitting with frames in the zeroth dimension
 
     Raises:
         ValueError: arr.shape[axis] must be evenly divisible by n_split
@@ -913,3 +930,55 @@ def split_stack(arr, batch, n_split1, axis1, n_split2, axis2):
     split2con = np.concatenate(split2, axis=0)
 
     return split2con
+
+
+def match_nodes(gt, res):
+    """Loads all data that matches each pattern and compares the graphs.
+
+    Args:
+        gt (numpy.array): data array to match to unique.
+        res (numpy.array): ground truth array with all cells labeled uniquely.
+
+    Returns:
+        numpy.array: IoU of ground truth cells and predicted cells.
+    """
+    num_frames = gt.shape[0]
+    iou = np.zeros((num_frames, np.max(gt) + 1, np.max(res) + 1))
+
+    # Compute IOUs only when neccesary
+    # If bboxs for true and pred do not overlap with each other, the assignment
+    # is immediate. Otherwise use pixelwise IOU to determine which cell is which
+
+    # Regionprops expects one frame at a time
+    for frame in range(num_frames):
+        gt_frame = gt[frame]
+        res_frame = res[frame]
+
+        gt_props = regionprops(np.squeeze(gt_frame.astype('int')))
+        gt_boxes = [np.array(gt_prop.bbox) for gt_prop in gt_props]
+        gt_boxes = np.array(gt_boxes).astype('double')
+        gt_box_labels = [int(gt_prop.label) for gt_prop in gt_props]
+
+        res_props = regionprops(np.squeeze(res_frame.astype('int')))
+        res_boxes = [np.array(res_prop.bbox) for res_prop in res_props]
+        res_boxes = np.array(res_boxes).astype('double')
+        res_box_labels = [int(res_prop.label) for res_prop in res_props]
+
+        # has the form [gt_bbox, res_bbox]
+        overlaps = compute_overlap(gt_boxes, res_boxes)
+
+        # Find the bboxes that have overlap at all
+        # (ind_ corresponds to box number - starting at 0)
+        ind_gt, ind_res = np.nonzero(overlaps)
+
+        # frame_ious = np.zeros(overlaps.shape)
+        for index in range(ind_gt.shape[0]):
+            iou_gt_idx = gt_box_labels[ind_gt[index]]
+            iou_res_idx = res_box_labels[ind_res[index]]
+            intersection = np.logical_and(
+                gt_frame == iou_gt_idx, res_frame == iou_res_idx)
+            union = np.logical_or(
+                gt_frame == iou_gt_idx, res_frame == iou_res_idx)
+            iou[frame, iou_gt_idx, iou_res_idx] = intersection.sum() / union.sum()
+
+    return iou

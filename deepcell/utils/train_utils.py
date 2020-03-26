@@ -30,20 +30,69 @@ from __future__ import print_function
 from __future__ import division
 
 import numpy as np
+from tensorflow.keras import callbacks
 from tensorflow.python.keras.utils import multi_gpu_model
-from tensorflow.python.keras.models import Model
+from tensorflow.python.keras import Model
 from tensorflow.python.client import device_lib
+
+
+def get_callbacks(model_path,
+                  save_weights_only=False,
+                  lr_sched=None,
+                  tensorboard_log_dir=None,
+                  reduce_lr_on_plateau=False,
+                  monitor='val_loss',
+                  verbose=1):
+    """Returns a list of callbacks used for training
+
+    Args:
+        model_path: (str) path for the h5 model file.
+        save_weights_only: (bool) if True, then only the model's weights
+            will be saved.
+        lr_sched (function): learning rate scheduler per epoch.
+            from deepcell.utils.train_utils.rate_scheduler.
+        tensorboard_log_dir (str): log directory for tensorboard.
+        monitor (str): quantity to monitor.
+        verbose (int): verbosity mode, 0 or 1.
+
+    Returns:
+        list: a list of callbacks to be passed to model.fit()
+    """
+    cbs = [
+        callbacks.ModelCheckpoint(
+            model_path, monitor=monitor,
+            save_best_only=True, verbose=verbose,
+            save_weights_only=save_weights_only),
+    ]
+
+    if lr_sched:
+        cbs.append(callbacks.LearningRateScheduler(lr_sched))
+
+    if reduce_lr_on_plateau:
+        cbs.append(
+            callbacks.ReduceLROnPlateau(
+                monitor=monitor, factor=0.1,
+                patience=10, verbose=verbose,
+                mode='auto', min_delta=0.0001,
+                cooldown=0, min_lr=0)
+        )
+
+    if tensorboard_log_dir:
+        cbs.append(callbacks.TensorBoard(log_dir=tensorboard_log_dir))
+
+    return cbs
 
 
 def rate_scheduler(lr=.001, decay=0.95):
     """Schedule the learning rate based on the epoch.
 
     Args:
-        lr: initial learning rate
-        decay: rate of decay of the learning rate
+        lr (float): initial learning rate
+        decay (float): rate of decay of the learning rate
 
     Returns:
-        A function that takes in the epoch and returns a learning rate.
+        function: A function that takes in the epoch
+            and returns a learning rate.
     """
     def output_fn(epoch):
         epoch = np.int(epoch)
@@ -56,7 +105,7 @@ def count_gpus():
     """Get the number of available GPUs.
 
     Returns:
-        count of GPUs as integer
+        int: count of GPUs as integer
     """
     devices = device_lib.list_local_devices()
     gpus = [d for d in devices if d.name.lower().startswith('/device:gpu')]
@@ -64,15 +113,22 @@ def count_gpus():
 
 
 class MultiGpuModel(Model):
-    """Wrapper Model class to enable multi-gpu saving/loading"""
+    """Wrapper Model class to enable multi-gpu saving/loading
+
+    Args:
+        ser_model (tensorflow.keras.Model): serial-model for multiple GPUs.
+        gpus (int): number of GPUs to train on.
+    """
     def __init__(self, ser_model, gpus):
         pmodel = multi_gpu_model(ser_model, gpus)
         self.__dict__.update(pmodel.__dict__)
         self._smodel = ser_model
 
     def __getattribute__(self, attrname):
-        """Override load and save methods to be used from the serial-model. The
-        serial-model holds references to the weights in the multi-gpu model."""
+        """Override load and save methods to be used from the serial-model.
+
+        The serial-model holds references to the weights in the multi-gpu model
+        """
         # return Model.__getattribute__(self, attrname)
         if 'load' in attrname or 'save' in attrname:
             return getattr(self._smodel, attrname)

@@ -33,10 +33,7 @@ import tensorflow as tf
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.layers import Layer
-try:  # tf v1.9 moves conv_utils from _impl to keras.utils
-    from tensorflow.python.keras.utils import conv_utils
-except ImportError:
-    from tensorflow.python.keras._impl.keras.utils import conv_utils
+from tensorflow.python.keras.utils import conv_utils
 
 
 class Resize2D(Layer):
@@ -75,7 +72,7 @@ class Resize2D(Layer):
         rows = self.scale * input_shape[1]
         cols = self.scale * input_shape[2]
         # TODO: K.resize_images() ?
-        resized = tf.image.resize_images(channel_last, (rows, cols))
+        resized = tf.image.resize(channel_last, (rows, cols))
 
         if self.data_format == 'channels_first':
             output = K.permute_dimensions(resized, (0, 3, 1, 2))

@@ -14,15 +14,20 @@
 #
 import os
 import sys
-import shlex
+from datetime import datetime
+import mock
+from sphinx.builders.html import StandaloneHTMLBuilder
 sys.path.insert(0, os.path.abspath('../..'))
 # sys.path.insert(0, os.path.abspath('.'))
 
+# pylint: disable=line-too-long
 
 # -- Project information -----------------------------------------------------
 
 project = 'DeepCell'
-copyright = '2016-2018, Van Valen Lab at the California Institute of Technology (Caltech)'
+copyright = ('2016-{currentyear}, Van Valen Lab at the '
+             'California Institute of Technology (Caltech)').format(
+                 currentyear=datetime.now().year)
 author = 'Van Valen Lab at Caltech'
 
 # The short X.Y version
@@ -30,25 +35,44 @@ version = '2.0'
 # The full version, including alpha/beta/rc tags
 release = '2.0.0'
 
+# -- RTD configuration ------------------------------------------------
+
+# on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
+on_rtd = os.environ.get("READTHEDOCS", None) == "True"
+
+# This is used for linking and such so we link to the thing we're building
+rtd_version = os.environ.get("READTHEDOCS_VERSION", "latest")
+if rtd_version not in ["stable", "latest"]:
+    rtd_version = "stable"
 
 # -- General configuration ---------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-# needs_sphinx = '1.0'
+needs_sphinx = '2.3.1'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.coverage',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
+    'sphinx.ext.viewcode',
     'm2r',
+    'IPython.sphinxext.ipython_console_highlighting',
+    'nbsphinx',
+    'sphinx.ext.todo',
+    'sphinx.ext.autosectionlabel'
+    # 'sphinx-copybutton'
 ]
+
+napoleon_google_docstring = True
+
+default_role = 'py:obj'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -75,7 +99,7 @@ language = None
 exclude_patterns = []
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = None
+pygments_style = 'sphinx'
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -168,6 +192,9 @@ texinfo_documents = [
 
 # Bibliographic Dublin Core info.
 epub_title = project
+epub_author = author
+epub_publisher = author
+epub_copyright = copyright
 
 # The unique identifier of the text. This can be a ISBN number
 # or the project homepage.
@@ -184,19 +211,61 @@ epub_exclude_files = ['search.html']
 # -- Extension configuration -------------------------------------------------
 autodoc_mock_imports = [
     'tensorflow',
+    'scipy',
+    'numpy',
     'sklearn',
     'skimage',
+    'pandas',
+    'networkx',
     'nbformat',
     'cv2',
+    'cython',
+    'keras-preprocessing',
     'keras_retinanet',
-    'keras_maskrcnn']
+    'deepcell_tracking',
+    'deepcell_toolbox',
+    'keras_applications',
+    'matplotlib'
+]
+
+sys.modules['deepcell.utils.compute_overlap'] = mock.Mock()
+sys.modules['tensorflow.python.keras.layers.convolutional_recurrent.ConvRNN2D'] = mock.Mock()
+
+# Disable nbsphinx extension from running notebooks
+nbsphinx_execute = 'never'
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 
 # -- Options for intersphinx extension ---------------------------------------
 
 intersphinx_mapping = {
-    'kiosk': ('https://deepcell-kiosk.readthedocs.io/en/latest/', None),
+    'python': ('https://docs.python.org/3.7', None),
+    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    'kiosk': ('https://deepcell-kiosk.readthedocs.io/en/{}/'.format(rtd_version), None),
+    'kiosk-redis-consumer': (('https://deepcell-kiosk.readthedocs.io/'
+                              'projects/kiosk-redis-consumer/en/{}/').format(rtd_version), None),
 }
 
 intersphinx_cache_limit = 0
 
 # -- Custom Additions --------------------------------------------------------
+nitpick_ignore = [
+    ('py:class', 'function'),  # TODO: set type for "function" properly
+    ('py:class', 'tensor'),  # TODO: set type for "tensor" properly
+    ('py:class', 'numpy.array'),
+    ('py:class', 'pandas.DataFrame'),
+    ('py:class', 'tensorflow.keras.Model'),
+    ('py:class', 'tensorflow.python.keras.Model'),
+    ('py:class', 'tensorflow.keras.layers.Layer'),
+    ('py:class', 'tensorflow.python.keras.layers.Layer'),
+    ('py:class', 'tensorflow.python.keras.layers.ZeroPadding2D'),
+    ('py:class', 'tensorflow.python.keras.layers.ZeroPadding3D'),
+    ('py:class', 'tensorflow.python.keras.preprocessing.image.Iterator'),
+    ('py:class', 'tensorflow.python.keras.preprocessing.image.ImageDataGenerator'),
+]
+
+StandaloneHTMLBuilder.supported_image_types = [
+    'image/svg+xml',
+    'image/gif',
+    'image/png',
+    'image/jpeg'
+]

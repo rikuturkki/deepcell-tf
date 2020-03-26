@@ -31,6 +31,7 @@ from __future__ import division
 import itertools
 
 import numpy as np
+import skimage as sk
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 from tensorflow.python.framework import tensor_shape
@@ -47,10 +48,12 @@ class AnchorParameters:
     """The parameteres that define how anchors are generated.
 
     Args:
-        sizes: List of sizes to use. Each size corresponds to one feature level.
-        strides: List of strides to use. Each stride correspond to one feature level.
-        ratios: List of ratios to use per location in a feature map.
-        scales: List of scales to use per location in a feature map.
+        sizes (list): List of sizes to use.
+            Each size corresponds to one feature level.
+        strides (list): List of strides to use.
+            Each stride correspond to one feature level.
+        ratios (list): List of ratios to use per location in a feature map.
+        scales (list): List of scales to use per location in a feature map.
     """
     def __init__(self, sizes, strides, ratios, scales):
         self.sizes = sizes
@@ -59,6 +62,11 @@ class AnchorParameters:
         self.scales = scales
 
     def num_anchors(self):
+        """Get the number of anchors.
+
+        Returns:
+            int: the number of anchors
+        """
         return len(self.ratios) * len(self.scales)
 
 
@@ -66,14 +74,68 @@ class AnchorParameters:
 AnchorParameters.default = AnchorParameters(
     sizes=[32, 64, 128, 256, 512],
     strides=[8, 16, 32, 64, 128],
-    ratios=np.array([0.5, 1, 2], K.floatx()),
-    scales=np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)], K.floatx()),
+    ratios=[0.5, 1.0, 2.0],
+    scales=[2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)],
 )
+
+
+def get_anchor_parameters(y):
+    """Automatically determine appropriate backbone layers, pyarmid layers,
+    and anchor parameters based on the annotated data.
+
+    Args:
+        y (numpy.array): Annotated data array (channels_last).
+
+    Returns:
+        tuple: Tuple of backbone layers, pyramid layers, and anchor parameters.
+    """
+    areas, aspects = [], []
+    for batch in range(y.shape[0]):
+        y_batch = y[batch, ..., 0]
+        for prop in sk.measure.regionprops(y_batch):
+            width = np.float(prop.bbox[2] - prop.bbox[0])
+            height = np.float(prop.bbox[3] - prop.bbox[1])
+
+            areas.append(width * height)
+            aspects.append(width / height)
+
+    aspects = np.log2(aspects)
+    size_min = np.sqrt(np.percentile(areas, 2.5))
+
+    size_max = np.sqrt(np.percentile(areas, 97.5))
+    aspect_min = np.percentile(aspects, 2.5)
+    aspect_max = np.percentile(aspects, 97.5)
+    layer_min = np.maximum(np.floor(np.log2(size_min)) - 2, 1)
+    layer_max = np.floor(np.log2(size_max)) - 2
+    layers = np.arange(np.int(layer_min), np.int(layer_max) + 1)
+
+    backbone_layers = ['C{}'.format(l) for l in layers]
+    pyramid_layers = ['P{}'.format(l) for l in layers]
+
+    sizes = 2.0 ** (layers + 2)
+    strides = 2.0 ** (layers)
+    ratios = 2.0 ** np.arange(np.int(aspect_min), np.int(aspect_max) + 1)
+    scales = [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]
+    anchor_params = AnchorParameters(sizes=sizes, strides=strides,
+                                     ratios=ratios, scales=scales)
+    return backbone_layers, pyramid_layers, anchor_params
 
 
 def generate_anchor_params(pyramid_levels, anchor_size_dict,
                            ratios=AnchorParameters.default.ratios,
                            scales=AnchorParameters.default.scales):
+    """Get AnchorParameters for the given pyramid levels and anchor sizes.
+
+    Args:
+        pyramid_levels (list): List of layers to use as pyramid features
+        anchor_size_dict (dict): dictionary of anchor sizes
+        ratios (list): list of ratios
+        scales (list): list of scales
+
+    Returns:
+        AnchorParameters: anchor configuration for the given
+            pyramids and anchors
+    """
     sizes = [anchor_size_dict[level] for level in pyramid_levels]
     strides = [2 ** int(level[1:]) for level in pyramid_levels]
     anchor_parameters = AnchorParameters(sizes, strides, ratios, scales)
@@ -89,29 +151,30 @@ def anchor_targets_bbox(anchors,
     """Generate anchor targets for bbox detection.
 
     Args:
-        anchors: np.array of annotations of shape (N, 4) for (x1, y1, x2, y2).
-        image_group: List of BGR images.
-        annotations_group: List of annotations
+        anchors (numpy.array): annotations of shape (N, 4) for (x1, y1, x2, y2).
+        image_group (list): List of BGR images.
+        annotations_group (list): List of annotations
             (np.array of shape (N, 5) for (x1, y1, x2, y2, label)).
-        num_classes: Number of classes to predict.
-        mask_shape: If the image is padded with zeros, mask_shape can be used
-            to mark the relevant part of the image.
-        negative_overlap: IoU overlap for negative anchors (all anchors with
-            overlap < negative_overlap are negative).
-        positive_overlap: IoU overlap or positive anchors (all anchors with
-            overlap > positive_overlap are positive).
+        num_classes (int): Number of classes to predict.
+        mask_shape (numpy.array): If the image is padded with zeros, mask_shape
+            can be used to mark the relevant part of the image.
+        negative_overlap (float): IoU overlap for negative anchors
+            (all anchors with overlap < negative_overlap are negative).
+        positive_overlap (float): IoU overlap or positive anchors
+            (all anchors with overlap > positive_overlap are positive).
 
     Returns:
-        labels_batch: batch that contains labels & anchor states
-            (np.array of shape (batch_size, N, num_classes + 1), where N is the
-            number of anchors for an image and the last column defines the
-            anchor state (-1 for ignore, 0 for bg, 1 for fg).
-        regression_batch: batch that contains bounding-box regression targets
-            for an image & anchor states
-            (np.array of shape (batch_size, N, 4 + 1), where N is the number of
-            anchors for an image, the first 4 columns define regression targets
-            for (x1, y1, x2, y2) and the last column defines anchor states
-            (-1 for ignore, 0 for bg, 1 for fg).
+        tuple: (labels_batch, regression_batch)
+            labels_batch: batch that contains labels & anchor states
+                (np.array of shape (batch_size, N, num_classes + 1), where N is
+                the number of anchors for an image and the last column defines
+                the anchor state (-1 for ignore, 0 for bg, 1 for fg).
+            regression_batch: batch that contains bounding-box regression targets
+                for an image & anchor states (np.array of shape
+                (batch_size, N, 4 + 1), where N is the number of anchors for an
+                image, the first 4 columns define regression targets for
+                (x1, y1, x2, y2) and the last column defines anchor states
+                (-1 for ignore, 0 for bg, 1 for fg).
     """
     if len(image_group) != len(annotations_group):
         raise ValueError('Images and annotations must be the same size. '
@@ -177,17 +240,18 @@ def compute_gt_annotations(anchors,
     """Obtain indices of gt annotations with the greatest overlap.
 
     Args:
-        anchors: np.array of annotations of shape (N, 4) for (x1, y1, x2, y2).
-        annotations: np.array of shape (N, 5) for (x1, y1, x2, y2, label).
-        negative_overlap: IoU overlap for negative anchors
+        anchors (numpy.array): annotations of shape (N, 4) for (x1, y1, x2, y2).
+        annotations (numpy.array): shape (N, 5) for (x1, y1, x2, y2, label).
+        negative_overlap (float): IoU overlap for negative anchors
             (all anchors with overlap < negative_overlap are negative).
-        positive_overlap: IoU overlap or positive anchors
+        positive_overlap (float): IoU overlap or positive anchors
             (all anchors with overlap > positive_overlap are positive).
 
     Returns:
-        positive_indices: indices of positive anchors
-        ignore_indices: indices of ignored anchors
-        argmax_overlaps_inds: ordered overlaps indices
+        tuple: (positive_indices, ignore_indices, argmax_overlaps_inds)
+            positive_indices: indices of positive anchors
+            ignore_indices: indices of ignored anchors
+            argmax_overlaps_inds: ordered overlaps indices
     """
     if compute_overlap is None:
         raise ImportError('To use `compute_overlap`, the C extensions must be '
@@ -205,6 +269,14 @@ def compute_gt_annotations(anchors,
 
 
 def flatten_list(data):
+    """Flatten a nested list of data.
+
+    Args:
+        data (list): list to be flattened
+
+    Returns:
+        list: flattened list.
+    """
     results = []
     for rec in data:
         if isinstance(rec, list):
@@ -219,12 +291,12 @@ def layer_shapes(image_shape, model):
     """Compute layer shapes given input image shape and the model.
 
     Args:
-        image_shape: The shape of the image.
-        model: The model to use for computing how the image shape is
-            transformed in the pyramid.
+        image_shape (tuple): The shape of the image.
+        model (tensorflow.keras.Model): The model to use for computing how the image
+            shape is transformed in the pyramid.
 
     Returns:
-        A dictionary mapping layer names to image shapes.
+        dict: mapping of layer names to image shapes.
     """
     if isinstance(image_shape, tensor_shape.TensorShape):
         image_shape = tuple(image_shape.as_list())
@@ -250,7 +322,10 @@ def make_shapes_callback(model):
     """Make a function for getting the shape of the pyramid levels.
 
     Args:
-        model: keras.Model to get shapes of pyramid levels
+        model (tensorflow.keras.Model): model to get shapes of pyramid levels
+
+    Returns:
+        function: function that returns shapes
     """
     def get_shapes(image_shape, pyramid_levels):
         shape = layer_shapes(image_shape, model)
@@ -269,11 +344,11 @@ def guess_shapes(image_shape, pyramid_levels):
     """Guess shapes based on pyramid levels.
 
     Args:
-        image_shape: The shape of the image.
-        pyramid_levels: A list of what pyramid levels are used.
+        image_shape (tuple): The shape of the image.
+        pyramid_levels (str[]): A list of what pyramid levels are used.
 
     Returns:
-        A list of image shapes at each pyramid level.
+        list: image shapes at each pyramid level.
     """
     image_shape = np.array(image_shape[:2])
     image_shapes = []
@@ -291,17 +366,16 @@ def anchors_for_shape(image_shape,
     """Generators anchors for a given shape.
 
     Args:
-        image_shape: The shape of the image.
-        pyramid_levels: List of ints representing which pyramids to use
+        image_shape (tuple): The shape of the image.
+        pyramid_levels (int[]): List of ints representing which pyramids to use
             (defaults to [3, 4, 5, 6, 7]).
-        anchor_params: Struct containing anchor parameters.
+        anchor_params (AnchorParameters): Struct containing anchor parameters.
             If None, default values are used.
-        shapes_callback: Function to call for getting the shape of the image
-            at different pyramid levels.
+        shapes_callback (function): Function to call for getting the shape of
+            the image at different pyramid levels.
 
     Returns:
-        np.array of shape (N, 4) containing the (x1, y1, x2, y2) coordinates
-            for the anchors.
+        numpy.array: (N, 4) containing the (x1, y1, x2, y2) anchor coordinates.
     """
 
     if pyramid_levels is None:
@@ -335,9 +409,12 @@ def _shift(shape, stride, anchors):
     """Produce shifted anchors based on shape of the map and stride size.
 
     Args:
-        shape: Shape to shift the anchors over.
-        stride: Stride to shift the anchors with over the shape.
-        anchors: The anchors to apply at each location.
+        shape (tuple): Shape to shift the anchors over.
+        stride (int): Stride to shift the anchors with over the shape.
+        anchors (numpy.array): The anchors to apply at each location.
+
+    Returns:
+        numpy.array: shifted anchors
     """
 
     # create a grid starting from half stride from the top left corner
@@ -367,6 +444,14 @@ def _shift(shape, stride, anchors):
 def generate_anchors(base_size=16, ratios=None, scales=None):
     """Generate anchor (reference) windows by enumerating aspect ratios X
     scales w.r.t. a reference window.
+
+    Args:
+        base_size (int): base size of anchors
+        ratios (float[]): list of ratios
+        scales (float[]): list of scales
+
+    Returns:
+        numpy.array: generated anchors
     """
 
     if ratios is None:
@@ -374,6 +459,9 @@ def generate_anchors(base_size=16, ratios=None, scales=None):
 
     if scales is None:
         scales = AnchorParameters.default.scales
+
+    ratios = np.array(ratios, dtype=K.floatx())
+    scales = np.array(scales, dtype=K.floatx())
 
     num_anchors = len(ratios) * len(scales)
 
@@ -398,7 +486,18 @@ def generate_anchors(base_size=16, ratios=None, scales=None):
 
 
 def bbox_transform(anchors, gt_boxes, mean=None, std=None):
-    """Compute bounding-box regression targets for an image."""
+    """Compute bounding-box regression targets for an image.
+
+    Args:
+        anchors (numpy.array): locations of anchors
+        gt_boxes (numpy.array): coordinates of bounding boxes
+        mean (numpy.array): arithmetic mean
+        std (numpy.array): standard deviation
+
+    Raises:
+        ValueError: mean is not a np.array
+        ValueError: std is not a np.array
+    """
 
     if mean is None:
         mean = np.array([0, 0, 0, 0])
@@ -442,34 +541,34 @@ def bbox_transform_inv(boxes, deltas, mean=None, std=None):
     They are unnormalized in this function and then applied to the boxes.
 
     Args:
-        boxes: np.array of shape (B, N, 4), where B is the batch size,
-               N the number of boxes and 4 values for (x1, y1, x2, y2).
-        deltas: np.array of same shape as boxes. These deltas
-                (d_x1, d_y1, d_x2, d_y2) are a factor of the width/height.
-        mean: The mean value used when computing deltas
-              (defaults to [0, 0, 0, 0]).
-        std: The standard deviation used when computing deltas
-             (defaults to [0.2, 0.2, 0.2, 0.2]).
+        boxes (numpy.array): shape (B, N, 4), where B is the batch size,
+            N the number of boxes and 4 values for (x1, y1, x2, y2).
+        deltas (numpy.array): same shape as boxes. These deltas
+            (d_x1, d_y1, d_x2, d_y2) are a factor of the width/height.
+        mean (numpy.array): The mean value used when computing deltas
+            (defaults to [0, 0, 0, 0]).
+        std (numpy.array): The standard deviation used when computing deltas
+            (defaults to [0.2, 0.2, 0.2, 0.2]).
 
     Returns:
-        A np.array of the same shape as boxes with deltas applied to each box.
-        The mean and std are used during training to normalize the
-        regression values (networks love normalization).
+        numpy.array: same shape as boxes with deltas applied to each box.
+            The mean and std are used during training to normalize the
+            regression values (networks love normalization).
     """
     if mean is None:
         mean = [0, 0, 0, 0]
     if std is None:
         std = [0.2, 0.2, 0.2, 0.2]
 
-    width = boxes[:, :, 2] - boxes[:, :, 0]
-    height = boxes[:, :, 3] - boxes[:, :, 1]
+    width = boxes[..., 2] - boxes[..., 0]
+    height = boxes[..., 3] - boxes[..., 1]
 
-    x1 = boxes[:, :, 0] + (deltas[:, :, 0] * std[0] + mean[0]) * width
-    y1 = boxes[:, :, 1] + (deltas[:, :, 1] * std[1] + mean[1]) * height
-    x2 = boxes[:, :, 2] + (deltas[:, :, 2] * std[2] + mean[2]) * width
-    y2 = boxes[:, :, 3] + (deltas[:, :, 3] * std[3] + mean[3]) * height
+    x1 = boxes[..., 0] + (deltas[..., 0] * std[0] + mean[0]) * width
+    y1 = boxes[..., 1] + (deltas[..., 1] * std[1] + mean[1]) * height
+    x2 = boxes[..., 2] + (deltas[..., 2] * std[2] + mean[2]) * width
+    y2 = boxes[..., 3] + (deltas[..., 3] * std[3] + mean[3]) * height
 
-    pred_boxes = K.stack([x1, y1, x2, y2], axis=2)
+    pred_boxes = K.stack([x1, y1, x2, y2], axis=-1)
 
     return pred_boxes
 
@@ -478,12 +577,12 @@ def shift(shape, stride, anchors):
     """Produce shifted anchors based on shape of the map and stride size.
 
     Args:
-        shape: Shape to shift the anchors over.
-        stride: Stride to shift the anchors with over the shape.
-        anchors: The anchors to apply at each location.
+        shape (tuple): Shape to shift the anchors over.
+        stride (int): Stride to shift the anchors with over the shape.
+        anchors (numpy.array): The anchors to apply at each location.
 
     Returns:
-        shifted anchors
+        numpy.array: shifted anchors
     """
     shift_x = (K.arange(0, shape[1], dtype=K.floatx()) +
                K.constant(0.5, dtype=K.floatx())) * stride
@@ -516,10 +615,10 @@ def shift(shape, stride, anchors):
 def compute_iou(a, b):
     """Computes the IoU overlap of boxes in a and b.
     Args:
-        a: (N, H, W) ndarray of float
-        b: (K, H, W) ndarray of float
+        a (numpy.array): (N, H, W) ndarray of float
+        b (numpy.array): (K, H, W) ndarray of float
     Returns
-        overlaps: (N, K) ndarray of overlap between boxes and query_boxes
+        numpy.array: (N, K) ndarray of overlap between boxes and query_boxes
     """
     intersection = np.zeros((a.shape[0], b.shape[0]))
     union = np.zeros((a.shape[0], b.shape[0]))
@@ -534,11 +633,11 @@ def overlap(a, b):
     """Computes the IoU overlap of boxes in a and b.
 
     Args:
-        a: np.array of shape (N, 4) of boxes.
-        b: np.array of shape (K, 4) of boxes.
+        a (numpy.array): np.array of shape (N, 4) of boxes.
+        b (numpy.array): np.array of shape (K, 4) of boxes.
 
     Returns:
-        A np.array of shape (N, K) of overlap between boxes from a and b.
+        numpy.array: shape (N, K) of overlap between boxes from a and b.
     """
     area = (b[:, 2] - b[:, 0]) * (b[:, 3] - b[:, 1])
 
@@ -565,10 +664,11 @@ def _compute_ap(recall, precision):
     Code originally from https://github.com/rbgirshick/py-faster-rcnn.
 
     Args:
-        recall: The recall curve (list).
-        precision: The precision curve (list).
+        recall (numpy.array): The recall curve (list).
+        precision (numpy.array): The precision curve (list).
+
     Returns:
-        The average precision as computed in py-faster-rcnn.
+        numpy.array: The average precision as computed in py-faster-rcnn.
     """
     # correct AP calculation
     # first append sentinel values at the end
@@ -590,6 +690,7 @@ def _compute_ap(recall, precision):
 
 def _get_detections(generator,
                     model,
+                    frames_per_batch=1,
                     score_threshold=0.05,
                     max_detections=100):
     """Get the detections from the model using the generator.
@@ -599,11 +700,12 @@ def _get_detections(generator,
 
     Args:
         generator: The generator used to run images through the model.
-        model: The model to run on the images.
-        score_threshold: The score confidence threshold to use.
-        max_detections: The maximum number of detections to use per image.
+        model (tensorflow.keras.Model): The model to run on the images.
+        score_threshold (float): The score confidence threshold to use.
+        max_detections (int): The maximum number of detections to use per image.
+
     Returns:
-        A list of lists containing the detections for each image in the generator.
+        list: The detections for each image in the generator.
     """
     all_detections = [[None for i in range(generator.num_classes)]
                       for j in range(generator.y.shape[0])]
@@ -611,103 +713,211 @@ def _get_detections(generator,
     all_masks = [[None for i in range(generator.num_classes)]
                  for j in range(generator.y.shape[0])]
 
-    for i in range(generator.y.shape[0]):
-        # raw_image = generator.load_image(i)
-        # image = generator.preprocess_image(raw_image.copy())
-        # image, scale = generator.resize_image(image)
-        image = generator.x[i]
+    if len(generator.x.shape) == 4:
+        for i in range(generator.y.shape[0]):
+            # raw_image = generator.load_image(i)
+            # image = generator.preprocess_image(raw_image.copy())
+            # image, scale = generator.resize_image(image)
+            image = generator.x[i]
 
-        # run network
-        results = model.predict_on_batch(np.expand_dims(image, axis=0))
+            # run network
+            results = model.predict_on_batch(np.expand_dims(image, axis=0))
 
-        if generator.panoptic:
-            num_semantic_outputs = len(generator.y_semantic_list)
-            boxes = results[-num_semantic_outputs - 3]
-            scores = results[-num_semantic_outputs - 2]
-            labels = results[-num_semantic_outputs - 1]
-            semantic = results[-num_semantic_outputs:]
-            if generator.include_masks:
-                boxes = results[-num_semantic_outputs - 4]
-                scores = results[-num_semantic_outputs - 3]
-                labels = results[-num_semantic_outputs - 2]
-                masks = results[-num_semantic_outputs - 1]
-                semantic = results[-num_semantic_outputs]
-        elif generator.include_masks:
-            boxes = results[-4]
-            scores = results[-3]
-            labels = results[-2]
-            masks = results[-1]
-        else:
-            boxes, scores, labels = results[0:3]
+            if generator.panoptic:
+                num_semantic_outputs = len(generator.y_semantic_list)
+                boxes = results[-num_semantic_outputs - 3]
+                scores = results[-num_semantic_outputs - 2]
+                labels = results[-num_semantic_outputs - 1]
+                semantic = results[-num_semantic_outputs:]
+                if generator.include_masks:
+                    boxes = results[-num_semantic_outputs - 4]
+                    scores = results[-num_semantic_outputs - 3]
+                    labels = results[-num_semantic_outputs - 2]
+                    masks = results[-num_semantic_outputs - 1]
+                    semantic = results[-num_semantic_outputs]
+            elif generator.include_masks:
+                boxes = results[-4]
+                scores = results[-3]
+                labels = results[-2]
+                masks = results[-1]
+            else:
+                boxes = results[-3]
+                scores = results[-2]
+                labels = results[-1]
 
-        # correct boxes for image scale
-        # boxes = boxes / scale
+            # select indices which have a score above the threshold
+            indices = np.where(scores[0, :] > score_threshold)[0]
 
-        # select indices which have a score above the threshold
-        indices = np.where(scores[0, :] > score_threshold)[0]
+            # select those scores
+            scores = scores[0][indices]
 
-        # select those scores
-        scores = scores[0][indices]
+            # find the order with which to sort the scores
+            scores_sort = np.argsort(-scores)[:max_detections]
 
-        # find the order with which to sort the scores
-        scores_sort = np.argsort(-scores)[:max_detections]
+            # select detections
+            image_boxes = boxes[0, indices[scores_sort], :]
+            image_scores = scores[scores_sort]
+            image_labels = labels[0, indices[scores_sort]]
 
-        # select detections
-        image_boxes = boxes[0, indices[scores_sort], :]
-        image_scores = scores[scores_sort]
-        image_labels = labels[0, indices[scores_sort]]
+            image_detections = np.concatenate([
+                image_boxes,
+                np.expand_dims(image_scores, axis=1),
+                np.expand_dims(image_labels, axis=1)
+            ], axis=1)
 
-        image_detections = np.concatenate([
-            image_boxes,
-            np.expand_dims(image_scores, axis=1),
-            np.expand_dims(image_labels, axis=1)
-        ], axis=1)
-
-        # copy detections to all_detections
-        for label in range(generator.num_classes):
-            imd = image_detections[image_detections[:, -1] == label, :-1]
-            all_detections[i][label] = imd
-
-        if generator.include_masks:
-            image_masks = masks[0, indices[scores_sort], :, :, image_labels]
+            # copy detections to all_detections
             for label in range(generator.num_classes):
-                imm = image_masks[image_detections[:, -1] == label, ...]
-                all_masks[i][label] = imm
+                imd = image_detections[image_detections[:, -1] == label, :-1]
+                all_detections[i][label] = imd
+
+            if generator.include_masks:
+                image_masks = masks[0, indices[scores_sort], :, :, image_labels]
+                for label in range(generator.num_classes):
+                    imm = image_masks[image_detections[:, -1] == label, ...]
+                    all_masks[i][label] = imm
+
+    if len(generator.x.shape) == 5:
+        boxes_list = []
+        scores_list = []
+        labels_list = []
+
+        for i in range(generator.y.shape[0]):
+            for j in range(0, generator.y.shape[1], frames_per_batch):
+                movie = generator.x[[i], j:j + frames_per_batch, ...]
+                results = model.predict_on_batch(movie)
+
+                if generator.panoptic:
+                    # Add logic for networks that have semantic heads
+                    pass
+                else:
+                    if (generator.include_masks and
+                            not generator.include_final_detection_layer):
+                        boxes = results[-4]
+                        scores = results[-3]
+                        labels = results[-2]
+                        masks = results[-1]
+                    elif (generator.include_masks and
+                          generator.include_final_detection_layer):
+                        boxes = results[-5]
+                        scores = results[-4]
+                        labels = results[-3]
+                        masks = results[-2]
+                        final_scores = results[-1]
+                    else:
+                        boxes, scores, labels = results[0:3]
+
+                    for k in range(frames_per_batch):
+                        boxes_list.append(boxes[0, k])
+                        scores_list.append(scores[0, k])
+                        labels_list.append(labels[0, k])
+
+        batch_boxes = np.stack(boxes_list, axis=0)
+        batch_scores = np.stack(scores_list, axis=0)
+        batch_labels = np.stack(labels_list, axis=0)
+
+        all_detections = [[None for i in range(generator.num_classes)]
+                          for j in range(batch_boxes.shape[0])]
+
+        all_masks = [[None for i in range(generator.num_classes)]
+                     for j in range(batch_boxes.shape[0])]
+
+        for i in range(batch_boxes.shape[0]):
+            boxes = batch_boxes[[i]]
+            scores = batch_scores[[i]]
+            labels = batch_labels[[i]]
+
+            # select indices which have a score above the threshold
+            indices = np.where(scores[0, :] > score_threshold)[0]
+
+            # select those scores
+            scores = scores[0][indices]
+
+            # find the order with which to sort the scores
+            scores_sort = np.argsort(-scores)[:max_detections]
+
+            # select detections
+            image_boxes = boxes[0, indices[scores_sort], :]
+            image_scores = scores[scores_sort]
+            image_labels = labels[0, indices[scores_sort]]
+
+            image_detections = np.concatenate([
+                image_boxes,
+                np.expand_dims(image_scores, axis=1),
+                np.expand_dims(image_labels, axis=1)
+            ], axis=1)
+
+            # copy detections to all_detections
+            for label in range(generator.num_classes):
+                imd = image_detections[image_detections[:, -1] == label, :-1]
+                all_detections[i][label] = imd
+
+            if generator.include_masks:
+                image_masks = masks[0, :, indices[scores_sort], :, :, image_labels]
+                for label in range(generator.num_classes):
+                    imm = image_masks[image_detections[:, -1] == label, ...]
+                    all_masks[i][label] = imm
 
     return all_detections, all_masks
 
 
-def _get_annotations(generator):
+def _get_annotations(generator, frames_per_batch=1):
     """Get the ground truth annotations from the generator.
 
     The result is a list of lists such that the size is:
         all_detections[num_images][num_classes] = annotations[num_detections, 5]
 
     Args:
-        generator : The generator used to retrieve ground truth annotations.
+        generator: The generator used to retrieve ground truth annotations.
+
     Returns:
-        A list of lists containing the annotations for each image in the generator.
+        list: The annotations for each image in the generator.
     """
-    all_annotations = [[None for i in range(generator.num_classes)]
-                       for j in range(generator.y.shape[0])]
 
-    all_masks = [[None for i in range(generator.num_classes)]
-                 for j in range(generator.y.shape[0])]
+    if len(generator.x.shape) == 4:
+        all_annotations = [[None for i in range(generator.num_classes)]
+                           for j in range(generator.y.shape[0])]
 
-    for i in range(generator.y.shape[0]):
-        # load the annotations
-        annotations = generator.load_annotations(generator.y[i])
+        all_masks = [[None for i in range(generator.num_classes)]
+                     for j in range(generator.y.shape[0])]
 
-        if generator.include_masks:
-            annotations['masks'] = np.stack(annotations['masks'], axis=0)
+        for i in range(generator.y.shape[0]):
+            # load the annotations
+            annotations = generator.load_annotations(generator.y[i])
 
-        # copy detections to all_annotations
-        for label in range(generator.num_classes):
-            imb = annotations['bboxes'][annotations['labels'] == label, :].copy()
-            all_annotations[i][label] = imb
             if generator.include_masks:
-                imm = annotations['masks'][annotations['labels'] == label, ..., 0].copy()
-                all_masks[i][label] = imm
+                annotations['masks'] = np.stack(annotations['masks'], axis=0)
+
+            # copy detections to all_annotations
+            for label in range(generator.num_classes):
+                imb = annotations['bboxes'][annotations['labels'] == label, :].copy()
+                all_annotations[i][label] = imb
+                if generator.include_masks:
+                    imm = annotations['masks'][annotations['labels'] == label, ..., 0].copy()
+                    all_masks[i][label] = imm
+
+    if len(generator.x.shape) == 5:
+        all_annotations = []
+        all_masks = []
+        for i in range(generator.y.shape[0]):
+            for j in range(0, generator.y.shape[1], frames_per_batch):
+                label_movie = generator.y[i, j:j + frames_per_batch, ...]
+                for k in range(frames_per_batch):
+                    annotations = generator.load_annotations(label_movie[k])
+
+                    if generator.include_masks:
+                        annotations['masks'] = np.stack(annotations['masks'], axis=0)
+
+                    imb_list = [None for i in range(generator.num_classes)]
+                    imm_list = [None for i in range(generator.num_classes)]
+                    for label in range(generator.num_classes):
+                        label_idx = annotations['labels'] == label
+                        imb = annotations['bboxes'][label_idx, :].copy()
+                        imb_list[label] = imb
+                        if generator.include_masks:
+                            imm = annotations['masks'][label_idx, ..., 0].copy()
+                            imm_list[label] = imm
+                    all_annotations.append(imb_list.copy())
+                    all_masks.append(imm_list.copy())
 
     return all_annotations, all_masks
 
@@ -715,26 +925,29 @@ def _get_annotations(generator):
 def evaluate(generator, model,
              iou_threshold=0.5,
              score_threshold=0.05,
+             frames_per_batch=1,
              max_detections=100):
     """Evaluate a given dataset using a given model.
 
     Args:
         generator: The generator that represents the dataset to evaluate.
-        model: The model to evaluate.
-        iou_threshold: The threshold used to consider when a detection
+        model (tensorflow.keras.Model): The model to evaluate.
+        iou_threshold (float): The threshold used to consider when a detection
             is positive or negative.
-        score_threshold: The score confidence threshold to use for detections.
-        max_detections: The maximum number of detections to use per image.
+        score_threshold (float): The score confidence threshold
+            to use for detections.
+        max_detections (int): The maximum number of detections to use per image.
+
     Returns:
-        A dict mapping class names to mAP scores.
+        dict: A mapping of class names to mAP scores.
     """
     # gather all detections and annotations
     all_detections, _ = _get_detections(
         generator, model,
+        frames_per_batch=frames_per_batch,
         score_threshold=score_threshold,
         max_detections=max_detections)
-
-    all_annotations, _ = _get_annotations(generator)
+    all_annotations, _ = _get_annotations(generator, frames_per_batch)
     average_precisions = {}
 
     # all_detections = pickle.load(open('all_detections.pkl', 'rb'))
@@ -807,27 +1020,30 @@ def evaluate_mask(generator, model,
                   iou_threshold=0.5,
                   score_threshold=0.05,
                   max_detections=100,
+                  frames_per_batch=1,
                   binarize_threshold=0.5):
     """Evaluate a given dataset using a given model.
 
     Args:
         generator: The generator that represents the dataset to evaluate.
-        model: The model to evaluate.
-        iou_threshold: The threshold used to consider when a detection is
-            positive or negative.
-        score_threshold: The score confidence threshold to use for detections.
-        max_detections: The maximum number of detections to use per image.
-        binarize_threshold: Threshold to binarize the masks with.
+        model (tensorflow.keras.Model): The model to evaluate.
+        iou_threshold (float): The threshold used to consider when a detection
+            is positive or negative.
+        score_threshold (float): The score confidence threshold
+            to use for detections.
+        max_detections (int): The maximum number of detections to use per image.
+        binarize_threshold (float): Threshold to binarize the masks with.
 
     Returns:
-        A dict mapping class names to mAP scores.
+        dict: A mapping of class names to mAP scores.
     """
     # gather all detections and annotations
     all_detections, all_masks = _get_detections(
         generator, model,
+        frames_per_batch=frames_per_batch,
         score_threshold=score_threshold,
         max_detections=max_detections)
-    all_annotations, all_gt_masks = _get_annotations(generator)
+    all_annotations, all_gt_masks = _get_annotations(generator, frames_per_batch)
     average_precisions = {}
 
     # import pickle
@@ -865,29 +1081,37 @@ def evaluate_mask(generator, model,
                 box_x = box[3] - box[1]
                 box_y = box[2] - box[0]
 
-                mask = resize(mask, (box_x, box_y))
+                if frames_per_batch == 1:
+                    mask = np.expand_dims(mask, axis=0)
+
+                mask = resize(mask, (frames_per_batch, box_x, box_y))
 
                 # binarize the mask
                 mask = (mask > binarize_threshold).astype('uint8')
 
                 # place mask in image frame
-                mask_image = np.zeros_like(gt_masks[0])
-                mask_image[box[1]:box[3], box[0]:box[2]] = mask
+                mask_image = np.zeros(tuple([frames_per_batch] +
+                                            list(gt_masks[0].shape)))
+
+                mask_image[:, box[1]:box[3], box[0]:box[2]] = mask
+
                 mask = mask_image
 
-                overlaps = compute_iou(np.expand_dims(mask, axis=0), gt_masks)
+                for f in range(frames_per_batch):
 
-                assigned_annotation = np.argmax(overlaps, axis=1)
-                max_overlap = overlaps[0, assigned_annotation]
+                    overlaps = compute_iou(np.expand_dims(mask[f], axis=0), gt_masks)
 
-                if max_overlap >= iou_threshold and \
-                   assigned_annotation not in detected_annotations:
-                    false_positives = np.append(false_positives, 0)
-                    true_positives = np.append(true_positives, 1)
-                    detected_annotations.append(assigned_annotation)
-                else:
-                    false_positives = np.append(false_positives, 1)
-                    true_positives = np.append(true_positives, 0)
+                    assigned_annotation = np.argmax(overlaps, axis=1)
+                    max_overlap = overlaps[0, assigned_annotation]
+
+                    if max_overlap >= iou_threshold and \
+                       assigned_annotation not in detected_annotations:
+                        false_positives = np.append(false_positives, 0)
+                        true_positives = np.append(true_positives, 1)
+                        detected_annotations.append(assigned_annotation)
+                    else:
+                        false_positives = np.append(false_positives, 1)
+                        true_positives = np.append(true_positives, 0)
 
         # no annotations -> AP for this class is 0 (is this correct?)
         if num_annotations == 0:

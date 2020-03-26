@@ -33,11 +33,7 @@ import tensorflow as tf
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.keras.layers import Layer
 from tensorflow.python.keras import backend as K
-
-try:  # tf v1.9 moves conv_utils from _impl to keras.utils
-    from tensorflow.python.keras.utils import conv_utils
-except ImportError:
-    from tensorflow.python.keras._impl.keras.utils import conv_utils
+from tensorflow.python.keras.utils import conv_utils
 
 from deepcell.utils import retinanet_anchor_utils
 
@@ -53,14 +49,14 @@ class Anchors(Layer):
         scales: The scales of the anchors to generate,
             defaults to AnchorParameters.default.scales.
         data_format: A string,
-            one of `channels_last` (default) or `channels_first`.
+            one of "channels_last" (default) or "channels_first".
             The ordering of the dimensions in the inputs.
-            `channels_last` corresponds to inputs with shape
-            `(batch, height, width, channels)` while `channels_first`
+            "channels_last" corresponds to inputs with shape
+            (batch, height, width, channels) while "channels_first"
             corresponds to inputs with shape
-            `(batch, channels, height, width)`.
-            It defaults to the `image_data_format` value found in your
-            Keras config file at `~/.keras/keras.json`.
+            (batch, channels, height, width).
+            It defaults to the image_data_format value found in your
+            Keras config file at "~/.keras/keras.json".
             If you never set it, then it will be "channels_last".
     """
 
@@ -79,14 +75,14 @@ class Anchors(Layer):
         self.ratios = ratios
         self.scales = scales
 
-        if ratios is None:
+        if self.ratios is None:
             self.ratios = retinanet_anchor_utils.AnchorParameters.default.ratios
-        elif isinstance(ratios, list):
-            self.ratios = np.array(ratios)
-        if scales is None:
+        if isinstance(self.ratios, list):
+            self.ratios = np.array(self.ratios)
+        if self.scales is None:
             self.scales = retinanet_anchor_utils.AnchorParameters.default.scales
-        elif isinstance(scales, list):
-            self.scales = np.array(scales)
+        if isinstance(self.scales, list):
+            self.scales = np.array(self.scales)
 
         self.num_anchors = len(self.ratios) * len(self.scales)
         self.anchors = K.variable(retinanet_anchor_utils.generate_anchors(
@@ -98,7 +94,7 @@ class Anchors(Layer):
         features_shape = K.shape(inputs)
 
         # generate proposals from bbox deltas and shifted anchors
-        row_axis = 2 if self.data_format == 'channels_first' else 1
+        row_axis = 2 if self.data_format == "channels_first" else 1
         anchors = retinanet_anchor_utils.shift(
             features_shape[row_axis:row_axis + 2], self.stride, self.anchors)
 
@@ -110,15 +106,17 @@ class Anchors(Layer):
     def compute_output_shape(self, input_shape):
         input_shape = tensor_shape.TensorShape(input_shape).as_list()
         if None not in input_shape[1:]:
-            if self.data_format == 'channels_first':
+            if self.data_format == "channels_first":
                 total = K.prod(input_shape[2:4]) * self.num_anchors
             else:
                 total = K.prod(input_shape[1:3]) * self.num_anchors
+
+            # TODO: fails time_distributed tests for RetinaMask
+            # AttributeError: 'Tensor' object has no attribute 'numpy'
             total = K.get_value(total)
 
             return tensor_shape.TensorShape((input_shape[0], total, 4))
-        else:
-            return tensor_shape.TensorShape((input_shape[0], None, 4))
+        return tensor_shape.TensorShape((input_shape[0], None, 4))
 
     def get_config(self):
         config = {
@@ -133,27 +131,26 @@ class Anchors(Layer):
 
 
 class RegressBoxes(Layer):
-    """Keras layer for applying regression values to boxes."""
+    """Layer for applying regression values to boxes.
+
+    Args:
+        mean: The mean value of the regression values
+            which was used for normalization.
+        std:  The standard value of the regression values
+            which was used for normalization.
+        data_format: A string,
+            one of "channels_last" (default) or "channels_first".
+            The ordering of the dimensions in the inputs.
+            "channels_last" corresponds to inputs with shape
+            (batch, height, width, channels) while "channels_first"
+            corresponds to inputs with shape
+            (batch, channels, height, width).
+            It defaults to the image_data_format value found in your
+            Keras config file at "~/.keras/keras.json".
+            If you never set it, then it will be "channels_last".
+    """
 
     def __init__(self, mean=None, std=None, data_format=None, *args, **kwargs):
-        """Initializer for the RegressBoxes layer.
-
-        Args:
-            mean: The mean value of the regression values
-                which was used for normalization.
-            std:  The standard value of the regression values
-                which was used for normalization.
-            data_format: A string,
-                one of `channels_last` (default) or `channels_first`.
-                The ordering of the dimensions in the inputs.
-                `channels_last` corresponds to inputs with shape
-                `(batch, height, width, channels)` while `channels_first`
-                corresponds to inputs with shape
-                `(batch, channels, height, width)`.
-                It defaults to the `image_data_format` value found in your
-                Keras config file at `~/.keras/keras.json`.
-                If you never set it, then it will be "channels_last".
-        """
         super(RegressBoxes, self).__init__(*args, **kwargs)
         self.data_format = conv_utils.normalize_data_format(data_format)
 
@@ -206,18 +203,20 @@ class ClipBoxes(Layer):
     def call(self, inputs, **kwargs):
         image, boxes = inputs
         shape = K.cast(K.shape(image), K.floatx())
-        if self.data_format == 'channels_first':
-            height = shape[2]
-            width = shape[3]
+        ndim = K.ndim(image)
+        if self.data_format == "channels_first":
+            height = shape[ndim - 2]
+            width = shape[ndim - 1]
         else:
-            height = shape[1]
-            width = shape[2]
-        x1 = tf.clip_by_value(boxes[:, :, 0], 0, width)
-        y1 = tf.clip_by_value(boxes[:, :, 1], 0, height)
-        x2 = tf.clip_by_value(boxes[:, :, 2], 0, width)
-        y2 = tf.clip_by_value(boxes[:, :, 3], 0, height)
+            height = shape[ndim - 3]
+            width = shape[ndim - 2]
 
-        return K.stack([x1, y1, x2, y2], axis=2)
+        x1, y1, x2, y2 = tf.unstack(boxes, axis=-1)
+        x1 = tf.clip_by_value(x1, 0, width - 1)
+        y1 = tf.clip_by_value(y1, 0, height - 1)
+        x2 = tf.clip_by_value(x2, 0, width - 1)
+        y2 = tf.clip_by_value(y2, 0, height - 1)
+        return K.stack([x1, y1, x2, y2], axis=ndim - 2)
 
     def compute_output_shape(self, input_shape):
         return tensor_shape.TensorShape(input_shape[1]).as_list()
@@ -229,25 +228,29 @@ class ClipBoxes(Layer):
 
 
 class ConcatenateBoxes(Layer):
+    """Keras layer to concatenate bouding boxes."""
     def call(self, inputs, **kwargs):
         boxes, other = inputs
         boxes_shape = K.shape(boxes)
-        other_shape = K.shape(other)
-        other = K.reshape(other, (boxes_shape[0], boxes_shape[1], -1))
-        return K.concatenate([boxes, other], axis=2)
+        n = int(K.ndim(boxes) - 1)
+        other_shape = tuple([boxes_shape[i] for i in range(n)] + [-1])
+        other = K.reshape(other, other_shape)
+        return K.concatenate([boxes, other], axis=K.ndim(boxes) - 1)
 
     def compute_output_shape(self, input_shape):
         boxes_shape, other_shape = input_shape
-        output_shape = tuple(list(boxes_shape[:2]) +
-                             [K.prod([s for s in other_shape[2:]]) + 4])
+        n = len(boxes_shape) - 1
+        output_shape = tuple(list(boxes_shape[:n]) +
+                             [K.prod([s for s in other_shape[n:]]) + 4])
         return tensor_shape.TensorShape(output_shape)
 
 
-class RoiAlign(Layer):
+class _RoiAlign(Layer):
+    """Original RoiAlign Layer from https://github.com/fizyr/keras-retinanet"""
     def __init__(self, crop_size=(14, 14), parallel_iterations=32, **kwargs):
         self.crop_size = crop_size
         self.parallel_iterations = parallel_iterations
-        super(RoiAlign, self).__init__(**kwargs)
+        super(_RoiAlign, self).__init__(**kwargs)
 
     def map_to_level(self, boxes,
                      canonical_size=224,
@@ -277,6 +280,24 @@ class RoiAlign(Layer):
         boxes = K.stop_gradient(inputs[1])
         scores = K.stop_gradient(inputs[2])
         fpn = [K.stop_gradient(i) for i in inputs[3:]]
+
+        time_distributed = K.ndim(boxes) == 4
+
+        if time_distributed:
+            image_shape = image_shape[1:]
+
+            boxes_shape = tf.shape(boxes)
+            scores_shape = tf.shape(scores)
+            fpn_shape = [tf.shape(f) for f in fpn]
+
+            new_boxes_shape = [-1] + [boxes_shape[i] for i in range(2, K.ndim(boxes))]
+            new_scores_shape = [-1] + [scores_shape[i] for i in range(2, K.ndim(scores))]
+            new_fpn_shape = [[-1] + [f_s[i] for i in range(2, K.ndim(f))]
+                             for f, f_s in zip(fpn, fpn_shape)]
+
+            boxes = tf.reshape(boxes, new_boxes_shape)
+            scores = tf.reshape(scores, new_scores_shape)
+            fpn = [tf.reshape(f, f_s) for f, f_s in zip(fpn, new_fpn_shape)]
 
         def _roi_align(args):
             boxes = args[0]
@@ -332,22 +353,102 @@ class RoiAlign(Layer):
             parallel_iterations=self.parallel_iterations
         )
 
+        if time_distributed:
+            roi_shape = tf.shape(roi_batch)
+            new_roi_shape = [boxes_shape[0], boxes_shape[1]] + \
+                            [roi_shape[i] for i in range(1, K.ndim(roi_batch))]
+            roi_batch = tf.reshape(roi_batch, new_roi_shape)
+
         return roi_batch
 
     def compute_output_shape(self, input_shape):
-        output_shape = [
-            input_shape[1][0],
-            None,
-            self.crop_size[0],
-            self.crop_size[1],
-            input_shape[3][-1]
-        ]
-        return tensor_shape.TensorShape(output_shape)
+        if len(input_shape[3]) == 4:
+            output_shape = [
+                input_shape[1][0],
+                None,
+                self.crop_size[0],
+                self.crop_size[1],
+                input_shape[3][-1]
+            ]
+            return tensor_shape.TensorShape(output_shape)
+        elif len(input_shape[3]) == 5:
+            output_shape = [
+                input_shape[1][0],
+                input_shape[3][1],
+                None,
+                self.crop_size[0],
+                self.crop_size[1],
+                input_shape[3][-1]
+            ]
+            return tensor_shape.TensorShape(output_shape)
 
     def get_config(self):
         config = {'crop_size': self.crop_size}
-        base_config = super(RoiAlign, self).get_config()
+        base_config = super(_RoiAlign, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+
+class RoiAlign(_RoiAlign):
+    """Modified RoiAlign layer.
+
+    Only takes in one feature map, which must be the size of the original image
+    """
+
+    def call(self, inputs, **kwargs):
+        boxes = K.stop_gradient(inputs[0])
+        fpn = K.stop_gradient(inputs[1])
+
+        time_distributed = K.ndim(boxes) == 4
+
+        if time_distributed:
+            boxes_shape = K.shape(boxes)
+            fpn_shape = K.shape(fpn)
+
+            new_boxes_shape = [-1] + [boxes_shape[i] for i in range(2, K.ndim(boxes))]
+            new_fpn_shape = [-1] + [fpn_shape[i] for i in range(2, K.ndim(fpn))]
+
+            boxes = K.reshape(boxes, new_boxes_shape)
+            fpn = K.reshape(fpn, new_fpn_shape)
+
+        image_shape = K.cast(K.shape(fpn), K.floatx())
+
+        def _roi_align(args):
+            boxes = args[0]
+            fpn = args[1]            # process the feature map
+            x1 = boxes[:, 0]
+            y1 = boxes[:, 1]
+            x2 = boxes[:, 2]
+            y2 = boxes[:, 3]
+
+            fpn_shape = K.cast(K.shape(fpn), dtype=K.floatx())
+            norm_boxes = K.stack([
+                (y1 / image_shape[1] * fpn_shape[0]) / (fpn_shape[0] - 1),
+                (x1 / image_shape[2] * fpn_shape[1]) / (fpn_shape[1] - 1),
+                (y2 / image_shape[1] * fpn_shape[0] - 1) / (fpn_shape[0] - 1),
+                (x2 / image_shape[2] * fpn_shape[1] - 1) / (fpn_shape[1] - 1)
+            ], axis=1)
+
+            rois = tf.image.crop_and_resize(
+                K.expand_dims(fpn, axis=0),
+                norm_boxes,
+                tf.zeros((K.shape(norm_boxes)[0],), dtype='int32'),
+                self.crop_size)
+
+            return rois
+
+        roi_batch = tf.map_fn(
+            _roi_align,
+            elems=[boxes, fpn],
+            dtype=K.floatx(),
+            parallel_iterations=self.parallel_iterations)
+
+        if time_distributed:
+            roi_shape = tf.shape(roi_batch)
+            new_roi_shape = [boxes_shape[0], boxes_shape[1]] + \
+                            [roi_shape[i] for i in range(1, K.ndim(roi_batch))]
+            roi_batch = tf.reshape(roi_batch, new_roi_shape)
+
+        return roi_batch
 
 
 class Shape(Layer):

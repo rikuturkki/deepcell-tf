@@ -38,10 +38,7 @@ from tensorflow.python.keras import constraints
 from tensorflow.python.keras import initializers
 from tensorflow.python.keras import regularizers
 from tensorflow.python.keras.layers import Layer, InputSpec
-try:  # tf v1.9 moves conv_utils from _impl to keras.utils
-    from tensorflow.python.keras.utils import conv_utils
-except ImportError:
-    from tensorflow.python.keras._impl.keras.utils import conv_utils
+from tensorflow.python.keras.utils import conv_utils
 
 
 class ImageNormalization2D(Layer):
@@ -107,18 +104,19 @@ class ImageNormalization2D(Layer):
         self.input_spec = InputSpec(ndim=4, axes={channel_axis: input_dim})
 
         kernel_shape = (self.filter_size, self.filter_size, input_dim, 1)
-        self.kernel = self.add_weight(
-            name='kernel',
-            shape=kernel_shape,
-            initializer=self.kernel_initializer,
-            regularizer=self.kernel_regularizer,
-            constraint=self.kernel_constraint,
-            trainable=False,
-            dtype=self.dtype)
+        # self.kernel = self.add_weight(
+        #     name='kernel',
+        #     shape=kernel_shape,
+        #     initializer=self.kernel_initializer,
+        #     regularizer=self.kernel_regularizer,
+        #     constraint=self.kernel_constraint,
+        #     trainable=False,
+        #     dtype=self.dtype)
 
-        W = np.ones(kernel_shape)
-        W = W / W.size
-        self.set_weights([W])
+        W = K.ones(kernel_shape, dtype=K.floatx())
+        W = W / K.cast(K.prod(K.int_shape(W)), dtype=K.floatx())
+        self.kernel = W
+        # self.set_weights([W])
 
         if self.use_bias:
             self.bias = self.add_weight(
@@ -263,18 +261,19 @@ class ImageNormalization3D(Layer):
             depth = int(input_shape[1])
         kernel_shape = (depth, self.filter_size, self.filter_size, input_dim, 1)
 
-        self.kernel = self.add_weight(
-            'kernel',
-            shape=kernel_shape,
-            initializer=self.kernel_initializer,
-            regularizer=self.kernel_regularizer,
-            constraint=self.kernel_constraint,
-            trainable=False,
-            dtype=self.dtype)
+        # self.kernel = self.add_weight(
+        #     'kernel',
+        #     shape=kernel_shape,
+        #     initializer=self.kernel_initializer,
+        #     regularizer=self.kernel_regularizer,
+        #     constraint=self.kernel_constraint,
+        #     trainable=False,
+        #     dtype=self.dtype)
 
-        W = np.ones(kernel_shape)
-        W = W / W.size
-        self.set_weights([W])
+        W = K.ones(kernel_shape, dtype=K.floatx())
+        W = W / K.cast(K.prod(K.int_shape(W)), dtype=K.floatx())
+        self.kernel = W
+        # self.set_weights([W])
 
         if self.use_bias:
             self.bias = self.add_weight(

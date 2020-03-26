@@ -53,38 +53,46 @@ def _generate_test_masks():
 
 
 class TransformUtilsTest(test.TestCase):
-    def test_deepcell_transform_2d(self):
-        # test single edge class
-        maskstack = np.array([label(i) for i in _generate_test_masks()])
-        dc_maskstack = transform_utils.deepcell_transform(
-            maskstack, data_format=None, separate_edge_classes=False)
-        dc_maskstack_dil = transform_utils.deepcell_transform(
-            maskstack, dilation_radius=1,
-            data_format='channels_last',
-            separate_edge_classes=False)
+    def test_pixelwise_transform_2d(self):
+        with self.cached_session():
+            K.set_image_data_format('channels_last')
+            # test single edge class
+            for img in _generate_test_masks():
+                img = label(img)
+                img = np.squeeze(img)
+                pw_img = transform_utils.pixelwise_transform(
+                    img, data_format=None, separate_edge_classes=False)
+                pw_img_dil = transform_utils.pixelwise_transform(
+                    img, dilation_radius=1,
+                    data_format='channels_last',
+                    separate_edge_classes=False)
 
-        self.assertEqual(dc_maskstack.shape[-1], 3)
-        self.assertEqual(dc_maskstack_dil.shape[-1], 3)
-        self.assertGreater(
-            dc_maskstack_dil[..., 0].sum() + dc_maskstack_dil[..., 1].sum(),
-            dc_maskstack[..., 0].sum() + dc_maskstack[..., 1].sum())
+                self.assertEqual(pw_img.shape[-1], 3)
+                self.assertEqual(pw_img_dil.shape[-1], 3)
+                assert(np.all(np.equal(pw_img[..., 0] + pw_img[..., 1], img > 0)))
+                self.assertGreater(
+                    pw_img_dil[..., 0].sum() + pw_img_dil[..., 1].sum(),
+                    pw_img[..., 0].sum() + pw_img[..., 1].sum())
 
-        # test separate edge classes
-        maskstack = np.array([label(i) for i in _generate_test_masks()])
-        dc_maskstack = transform_utils.deepcell_transform(
-            maskstack, data_format=None, separate_edge_classes=True)
-        dc_maskstack_dil = transform_utils.deepcell_transform(
-            maskstack, dilation_radius=1,
-            data_format='channels_last',
-            separate_edge_classes=True)
+            # test separate edge classes
+            for img in _generate_test_masks():
+                img = label(img)
+                img = np.squeeze(img)
+                pw_img = transform_utils.pixelwise_transform(
+                    img, data_format=None, separate_edge_classes=True)
+                pw_img_dil = transform_utils.pixelwise_transform(
+                    img, dilation_radius=1,
+                    data_format='channels_last',
+                    separate_edge_classes=True)
 
-        self.assertEqual(dc_maskstack.shape[-1], 4)
-        self.assertEqual(dc_maskstack_dil.shape[-1], 4)
-        self.assertGreater(
-            dc_maskstack_dil[..., 0].sum() + dc_maskstack_dil[..., 1].sum(),
-            dc_maskstack[..., 0].sum() + dc_maskstack[..., 1].sum())
+                self.assertEqual(pw_img.shape[-1], 4)
+                self.assertEqual(pw_img_dil.shape[-1], 4)
+                assert(np.all(np.equal(pw_img[..., 0] + pw_img[..., 1] + pw_img[..., 2], img > 0)))
+                self.assertGreater(
+                    pw_img_dil[..., 0].sum() + pw_img_dil[..., 1].sum(),
+                    pw_img[..., 0].sum() + pw_img[..., 1].sum())
 
-    def test_deepcell_transform_3d(self):
+    def test_pixelwise_transform_3d(self):
         frames = 10
         img_list = []
         for im in _generate_test_masks():
@@ -94,84 +102,51 @@ class TransformUtilsTest(test.TestCase):
             img_stack = np.array(frame_list)
             img_list.append(img_stack)
 
-        # test single edge class
-        maskstack = np.vstack(img_list)
-        batch_count = maskstack.shape[0] // frames
-        new_shape = tuple([batch_count, frames] + list(maskstack.shape[1:]))
-        maskstack = np.reshape(maskstack, new_shape)
-        dc_maskstack = transform_utils.deepcell_transform(
-            maskstack, data_format=None, separate_edge_classes=False)
-        dc_maskstack_dil = transform_utils.deepcell_transform(
-            maskstack, dilation_radius=2,
-            data_format='channels_last',
-            separate_edge_classes=False)
-        self.assertEqual(dc_maskstack.shape[-1], 3)
-        self.assertEqual(dc_maskstack_dil.shape[-1], 3)
-        self.assertGreater(
-            dc_maskstack_dil[..., 0].sum() + dc_maskstack_dil[..., 1].sum(),
-            dc_maskstack[..., 0].sum() + dc_maskstack[..., 1].sum())
+        with self.cached_session():
+            K.set_image_data_format('channels_last')
+            # test single edge class
+            maskstack = np.vstack(img_list)
+            batch_count = maskstack.shape[0] // frames
+            new_shape = tuple([batch_count, frames] + list(maskstack.shape[1:]))
+            maskstack = np.reshape(maskstack, new_shape)
 
-        # test separate edge classes
-        maskstack = np.vstack(img_list)
-        batch_count = maskstack.shape[0] // frames
-        new_shape = tuple([batch_count, frames] + list(maskstack.shape[1:]))
-        maskstack = np.reshape(maskstack, new_shape)
-        dc_maskstack = transform_utils.deepcell_transform(
-            maskstack, data_format=None, separate_edge_classes=True)
-        dc_maskstack_dil = transform_utils.deepcell_transform(
-            maskstack, dilation_radius=2,
-            data_format='channels_last',
-            separate_edge_classes=True)
-        self.assertEqual(dc_maskstack.shape[-1], 4)
-        self.assertEqual(dc_maskstack_dil.shape[-1], 4)
-        self.assertGreater(
-            dc_maskstack_dil[..., 0].sum() + dc_maskstack_dil[..., 1].sum(),
-            dc_maskstack[..., 0].sum() + dc_maskstack[..., 1].sum())
+            for i in range(maskstack.shape[0]):
+                img = maskstack[i, ...]
+                img = np.squeeze(img)
+                pw_img = transform_utils.pixelwise_transform(
+                    img, data_format=None, separate_edge_classes=False)
+                pw_img_dil = transform_utils.pixelwise_transform(
+                    img, dilation_radius=2,
+                    data_format='channels_last',
+                    separate_edge_classes=False)
+                self.assertEqual(pw_img.shape[-1], 3)
+                self.assertEqual(pw_img_dil.shape[-1], 3)
+                assert(np.all(np.equal(pw_img[..., 0] + pw_img[..., 1], img > 0)))
+                self.assertGreater(
+                    pw_img_dil[..., 0].sum() + pw_img_dil[..., 1].sum(),
+                    pw_img[..., 0].sum() + pw_img[..., 1].sum())
 
-    def test_erode_edges_2d(self):
-        for img in _generate_test_masks():
-            img = label(img)
-            img = np.squeeze(img)
+            # test separate edge classes
+            maskstack = np.vstack(img_list)
+            batch_count = maskstack.shape[0] // frames
+            new_shape = tuple([batch_count, frames] + list(maskstack.shape[1:]))
+            maskstack = np.reshape(maskstack, new_shape)
 
-            erode_0 = transform_utils.erode_edges(img, erosion_width=0)
-            erode_1 = transform_utils.erode_edges(img, erosion_width=1)
-            erode_2 = transform_utils.erode_edges(img, erosion_width=2)
-
-            self.assertEqual(img.shape, erode_0.shape)
-            self.assertEqual(erode_0.shape, erode_1.shape)
-            self.assertEqual(erode_1.shape, erode_2.shape)
-            self.assertAllEqual(erode_0, img)
-            self.assertGreater(np.sum(erode_0), np.sum(erode_1))
-            self.assertGreater(np.sum(erode_1), np.sum(erode_2))
-
-            # test too few dims
-            with self.assertRaises(ValueError):
-                erode_1 = transform_utils.erode_edges(img[0], erosion_width=1)
-
-    def test_erode_edges_3d(self):
-        mask_stack = np.array(_generate_test_masks())
-        unique = np.zeros(mask_stack.shape)
-
-        for i, mask in enumerate(_generate_test_masks()):
-            unique[i] = label(mask)
-
-        unique = np.squeeze(unique)
-
-        erode_0 = transform_utils.erode_edges(unique, erosion_width=0)
-        erode_1 = transform_utils.erode_edges(unique, erosion_width=1)
-        erode_2 = transform_utils.erode_edges(unique, erosion_width=2)
-
-        self.assertEqual(unique.shape, erode_0.shape)
-        self.assertEqual(erode_0.shape, erode_1.shape)
-        self.assertEqual(erode_1.shape, erode_2.shape)
-        self.assertAllEqual(erode_0, unique)
-        self.assertGreater(np.sum(erode_0), np.sum(erode_1))
-        self.assertGreater(np.sum(erode_1), np.sum(erode_2))
-
-        # test too many dims
-        with self.assertRaises(ValueError):
-            unique = np.expand_dims(unique, axis=-1)
-            erode_1 = transform_utils.erode_edges(unique, erosion_width=1)
+            for i in range(maskstack.shape[0]):
+                img = maskstack[i, ...]
+                img = np.squeeze(img)
+                pw_img = transform_utils.pixelwise_transform(
+                    img, data_format=None, separate_edge_classes=True)
+                pw_img_dil = transform_utils.pixelwise_transform(
+                    img, dilation_radius=2,
+                    data_format='channels_last',
+                    separate_edge_classes=True)
+                self.assertEqual(pw_img.shape[-1], 4)
+                self.assertEqual(pw_img_dil.shape[-1], 4)
+                assert(np.all(np.equal(pw_img[..., 0] + pw_img[..., 1] + pw_img[..., 2], img > 0)))
+                self.assertGreater(
+                    pw_img_dil[..., 0].sum() + pw_img_dil[..., 1].sum(),
+                    pw_img[..., 0].sum() + pw_img[..., 1].sum())
 
     def test_distance_transform_3d(self):
         mask_stack = np.array(_generate_test_masks())
@@ -236,14 +211,75 @@ class TransformUtilsTest(test.TestCase):
             self.assertEqual(np.expand_dims(distance, axis=1).shape, img.shape)
 
     def test_centroid_weighted_distance_transform_2d(self):
-        centroid_dist = transform_utils.centroid_weighted_distance_transform_2d
         for img in _generate_test_masks():
             K.set_image_data_format('channels_last')
-            dist_x, dist_y = centroid_dist(img)
+            dist_x, dist_y = \
+                transform_utils.centroid_weighted_distance_transform_2d(img)
             self.assertEqual(str(dist_x.dtype), str(K.floatx()))
             self.assertEqual(dist_x.shape, img.shape)
             self.assertEqual(str(dist_y.dtype), str(K.floatx()))
             self.assertEqual(dist_y.shape, img.shape)
+
+    def test_centroid_transform_continuous_2d(self):
+        for img in _generate_test_masks():
+            K.set_image_data_format('channels_last')
+            distance = transform_utils.centroid_transform_continuous_2d(img)
+            self.assertEqual(np.expand_dims(distance, axis=-1).shape, img.shape)
+
+            K.set_image_data_format('channels_first')
+            img = np.rollaxis(img, -1, 1)
+
+            distance = transform_utils.centroid_transform_continuous_2d(img)
+            self.assertEqual(np.expand_dims(distance, axis=1).shape, img.shape)
+
+    def test_centroid_transform_continuous_movie(self):
+        # TODO: not sure this is working properly!
+        mask_stack = np.array(_generate_test_masks())
+        img = np.zeros(mask_stack.shape)
+
+        for i, mask in enumerate(_generate_test_masks()):
+            img[i] = label(mask)
+
+        # pylint: disable=E1136
+        K.set_image_data_format('channels_last')
+        centroids = transform_utils.centroid_transform_continuous_movie(img)
+        print(centroids.shape)
+        self.assertEqual(str(centroids.dtype), str(K.floatx()))
+        self.assertEqual(centroids.shape, img.shape[:-1])
+
+        K.set_image_data_format('channels_first')
+        centroids = transform_utils.centroid_transform_continuous_movie(img)
+        self.assertEqual(str(centroids.dtype), str(K.floatx()))
+        self.assertEqual(centroids.shape, img.shape[:-1])
+
+    def test_distance_transform_continuous_2d(self):
+        for img in _generate_test_masks():
+            K.set_image_data_format('channels_last')
+            distance = transform_utils.distance_transform_continuous_2d(img)
+            self.assertEqual(np.expand_dims(distance, axis=-1).shape, img.shape)
+
+            K.set_image_data_format('channels_first')
+            img = np.rollaxis(img, -1, 1)
+
+            distance = transform_utils.distance_transform_continuous_2d(img)
+            self.assertEqual(np.expand_dims(distance, axis=1).shape, img.shape)
+
+    def test_distance_transform_continuous_movie(self):
+        mask_stack = np.array(_generate_test_masks())
+        img = np.zeros(mask_stack.shape)
+
+        for i, mask in enumerate(_generate_test_masks()):
+            img[i] = label(mask)
+
+        K.set_image_data_format('channels_last')
+        distance = transform_utils.distance_transform_continuous_movie(img)
+        self.assertEqual(np.expand_dims(distance, axis=-1).shape, img.shape)
+
+        K.set_image_data_format('channels_first')
+        img = np.rollaxis(img, -1, 1)
+
+        distance = transform_utils.distance_transform_continuous_movie(img)
+        self.assertEqual(np.expand_dims(distance, axis=1).shape, img.shape)
 
     def test_to_categorical(self):
         num_classes = 5

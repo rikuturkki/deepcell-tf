@@ -46,8 +46,8 @@ class RedirectModel(Callback):
     ```
 
     Args:
-        callback: callback to wrap.
-        model: model to use when executing callbacks.
+        callback (function): callback to wrap.
+        model (keras.Model): model to use when executing callbacks.
     """
 
     def __init__(self,
@@ -81,7 +81,23 @@ class RedirectModel(Callback):
 
 
 class Evaluate(Callback):
-    """Evaluation callback for arbitrary datasets.
+    """Evaluate a given dataset using a given model at the end of every
+       epoch during training.
+
+    Args:
+        generator (RetinaNetDataGenerator): The generator that represents the
+            dataset to evaluate.
+        iou_threshold (float): The threshold used to consider
+            when a detection is positive or negative.
+        score_threshold (float): The score confidence threshold to use for
+            detections.
+        max_detections (int): The maximum number of detections to use per image.
+        save_path (str): The path to save images with visualized detections to.
+        tensorboard (bool): Instance of keras.callbacks.TensorBoard used to log
+            the mAP value.
+        weighted_average (bool): Compute the mAP using the weighted average of
+            precisions among classes.
+        verbose (int): Set the verbosity level, by default this is set to 1.
     """
 
     def __init__(self,
@@ -92,24 +108,8 @@ class Evaluate(Callback):
                  save_path=None,
                  tensorboard=None,
                  weighted_average=False,
+                 frames_per_batch=1,
                  verbose=1):
-        """Evaluate a given dataset using a given model at the end of every
-           epoch during training.
-
-        Args:
-            generator: The generator that represents the dataset to evaluate.
-            iou_threshold: The threshold used to consider
-                when a detection is positive or negative.
-            score_threshold: The score confidence threshold to use for
-                detections.
-            max_detections: The maximum number of detections to use per image.
-            save_path: The path to save images with visualized detections to.
-            tensorboard: Instance of keras.callbacks.TensorBoard used to log
-                the mAP value.
-            weighted_average: Compute the mAP using the weighted average of
-                precisions among classes.
-            verbose: Set the verbosity level, by default this is set to 1.
-        """
         self.generator = generator
         self.iou_threshold = iou_threshold
         self.score_threshold = score_threshold
@@ -117,6 +117,7 @@ class Evaluate(Callback):
         self.save_path = save_path
         self.tensorboard = tensorboard
         self.weighted_average = weighted_average
+        self.frames_per_batch = frames_per_batch
         self.verbose = verbose
         super(Evaluate, self).__init__()
 
@@ -132,7 +133,8 @@ class Evaluate(Callback):
             self.model,
             iou_threshold=self.iou_threshold,
             score_threshold=self.score_threshold,
-            max_detections=self.max_detections
+            max_detections=self.max_detections,
+            frames_per_batch=self.frames_per_batch,
         )
 
         # compute per class average precision
