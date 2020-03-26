@@ -42,6 +42,20 @@ from deepcell.utils.misc_utils import get_sorted_keys
 
 
 def ConvBlock(feature, feature_size=64, kernel_size=1, strides=1, name='conv_block'):
+    """Returns a set of layers that apply batch normalization and relu activation 
+    after a convolutional layer
+    
+    Args:
+        feature: Output of the previous layer used as input to the convolutional layer
+        feature_size (int, optional): Depth of the kernel. Defaults to 64.
+        kernel_size (int, optional): Size of the kernel for convolution. Defaults to 1.
+        strides (int, optional): Defaults to 1.
+        name (str, optional): Defaults to 'conv_block'.
+    
+    Returns:
+        Same as `feature`: Output of the activation layer following convolution 
+            and batch normalization
+    """
     x = Conv2D(feature_size, kernel_size=kernel_size,
                strides=strides,
                padding='same',
@@ -53,6 +67,19 @@ def ConvBlock(feature, feature_size=64, kernel_size=1, strides=1, name='conv_blo
 
 
 def DepthwiseConvBlock(feature, kernel_size=3, strides=1, name='depthwise_conv_block'):
+    """Set of layers adding a batch normalization and relu activation layer following
+    depthwise convolutional layer
+    
+    Args:
+        feature: Output of the previous layer used as input to the convolutional layer
+        kernel_size (int, optional): Defaults to 3.
+        strides (int, optional): Defaults to 1.
+        name (str, optional): Defaults to 'depthwise_conv_block'.
+    
+    Returns:
+        Same as `feature`: Output of the activation layer following convolution 
+            and batch normalization
+    """
     x = DepthwiseConv2D(kernel_size=kernel_size, strides=strides,
                         padding='same',
                         use_bias=False,
@@ -70,9 +97,8 @@ def __build_inputs(feature_dict, feature_size=64, include_final_layers=False, in
     features = [feature_dict[name] for name in feature_names]
 
     # Apply conv
-    for i,_ in range(len(feature_names)):
+    for i, N in enumerate(feature_names):
         if i == 0 and include_final_layers:
-            N = feature_names[0]
             level = int(re.findall(r'\d+', N)[0])
             feature = features[i]
             feature_plus_one = ConvBlock(feature,
@@ -87,7 +113,6 @@ def __build_inputs(feature_dict, feature_size=64, include_final_layers=False, in
             input_dict['P{}_in'.format(level+2)] = feature_plus_two
             input_dict['P{}_in'.format(level+1)] = feature_plus_one
 
-        N = feature_names[i]
         level = int(re.findall(r'\d+', N)[0])
         p_name = 'P{}_in'.format(level)
         feature = features[i]
