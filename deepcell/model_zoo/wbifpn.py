@@ -39,6 +39,7 @@ from tensorflow.python.keras.layers import UpSampling2D
 from tensorflow.python.keras.layers import BatchNormalization
 
 from deepcell.utils.misc_utils import get_sorted_keys
+from deepcell.layers.weighted_add import WeightedAdd
 
 
 def ConvBlock(feature, feature_size=64, kernel_size=1, strides=1, name='conv_block'):
@@ -145,7 +146,7 @@ def __build_upsample(input_dict, index=0):
             upsample_dict['P{}_U'.format(
                 level+1)] = UpSampling2D()(td_dict['P{}_td'.format(level+1)])
 
-        td = Add()([upsample_dict['P{}_U'.format(level+1)], p_in])
+        td = WeightedAdd()([upsample_dict['P{}_U'.format(level+1)], p_in])
         td = DepthwiseConvBlock(td, kernel_size=3,
                                 strides=1,
                                 name='BiFPN_{}_U_P{}'.format(index, level))
@@ -171,7 +172,7 @@ def __build_downsample(input_dict, td_dict, index=0):
             output_dict['P{}'.format(level)] = tds[i]
             downsample_dict['P{}_D'.format(level)] = MaxPooling2D(strides=(2, 2))(tds[i])
         elif i < len(td_names):
-            out = Add()([downsample_dict['P{}_D'.format(level-1)],
+            out = WeightedAdd()([downsample_dict['P{}_D'.format(level-1)],
                          td_dict['P{}_td'.format(level)], input_dict['P{}_in'.format(level)]])
             out = DepthwiseConvBlock(out, kernel_size=3,
                                      strides=1,
@@ -181,7 +182,7 @@ def __build_downsample(input_dict, td_dict, index=0):
         elif i == len(td_names):
             N = td_names[-1]
             level = int(re.findall(r'\d+', N)[0]) + 1
-            out = Add()([downsample_dict['P{}_D'.format(level-1)],
+            out = WeightedAdd()([downsample_dict['P{}_D'.format(level-1)],
                          input_dict['P{}_in'.format(level)]])
             out = DepthwiseConvBlock(out, kernel_size=3,
                                      strides=1,
