@@ -722,15 +722,7 @@ def _get_detections(generator,
             
             input_image = np.expand_dims(image, axis=0)
             inputs = input_image
-
-#             if generator.assoc_head:
-#                 label_image = generator.y[i]
-#                 annotation = generator.load_annotations(label_image)
-#                 bboxes = annotation['bboxes']
-#                 input_bboxes = np.expand_dims(bboxes, axis=0)
-
-#                 inputs = [input_image, input_bboxes] 
-
+            
             # run network
             results = model.predict_on_batch(inputs)
         
@@ -812,11 +804,12 @@ def _get_detections(generator,
                     pass
                 else:
                     if generator.assoc_head:
-                        boxes = results[0]
-                        scores = results[1]
-                        labels = results[2]
-                        masks = results[3]
-                        association_head = results[4]
+                        boxes = results[-6]
+                        scores = results[-5]
+                        labels = results[-4]
+                        masks = results[-3]
+                        final_scores = results[-2]
+                        association_head = results[-1]
                     elif (generator.include_masks and
                             not generator.include_final_detection_layer):
                         boxes = results[-5]
