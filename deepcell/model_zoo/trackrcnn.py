@@ -34,7 +34,8 @@ from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.layers import Add, Activation, Flatten, Dense
 from tensorflow.python.keras.layers import Input, Concatenate
 from tensorflow.python.keras.layers import TimeDistributed, Conv2D, Conv3D
-from tensorflow.python.keras.layers import AveragePooling2D, AveragePooling3D 
+from tensorflow.python.keras.layers import AveragePooling2D, AveragePooling3D
+from tensorflow.python.keras.layers import GlobalAveragePooling2D, GlobalAveragePooling3D
 from tensorflow.python.keras.layers import MaxPool2D, MaxPool3D, Lambda
 from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.initializers import normal
@@ -170,6 +171,7 @@ def default_final_detection_model(pyramid_feature_size=256,
 
 
 def default_roi_submodels(num_classes,
+                          num_association_features,
                           roi_size=(14, 14),
                           mask_size=(28, 28),
                           frames_per_batch=1,
@@ -199,11 +201,14 @@ def default_roi_submodels(num_classes,
                                    mask_size=mask_size,
                                    mask_dtype=mask_dtype,
                                    retinanet_dtype=retinanet_dtype), name='mask_submodel')),
-            ('final_detection', TimeDistributed(
-                default_final_detection_model(roi_size=roi_size))),
+            ('final_detection', TimeDistributed(default_final_detection_model(roi_size=roi_size), 
+                                                name = 'final_detection_submodel')),
             ('association_features', TimeDistributed(
-                association_vector_model(roi_size=roi_size,
-                                        frames_per_batch=frames_per_batch)))
+                                     association_vector_model(num_association_features,
+                                         roi_size=roi_size,
+                                         name='assoc_vec_submodel_0',
+                                         frames_per_batch=frames_per_batch),
+                                     name='assoc_head_submodel'))
         ]
     return [
         ('masks', default_mask_model(num_classes,
@@ -215,11 +220,11 @@ def default_roi_submodels(num_classes,
         ]
 
 
-def association_vector_model(roi_size=(14, 14),
-                             frames_per_batch=1,
-                             num_association_features=128,
+def association_vector_model(num_association_features,
+                             roi_size=(14, 14),
                              pyramid_feature_size=256,
-                             name='association_vector_model'):
+                             frames_per_batch=1,
+                             name='assoc_head_submodel'):
     options = {
         'kernel_size': 3,
         'strides': 1,
@@ -230,50 +235,65 @@ def association_vector_model(roi_size=(14, 14),
     }
 
     inputs = Input(shape=(None, roi_size[0], roi_size[1], pyramid_feature_size))
-    outputs = inputs
+    # inputs = Input(shape=(None, None, None, num_association_features))
 
     conv1 = TimeDistributed(Conv2D(
-        filters=num_association_features,
+        filters=pyramid_feature_size,
         **options
     ), name='association_vector_submodel_conv1')(inputs)
     conv2 = TimeDistributed(Conv2D(
-        filters=num_association_features,
+        filters=pyramid_feature_size,
         **options
     ), name='association_vector_submodel_conv2')(conv1)
+    x = conv2
     x = TimeDistributed(MaxPool2D(
     ), name='association_vector_submodel_pool1')(conv2)
 
     # Residuals
     for i in range(2):
-        x = TimeDistributed(Conv2D(filters=num_association_features,
+        x = TimeDistributed(Conv2D(filters=pyramid_feature_size,
                                    kernel_size=3,
                                    padding='valid',
                                    kernel_initializer=normal(mean=0.0, stddev=0.01, seed=None),
                                    bias_initializer='zeros',
                                    activation='relu', 
                                    name='association_vector_residual_conv1_block{}'.format(i)))(x)
-        y = TimeDistributed(Conv2D(filters=num_association_features,
+        y = TimeDistributed(Conv2D(filters=pyramid_feature_size,
                                    kernel_size=3,
                                    padding='same',
                                    kernel_initializer=normal(mean=0.0, stddev=0.01, seed=None),
                                    bias_initializer='zeros',
                                    activation='relu',
                                    name='association_vector_residual_conv2_block{}'.format(i)))(x)
+#         x = TimeDistributed(Add())([x, y])
+#         x = TimeDistributed(Activation('relu', name='association_vector_residual_relu_block{}'.format(i)))(x)     
         x = Add(name='association_vector_residual_add_block{}'.format(i))([x, y])
-        x = Activation('relu')(x)                          
+        x = Activation('relu', name='association_vector_residual_relu_block{}'.format(i))(x)     
 
-    y = AveragePooling3D(pool_size=3)(x)
-#     y = Flatten()(y)
-    outputs = Dense(num_association_features,
+
+    y = TimeDistributed(AveragePooling2D(pool_size=3,
+                        name='association_vector_averagepooling'))(x)
+#     y = TimeDistributed(Flatten(data_format='channels_last',
+#                                 name='association_vector_flatten'))(y)
+#     y = TimeDistributed(GlobalAveragePooling2D(data_format='channels_last',
+#                               name='association_vector_globalavgpooling'))(x)
+#     print("GlobalAveragePooling3D.shape: ", y.shape)
+    
+    outputs = TimeDistributed(Dense(num_association_features,
                     activation='softmax',
-                    kernel_initializer='he_normal')(y)
-    outputs = y
+#                     kernel_initializer='he_normal',
+                    name='association_vector_dense_output'))(y)
+    outputs = Lambda(lambda x: tf.squeeze(x, axis=[2, 3]))(outputs)
+
+    print("outputs.shape", outputs.shape)
+        
     return Model(inputs=inputs, outputs=outputs, name=name)
 
 
 def retinanet_mask(inputs,
                    backbone_dict,
                    num_classes,
+                   num_association_features,
                    frames_per_batch=1,
                    backbone_levels=['C3', 'C4', 'C5'],
                    pyramid_levels=['P3', 'P4', 'P5', 'P6', 'P7'],
@@ -281,7 +301,7 @@ def retinanet_mask(inputs,
                    anchor_params=None,
                    nms=True,
                    panoptic=False,
-                   shape_mask=False,
+                   use_assoc_head=False,
                    class_specific_filter=True,
                    crop_size=(14, 14),
                    mask_size=(28, 28),
@@ -329,7 +349,7 @@ def retinanet_mask(inputs,
         retinanet_dtype = K.floatx()
         K.set_floatx(mask_dtype)
         roi_submodels = default_roi_submodels(
-            num_classes, crop_size, mask_size,
+            num_classes, num_association_features, crop_size, mask_size,
             frames_per_batch, mask_dtype, retinanet_dtype)
         K.set_floatx(retinanet_dtype)
 
@@ -352,7 +372,6 @@ def retinanet_mask(inputs,
     # parse outputs
     regression = retinanet_model.outputs[0]
     classification = retinanet_model.outputs[1]
-    print("len(retinanet_model.outputs):", len(retinanet_model.outputs))
 
     if panoptic:
         # Determine the number of semantic heads
@@ -364,6 +383,7 @@ def retinanet_mask(inputs,
     else:
         other = retinanet_model.outputs[2:]
 
+
     features = [retinanet_model.get_layer(name).output
                 for name in pyramid_levels]
 
@@ -374,38 +394,59 @@ def retinanet_mask(inputs,
     boxes = ClipBoxes(name='clipped_boxes')([image, boxes])
 
     # filter detections (apply NMS / score threshold / select top-k)
-    # use ground truth boxes
-    if frames_per_batch == 1:
-        boxes = Input(shape=(None, 4), name='boxes_input')
-    else:
-        boxes = Input(shape=(None, None, 4), name='boxes_input')
-    inputs = [image, boxes]
+    detections = FilterDetections(
+        nms=nms,
+        nms_threshold=nms_threshold,
+        score_threshold=score_threshold,
+        class_specific_filter=class_specific_filter,
+        max_detections=max_detections,
+        name='filtered_detections'
+    )([boxes, classification] + other)
+
+    # split up in known outputs and "other"
+    boxes = detections[0]
+    scores = detections[1]
+
+    # get the region of interest features
+    #
+    # roi_input = [image_shape, boxes, classification] + features
+    # rois = _RoiAlign(crop_size=crop_size)(roi_input)
 
     fpn = features[0]
-    fpn = UpsampleLike(name='upsamplelike')([fpn, image])
-    rois = RoiAlign(crop_size=crop_size, name='roialign')([boxes, fpn])
+    fpn = UpsampleLike()([fpn, image])
+    rois = RoiAlign(crop_size=crop_size)([boxes, fpn])
 
     # execute trackrcnn submodels
     trackrcnn_outputs = [submodel(rois) for _, submodel in roi_submodels]
+    print("trackrcnn_outputs:")
+    for x in trackrcnn_outputs:
+        print(x.name, x.shape, x.dtype)
 
     # concatenate boxes for loss computation
     trainable_outputs = [ConcatenateBoxes(name=name)([boxes, output])
                          for (name, _), output in zip(
                              roi_submodels, trackrcnn_outputs)]
+    
+    trainable_outputs[-1] = Concatenate(name='association_features_cat')([trainable_outputs[-1], trainable_outputs[-2]])
 
-    print("roi_submodels names in trainable_outputs:")
+
+    print("roi_submodels names in roi_submodels:")
     for (name, _) in roi_submodels:
         print(name)
+    
+    print("trainable_outputs:")
+    for x in trainable_outputs:
+        print(x.name, x.shape, x.dtype)
 
-    # reconstruct the new output
-    detections = []
 
     outputs = [regression, classification] + other + trainable_outputs + \
-        detections # + trackrcnn_outputs
+        detections + trackrcnn_outputs
 
     if panoptic:
+        print("is panoptic")
         outputs += list(semantic)
-    print("len(outputs):", len(outputs))
+
+    print("outputs:", outputs)
 
     model = Model(inputs=inputs, outputs=outputs, name=name)
     model.backbone_levels = backbone_levels
@@ -427,6 +468,8 @@ def RetinaMask(backbone,
                mask_dtype=K.floatx(),
                required_channels=3,
                frames_per_batch=1,
+               use_assoc_head=False,
+               num_association_features=2,
                **kwargs):
     """Constructs a mrcnn model using a backbone from keras-applications.
 
@@ -514,4 +557,6 @@ def RetinaMask(backbone,
         name='{}_retinanet_mask'.format(backbone),
         mask_dtype=mask_dtype,
         frames_per_batch=frames_per_batch,
+        use_assoc_head=use_assoc_head,
+        num_association_features=num_association_features,
         **kwargs)
