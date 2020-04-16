@@ -706,7 +706,8 @@ def _get_detections(generator,
 
     Returns:
         list: The detections for each image in the generator.
-    """
+    """ 
+                
     all_detections = [[None for i in range(generator.num_classes)]
                       for j in range(generator.y.shape[0])]
 
@@ -719,42 +720,44 @@ def _get_detections(generator,
             # image = generator.preprocess_image(raw_image.copy())
             # image, scale = generator.resize_image(image)
             image = generator.x[i]
-            
             input_image = np.expand_dims(image, axis=0)
             inputs = input_image
+            
+            label_image = generator.y[i]
+            annotation = generator.load_annotations(label_image)
+            bboxes = annotation['bboxes']
+            input_bboxes = np.expand_dims(bboxes, axis=0)
+
+            inputs = [input_image, input_bboxes] 
             
             # run network
             results = model.predict_on_batch(inputs)
         
             if generator.panoptic:
                 num_semantic_outputs = len(generator.y_semantic_list)
-                boxes = results[-num_semantic_outputs - 4]
-                scores = results[-num_semantic_outputs - 3]
-                labels = results[-num_semantic_outputs - 2]
-                association_head = results[-num_assoc_head_outputs-1]
+                boxes = results[-num_semantic_outputs - 3]
+                scores = results[-num_semantic_outputs - 2]
+                labels = results[-num_semantic_outputs - 1]
                 semantic = results[-num_semantic_outputs:]
                 if generator.include_masks:
-                    boxes = results[-num_semantic_outputs - 5]
-                    scores = results[-num_semantic_outputs - 4]
-                    labels = results[-num_semantic_outputs - 3]
-                    masks = results[-num_semantic_outputs - 2]
-                    association_head = results[-num_assoc_head_outputs-1]
+                    boxes = results[-num_semantic_outputs - 4]
+                    scores = results[-num_semantic_outputs - 3]
+                    labels = results[-num_semantic_outputs - 2]
+                    masks = results[-num_semantic_outputs - 1]
                     semantic = results[-num_semantic_outputs]
             elif (generator.include_masks and
                         not generator.include_final_detection_layer):
-                    boxes = results[-5]
-                    scores = results[-4]
-                    labels = results[-3]
-                    masks = results[-2]
-                    association_head = results[-1]
+                    boxes = results[-4]
+                    scores = results[-3]
+                    labels = results[-2]
+                    masks = results[-1]
             elif (generator.include_masks and
                   generator.include_final_detection_layer):
                 boxes = results[-5]
-                scores = results[-5]
-                labels = results[-4]
-                masks = results[-3]
-                final_scores = results[-2]
-                association_head = results[-1]
+                scores = results[-4]
+                labels = results[-3]
+                masks = results[-2]
+                final_scores = results[-1]
             else:
                 boxes, scores, labels = results[0:3]
 
@@ -804,27 +807,24 @@ def _get_detections(generator,
                     pass
                 else:
                     if generator.assoc_head:
-                        boxes = results[-6]
-                        scores = results[-5]
-                        labels = results[-4]
-                        masks = results[-3]
-                        final_scores = results[-2]
-                        association_head = results[-1]
-                    elif (generator.include_masks and
-                            not generator.include_final_detection_layer):
                         boxes = results[-5]
                         scores = results[-4]
                         labels = results[-3]
                         masks = results[-2]
-                        association_head = results[-1]
+                        final_scores = results[-1]
+                    elif (generator.include_masks and
+                            not generator.include_final_detection_layer):
+                        boxes = results[-4]
+                        scores = results[-3]
+                        labels = results[-2]
+                        masks = results[-1]
                     elif (generator.include_masks and
                           generator.include_final_detection_layer):
-                        boxes = results[-6]
-                        scores = results[-5]
-                        labels = results[-4]
-                        masks = results[-3]
-                        final_scores = results[-2]
-                        association_head = results[-1]
+                        boxes = results[-5]
+                        scores = results[-4]
+                        labels = results[-3]
+                        masks = results[-2]
+                        final_scores = results[-1]
                     else:
                         boxes, scores, labels = results[0:3]
 
