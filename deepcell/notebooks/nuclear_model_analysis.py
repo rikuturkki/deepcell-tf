@@ -2,10 +2,10 @@ import os
 import papermill as pm
 
 filename = 'general_nuclear_train.npz'
-date = '04122020'
+date = '04182020'
 
-dataset_split_seeds = [0] # [0, 1, 2]
-dataset_sizes = [128] #[128, 512, 2048, 8192, 32768, 82800]
+dataset_split_seeds = [1] # [0, 1, 2]
+dataset_sizes = [82800] #[128, 512, 2048, 8192, 32768, 82800]
 backbones = ['resnet50'] # ['resnet50', 'mobilenetv2']
 model_types = ['retinamask', 'pixelwise', 'watershed']
 
@@ -21,7 +21,7 @@ for seed in dataset_split_seeds:
                 input_notebook_name = 'Papermill - Nuclear Accuracy.ipynb'
                 output_notebook_name = filename + '_training_notebook.ipynb'
                 
-                input_direc = os.path.join('/notebooks','papermill')
+                input_direc = os.path.join('/notebooks') #,'papermill')
                 output_direc = os.path.join('/notebooks', date)
                 
                 os.makedirs(input_direc, exist_ok=True)
