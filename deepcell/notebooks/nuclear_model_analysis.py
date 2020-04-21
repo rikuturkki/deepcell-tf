@@ -2,9 +2,9 @@ import os
 import papermill as pm
 
 filename = 'general_nuclear_train.npz'
-date = '04182020'
+date = '04212020'
 
-dataset_split_seeds = [1] # [0, 1, 2]
+dataset_split_seeds = [2] # [0, 1, 2]
 dataset_sizes = [82800] #[128, 512, 2048, 8192, 32768, 82800]
 backbones = ['resnet50'] # ['resnet50', 'mobilenetv2']
 model_types = ['retinamask', 'pixelwise', 'watershed']
