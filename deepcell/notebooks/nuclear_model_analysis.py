@@ -5,7 +5,7 @@ filename = 'general_nuclear_train.npz'
 date = '04202020'
 
 dataset_split_seeds = [2] # [0, 1, 2]
-dataset_sizes = [512] #[128, 512, 2048, 8192, 32768, 82800]
+dataset_sizes = [2048] #[128, 512, 2048, 8192, 32768, 82800]
 backbones = ['resnet50'] # ['resnet50', 'mobilenetv2']
 model_types = ['retinamask', 'pixelwise', 'watershed']
 
