@@ -1,13 +1,13 @@
 import os
 import papermill as pm
 
-filename = 'general_nuclear_train.npz'
-date = '04222020'
+filename = 'general_nuclear_train_new.npz'
+date = '04242020'
 
-dataset_split_seeds = [1] # [0, 1, 2]
-dataset_sizes = [82800] #[128, 512, 2048, 8192, 32768, 82800]
+dataset_split_seeds = [0] # [0, 1, 2]
+dataset_sizes = [6000] #[120,  1200,  6000, 12000, 24000, 48000, 77040]
 backbones = ['mobilenetv2'] # ['resnet50', 'mobilenetv2']
-model_types = ['pixelwise', 'watershed'] #'retinamask', 'pixelwise', 'watershed']
+model_types = ['retinamask', 'pixelwise', 'watershed']
 
 for seed in dataset_split_seeds:
     for dataset_size in dataset_sizes:
@@ -23,7 +23,7 @@ for seed in dataset_split_seeds:
                 
                 input_direc = os.path.join('/notebooks') #,'papermill')
                 output_direc = os.path.join('/notebooks', date)
-                
+               
                 os.makedirs(input_direc, exist_ok=True)
                 os.makedirs(output_direc, exist_ok=True)
                 
