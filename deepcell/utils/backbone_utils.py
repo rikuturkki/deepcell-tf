@@ -181,7 +181,12 @@ def featurenet_3D_backbone(input_tensor=None, input_shape=None,
 def get_backbone(backbone, input_tensor=None, input_shape=None,
                  use_imagenet=False, return_dict=True,
                  frames_per_batch=1, **kwargs):
+<<<<<<< HEAD
     """Retrieve backbones - helper function for the construction of feature pyramid networks
+=======
+    """Retrieve backbones for the construction of feature pyramid networks.
+
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     Args:
         backbone (str): Name of the backbone to be retrieved.
         input_tensor (tensor): The input tensor for the backbone.
@@ -216,8 +221,20 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
     kwargs['models'] = tf.keras.models
     kwargs['utils'] = utils
 
+<<<<<<< HEAD
     featurenet_backbones = ['featurenet', 'featurenet3d', 'featurenet_3d']
     vgg_backbones = ['vgg16', 'vgg19']
+=======
+    featurenet_backbones = {
+        'featurenet': featurenet_backbone,
+        'featurenet3d': featurenet_3D_backbone,
+        'featurenet_3d': featurenet_3D_backbone
+    }
+    vgg_backbones = {
+        'vgg16': applications.vgg16.VGG16,
+        'vgg19': applications.vgg19.VGG19,
+    }
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     densenet_backbones = {
         'densenet121': applications.densenet.DenseNet121,
         'densenet169': applications.densenet.DenseNet169,
@@ -247,6 +264,7 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
         'nasnet_mobile': applications.nasnet.NASNetMobile,
     }
     efficientnet_backbones = {
+<<<<<<< HEAD
         'efficientnetb0': applications.efficientnet.EfficientNetB0,
         'efficientnetb1': applications.efficientnet.EfficientNetB1,
         'efficientnetb2': applications.efficientnet.EfficientNetB2,
@@ -255,6 +273,16 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
         'efficientnetb5': applications.efficientnet.EfficientNetB5,
         'efficientnetb6': applications.efficientnet.EfficientNetB6,
         'efficientnetb7': applications.efficientnet.EfficientNetB7,
+=======
+        # 'efficientnetb0': applications.efficientnet.EfficientNetB0,
+        # 'efficientnetb1': applications.efficientnet.EfficientNetB1,
+        # 'efficientnetb2': applications.efficientnet.EfficientNetB2,
+        # 'efficientnetb3': applications.efficientnet.EfficientNetB3,
+        # 'efficientnetb4': applications.efficientnet.EfficientNetB4,
+        # 'efficientnetb5': applications.efficientnet.EfficientNetB5,
+        # 'efficientnetb6': applications.efficientnet.EfficientNetB6,
+        # 'efficientnetb7': applications.efficientnet.EfficientNetB7,
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     }
 
     # TODO: Check and make sure **kwargs is in the right format.
@@ -286,26 +314,19 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
             raise ValueError('A featurenet backbone that is pre-trained on '
                              'imagenet does not exist')
 
-        if '3d' in _backbone:
-            model, output_dict = featurenet_3D_backbone(input_tensor=img_input, **kwargs)
-        else:
-            model, output_dict = featurenet_backbone(input_tensor=img_input, **kwargs)
+        model_cls = featurenet_backbones[_backbone]
+        model, output_dict = model_cls(input_tensor=img_input, **kwargs)
 
         layer_outputs = [output_dict['C1'], output_dict['C2'], output_dict['C3'],
                          output_dict['C4'], output_dict['C5']]
 
     elif _backbone in vgg_backbones:
-        if _backbone == 'vgg16':
-            model = applications.vgg16.VGG16(input_tensor=img_input, **kwargs)
-        else:
-            model = applications.vgg19.VGG19(input_tensor=img_input, **kwargs)
+        model_cls = vgg_backbones[_backbone]
+        model = model_cls(input_tensor=img_input, **kwargs)
 
         # Set the weights of the model if requested
         if use_imagenet:
-            if _backbone == 'vgg16':
-                model_with_weights = applications.vgg16.VGG16(**kwargs_with_weights)
-            else:
-                model_with_weights = applications.vgg19.VGG19(**kwargs_with_weights)
+            model_with_weights = model_cls(**kwargs_with_weights)
             model_with_weights.save_weights('model_weights.h5')
             model.load_weights('model_weights.h5', by_name=True)
 
@@ -417,7 +438,11 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
         layer_outputs = [model.get_layer(name=ln).output for ln in layer_names]
 
     elif _backbone in nasnet_backbones:
+<<<<<<< HEAD
         model_cls = mobilenet_backbones[_backbone]
+=======
+        model_cls = nasnet_backbones[_backbone]
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
         model = model_cls(input_tensor=img_input, **kwargs)
         if _backbone.endswith('large'):
             block_ids = [5, 12, 18]
@@ -450,10 +475,17 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
 
     else:
         join = lambda x: [v for y in x for v in list(y.keys())]
+<<<<<<< HEAD
         backbones = join([featurenet_backbones + densenet_backbones +
                           resnet_backbones + resnext_backbones +
                           resnet_v2_backbones + vgg_backbones +
                           nasnet_backbones + mobilenet_backbones +
+=======
+        backbones = join([featurenet_backbones, densenet_backbones,
+                          resnet_backbones, resnext_backbones,
+                          resnet_v2_backbones, vgg_backbones,
+                          nasnet_backbones, mobilenet_backbones,
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
                           efficientnet_backbones])
         raise ValueError('Invalid value for `backbone`. Must be one of: %s' %
                          ', '.join(backbones))
