@@ -417,7 +417,11 @@ def semantic_prediction(semantic_names,
         x = TensorProduct(n_classes)(x)
         x = Softmax(axis=channel_axis, name='semantic_{}'.format(semantic_id))(x)
 <<<<<<< HEAD
+<<<<<<< HEAD
     elif n_classes == 1:
+=======
+    else:  # n_classes == 1
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
     else:  # n_classes == 1
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e

@@ -323,9 +323,15 @@ class ImageFullyConvDataGenerator(ImageDataGenerator):
             y_new = []
             for y_i in y:
 <<<<<<< HEAD
+<<<<<<< HEAD
                 if y_i.shape[self.channel_axis-1] > 1:
                     y_t = self.apply_transform(y_i, params)
                 elif y_i.shape[self.channel_axis-1] == 1:
+=======
+                if y_i.shape[self.channel_axis - 1] > 1:
+                    y_t = self.apply_transform(y_i, params)
+                else:
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
                 if y_i.shape[self.channel_axis - 1] > 1:
                     y_t = self.apply_transform(y_i, params)

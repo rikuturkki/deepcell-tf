@@ -155,7 +155,11 @@ def _transform_masks(y, transform, data_format=None, **kwargs):
 
         if y.ndim == 5:
 <<<<<<< HEAD
+<<<<<<< HEAD
             _distance_transform = transform_utils.distance_transform_continuous_movie    
+=======
+            raise ValueError('3D images not supported')
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
             raise ValueError('3D images not supported')
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
@@ -179,6 +183,12 @@ def _transform_masks(y, transform, data_format=None, **kwargs):
         erosion = kwargs.pop('erosion_width', 0)
         disk_size = kwargs.pop('disk_size', 4)
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+        alpha = kwargs.pop('alpha', 0.1)
+        beta = kwargs.pop('beta', 1)
+
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
         alpha = kwargs.pop('alpha', 0.1)
         beta = kwargs.pop('beta', 1)
@@ -191,7 +201,11 @@ def _transform_masks(y, transform, data_format=None, **kwargs):
 
         if y.ndim == 5:
 <<<<<<< HEAD
+<<<<<<< HEAD
             _transform = transform_utils.centroid_transform_continuous_movie
+=======
+            raise ValueError('3D images not supported')
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
             raise ValueError('3D images not supported')
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
@@ -205,7 +219,12 @@ def _transform_masks(y, transform, data_format=None, **kwargs):
                 mask = y[batch, ..., 0]
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             y_transform[batch] = _transform(mask, erosion)
+=======
+            y_transform[batch] = _transform(mask, erosion_width=erosion,
+                                            alpha=alpha, beta=beta)
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
             y_transform[batch] = _transform(mask, erosion_width=erosion,
                                             alpha=alpha, beta=beta)
@@ -250,10 +269,15 @@ from deepcell.image_generators.retinanet import RetinaMovieIterator
 from deepcell.image_generators.retinanet import RetinaMovieDataGenerator
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 from deepcell.image_generators.semantic import SemanticGenerator
 from deepcell.image_generators.semantic import SemanticIterator
 from deepcell.image_generators.semantic import SemanticMovieGenerator
 from deepcell.image_generators.semantic import SemanticMovieIterator
+=======
+from deepcell.image_generators.semantic import SemanticDataGenerator
+from deepcell.image_generators.semantic import SemanticIterator
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
 from deepcell.image_generators.semantic import SemanticDataGenerator
 from deepcell.image_generators.semantic import SemanticIterator

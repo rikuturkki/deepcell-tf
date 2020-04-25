@@ -221,6 +221,10 @@ autodoc_mock_imports = [
     'cython',
     'keras-preprocessing',
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+    'keras_retinanet',
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
     'keras_retinanet',
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e

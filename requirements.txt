@@ -13,9 +13,13 @@ cython>=0.28
 pathlib==1.0.1
 deepcell-tracking>=0.2.4
 <<<<<<< HEAD
+<<<<<<< HEAD
 tensorly>=0.4.5
 papermill==1.2.1
 deepcell_toolbox==0.3.0
+=======
+deepcell-toolbox>=0.3.0
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
 deepcell-toolbox>=0.3.0
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e

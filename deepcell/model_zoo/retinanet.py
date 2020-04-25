@@ -352,7 +352,10 @@ def retinanet(inputs,
               submodels=None,
               frames_per_batch=1,
 <<<<<<< HEAD
+<<<<<<< HEAD
               temporal_mode=None,
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
               semantic_only=False,

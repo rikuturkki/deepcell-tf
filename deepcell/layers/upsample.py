@@ -95,6 +95,9 @@ class UpsampleLike(Layer):
         new_shape_static = [None, None, None, None, volume.get_shape()[-1]]
         resized_volume.set_shape(new_shape_static)
 
+        new_shape_static = [None, None, None, None, volume.get_shape()[-1]]
+        resized_volume.set_shape(new_shape_static)
+
         if self.data_format == 'channels_first':
             resized_volume = tf.transpose(resized_volume, (0, 4, 1, 2, 3))
 

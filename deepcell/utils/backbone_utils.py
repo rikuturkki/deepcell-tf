@@ -182,8 +182,11 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
                  use_imagenet=False, return_dict=True,
                  frames_per_batch=1, **kwargs):
 <<<<<<< HEAD
+<<<<<<< HEAD
     """Retrieve backbones - helper function for the construction of feature pyramid networks
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     """Retrieve backbones for the construction of feature pyramid networks.
 
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
@@ -222,9 +225,12 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
     kwargs['utils'] = utils
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     featurenet_backbones = ['featurenet', 'featurenet3d', 'featurenet_3d']
     vgg_backbones = ['vgg16', 'vgg19']
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     featurenet_backbones = {
         'featurenet': featurenet_backbone,
         'featurenet3d': featurenet_3D_backbone,
@@ -234,6 +240,9 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
         'vgg16': applications.vgg16.VGG16,
         'vgg19': applications.vgg19.VGG19,
     }
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     densenet_backbones = {
         'densenet121': applications.densenet.DenseNet121,
@@ -265,6 +274,7 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
     }
     efficientnet_backbones = {
 <<<<<<< HEAD
+<<<<<<< HEAD
         'efficientnetb0': applications.efficientnet.EfficientNetB0,
         'efficientnetb1': applications.efficientnet.EfficientNetB1,
         'efficientnetb2': applications.efficientnet.EfficientNetB2,
@@ -274,6 +284,8 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
         'efficientnetb6': applications.efficientnet.EfficientNetB6,
         'efficientnetb7': applications.efficientnet.EfficientNetB7,
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
         # 'efficientnetb0': applications.efficientnet.EfficientNetB0,
         # 'efficientnetb1': applications.efficientnet.EfficientNetB1,
         # 'efficientnetb2': applications.efficientnet.EfficientNetB2,
@@ -282,6 +294,9 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
         # 'efficientnetb5': applications.efficientnet.EfficientNetB5,
         # 'efficientnetb6': applications.efficientnet.EfficientNetB6,
         # 'efficientnetb7': applications.efficientnet.EfficientNetB7,
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     }
 
@@ -439,7 +454,11 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
 
     elif _backbone in nasnet_backbones:
 <<<<<<< HEAD
+<<<<<<< HEAD
         model_cls = mobilenet_backbones[_backbone]
+=======
+        model_cls = nasnet_backbones[_backbone]
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
         model_cls = nasnet_backbones[_backbone]
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
@@ -476,15 +495,21 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
     else:
         join = lambda x: [v for y in x for v in list(y.keys())]
 <<<<<<< HEAD
+<<<<<<< HEAD
         backbones = join([featurenet_backbones + densenet_backbones +
                           resnet_backbones + resnext_backbones +
                           resnet_v2_backbones + vgg_backbones +
                           nasnet_backbones + mobilenet_backbones +
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
         backbones = join([featurenet_backbones, densenet_backbones,
                           resnet_backbones, resnext_backbones,
                           resnet_v2_backbones, vgg_backbones,
                           nasnet_backbones, mobilenet_backbones,
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
                           efficientnet_backbones])
         raise ValueError('Invalid value for `backbone`. Must be one of: %s' %

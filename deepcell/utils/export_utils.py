@@ -103,6 +103,7 @@ def export_model(keras_model, export_path, model_version=0, weights_path=None):
     builder.save()
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 def norm_images(images):
     mean = np.mean(images, axis=(1,2), keepdims=True)
     std = np.std(images, axis=(1,2), keepdims=True)
@@ -151,6 +152,8 @@ def export_model_to_tflite(model_file, export_path, val_generator, file_name = '
     
         return tflite_quant_model
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 
 def export_model_to_tflite(model_file, export_path, calibration_images,
                            norm=True, location=True, file_name='model.tflite'):
@@ -220,4 +223,7 @@ def export_model_to_tflite(model_file, export_path, calibration_images,
     open(save_path, "wb").write(tflite_quant_model)
 
     return tflite_model
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e

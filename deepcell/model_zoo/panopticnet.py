@@ -34,6 +34,7 @@ import re
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.models import Model
 <<<<<<< HEAD
+<<<<<<< HEAD
 from tensorflow.python.keras.layers import Conv2D, Conv3D, DepthwiseConv2D, TimeDistributed, ConvLSTM2D
 from tensorflow.python.keras.layers import Input, Concatenate, Add
 from tensorflow.python.keras.layers import Permute, Reshape
@@ -181,6 +182,8 @@ def __create_pyramid_features(backbone_dict, ndim=2,
     """
 
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 from tensorflow.python.keras.layers import Conv2D, Conv3D
 from tensorflow.python.keras.layers import TimeDistributed, ConvLSTM2D
 from tensorflow.python.keras.layers import Input, Concatenate
@@ -273,11 +276,15 @@ def semantic_upsample(x, n_upsample, n_filters=64, ndim=2,
         tensor: The upsampled tensor
     """
     # Check input to ndims
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     acceptable_ndims = [2, 3]
     if ndim not in acceptable_ndims:
         raise ValueError('Only 2 and 3 dimensional networks are supported')
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     # Get names of the backbone levels and place in ascending order
     backbone_names = get_sorted_keys(backbone_dict)
@@ -383,6 +390,8 @@ def semantic_upsample(x, n_upsample, n_filters=64, ndim=3, semantic_id=0):
     upsampling = UpSampling2D if ndim == 2 else UpSampling3D
     size = (2,2) if ndim == 2 else (1,2,2)
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     # Check input to interpolation
     acceptable_interpolation = {'bilinear', 'nearest'}
     if interpolation not in acceptable_interpolation:
@@ -393,6 +402,9 @@ def semantic_upsample(x, n_upsample, n_filters=64, ndim=3, semantic_id=0):
     conv_kernel = (3, 3) if ndim == 2 else (1, 3, 3)
     upsampling = UpSampling2D if ndim == 2 else UpSampling3D
     size = (2, 2) if ndim == 2 else (1, 2, 2)
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     if n_upsample > 0:
         for i in range(n_upsample):
@@ -400,9 +412,15 @@ def semantic_upsample(x, n_upsample, n_filters=64, ndim=3, semantic_id=0):
                      padding='same', data_format='channels_last',
                      name='conv_{}_semantic_upsample_{}'.format(i, semantic_id))(x)
 <<<<<<< HEAD
+<<<<<<< HEAD
             x = upsampling(size=size, 
                             name='upsampling_{}_semantic_upsample_{}'.format(i, semantic_id),
                             interpolation='bilinear')(x)
+=======
+            x = upsampling(size=size,
+                           name='upsampling_{}_semantic_upsample_{}'.format(i, semantic_id),
+                           interpolation=interpolation)(x)
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
             x = upsampling(size=size,
                            name='upsampling_{}_semantic_upsample_{}'.format(i, semantic_id),
@@ -414,6 +432,7 @@ def semantic_upsample(x, n_upsample, n_filters=64, ndim=3, semantic_id=0):
                  name='conv_final_semantic_upsample_{}'.format(semantic_id))(x)
     return x
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 def __create_semantic_head(pyramid_dict,
                             n_classes=3,
@@ -428,6 +447,8 @@ def __create_semantic_head(pyramid_dict,
     conv = Conv2D if ndim == 2 else Conv3D
     conv_kernel = (1,1) if ndim==2 else (1,1,1)
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 
 def __create_semantic_head(pyramid_dict,
                            n_classes=3,
@@ -474,6 +495,9 @@ def __create_semantic_head(pyramid_dict,
     conv = Conv2D if ndim == 2 else Conv3D
     conv_kernel = (1,) * ndim
 
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     if K.image_data_format() == 'channels_first':
         channel_axis = 1
@@ -483,7 +507,11 @@ def __create_semantic_head(pyramid_dict,
     if n_classes == 1:
         include_top = False
 <<<<<<< HEAD
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
 
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
@@ -495,6 +523,7 @@ def __create_semantic_head(pyramid_dict,
     pyramid_names.reverse()
     pyramid_features.reverse()
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     semantic_features = []
     semantic_names = []
@@ -535,6 +564,8 @@ def __create_semantic_head(pyramid_dict,
                 name='tensor_product_1_semantic_{}'.format(semantic_id))(x)
     # x = TensorProduct(n_classes, name='tensor_product_1_semantic_{}'.format(semantic_id))(x)
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     semantic_feature = pyramid_features[-1]
     semantic_name = pyramid_names[-1]
 
@@ -555,6 +586,9 @@ def __create_semantic_head(pyramid_dict,
     x = conv(n_classes, conv_kernel, strides=1,
              padding='same', data_format='channels_last',
              name='conv_1_semantic_{}'.format(semantic_id))(x)
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 
     if include_top:
@@ -564,6 +598,7 @@ def __create_semantic_head(pyramid_dict,
 
     return x
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 def PanopticNet(backbone,
                input_shape,
@@ -587,6 +622,8 @@ def PanopticNet(backbone,
     
     channel_axis = 1 if K.image_data_format() == 'channels_first' else -1
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 
 def PanopticNet(backbone,
                 input_shape,
@@ -675,6 +712,9 @@ def PanopticNet(backbone,
     if interpolation not in acceptable_interpolation:
         raise ValueError('Interpolation mode not supported. Choose from '
                          '["bilinear", "nearest"]')
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 
     if inputs is None:
@@ -690,7 +730,11 @@ def PanopticNet(backbone,
             inputs = Input(shape=input_shape, name='input_0')
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     # force the channel size for backbone input to be `required_channels`
+=======
+    # Normalize input images
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
     # Normalize input images
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
@@ -698,6 +742,7 @@ def PanopticNet(backbone,
         norm = inputs
     else:
         if frames_per_batch > 1:
+<<<<<<< HEAD
 <<<<<<< HEAD
             norm = TimeDistributed(ImageNormalization2D(norm_method=norm_method, name='norm'))(inputs)
         else:
@@ -727,6 +772,8 @@ def PanopticNet(backbone,
 
     # force the input shape
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
             norm = TimeDistributed(ImageNormalization2D(
                 norm_method=norm_method, name='norm'))(inputs)
         else:
@@ -751,6 +798,9 @@ def PanopticNet(backbone,
                         padding='same', name='conv_channels')(concat)
 
     # Force the input shape
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     axis = 0 if K.image_data_format() == 'channels_first' else -1
     fixed_input_shape = list(input_shape)
@@ -773,6 +823,7 @@ def PanopticNet(backbone,
                              if k in backbone_levels}
     ndim = 2 if frames_per_batch == 1 else 3
 <<<<<<< HEAD
+<<<<<<< HEAD
     pyramid_dict = create_pyramid_features(backbone_dict_reduced, ndim=ndim, lite=True)
 
     features = [pyramid_dict[key] for key in pyramid_levels]  
@@ -783,6 +834,8 @@ def PanopticNet(backbone,
             for f, k in zip(temporal_features, pyramid_dict.keys()):
                 pyramid_dict[k] = f
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     pyramid_dict = create_pyramid_features(backbone_dict_reduced,
                                            ndim=ndim,
                                            lite=lite,
@@ -795,6 +848,9 @@ def PanopticNet(backbone,
             feature, mode=temporal_mode) for feature in features]
         for f, k in zip(temporal_features, pyramid_dict.keys()):
             pyramid_dict[k] = f
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 
     semantic_levels = [int(re.findall(r'\d+', k)[0]) for k in pyramid_dict]
@@ -806,15 +862,21 @@ def PanopticNet(backbone,
             pyramid_dict, n_classes=num_semantic_classes[i],
             input_target=inputs, target_level=target_level,
 <<<<<<< HEAD
+<<<<<<< HEAD
             semantic_id=i, ndim=ndim, **kwargs)) 
     
     outputs=semantic_head_list
     
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
             semantic_id=i, ndim=ndim, **kwargs))
 
     outputs = semantic_head_list
 
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
     model = Model(inputs=inputs, outputs=outputs, name=name)
     return model

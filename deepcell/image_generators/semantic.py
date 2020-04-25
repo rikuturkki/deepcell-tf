@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Copyright 2016-2019 The Van Valen Lab at the California Institute of
 # Technology (Caltech), with support from the Paul Allen Family Foundation,
 # Google, & National Institutes of Health (NIH) under Grant U24CA224309-01.
@@ -684,6 +685,8 @@ class SemanticMovieGenerator(ImageDataGenerator):
 
 
 =======
+=======
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 # Copyright 2016-2019 The Van Valen Lab at the California Institute of
 # Technology (Caltech), with support from the Paul Allen Family Foundation,
 # Google, & National Institutes of Health (NIH) under Grant U24CA224309-01.
@@ -1071,4 +1074,7 @@ class SemanticDataGenerator(ImageDataGenerator):
 
         self.interpolation_order = _interpolation_order
         return x, y
+<<<<<<< HEAD
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
+=======
 >>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e

@@ -699,9 +699,14 @@ def train_model_retinanet(model,
             if n_classes > 1:
                 return panoptic_weight * losses.weighted_categorical_crossentropy(
 <<<<<<< HEAD
+<<<<<<< HEAD
                 y_pred, y_true, n_classes=n_classes)
             elif n_classes == 1:
                 return panoptic_weight * MSE(y_pred, y_true)
+=======
+                    y_pred, y_true, n_classes=n_classes)
+            return panoptic_weight * MSE(y_pred, y_true)
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
                     y_pred, y_true, n_classes=n_classes)
             return panoptic_weight * MSE(y_pred, y_true)

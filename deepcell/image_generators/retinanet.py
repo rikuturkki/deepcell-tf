@@ -333,9 +333,15 @@ class RetinaNetIterator(Iterator):
                                                **transform_kwargs)
                 if y_transform.shape[self.channel_axis] > 1:
 <<<<<<< HEAD
+<<<<<<< HEAD
 	                y_transform = np.asarray(y_transform, dtype='int32')
                 elif y_transform.shape[self.channel_axis] == 1:
 	                y_transform = np.asarray(y_transform, dtype=K.floatx())	
+=======
+                    y_transform = np.asarray(y_transform, dtype='int32')
+                else:
+                    y_transform = np.asarray(y_transform, dtype=K.floatx())
+>>>>>>> 890b7cd85983eb2811c5b0689431267df6e5f66e
 =======
                     y_transform = np.asarray(y_transform, dtype='int32')
                 else:
