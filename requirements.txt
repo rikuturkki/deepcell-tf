@@ -13,3 +13,5 @@ cython>=0.28
 pathlib==1.0.1
 deepcell-tracking>=0.2.4
 deepcell-toolbox>=0.3.0
+papermill==1.2.1
+
