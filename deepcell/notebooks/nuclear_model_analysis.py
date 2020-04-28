@@ -6,7 +6,7 @@ date = '04262020'
 
 dataset_split_seeds = [0] # [0, 1, 2]
 dataset_fractions = [1] #[0.01, 0.1, 0.25, 0.5, 1]
-backbones = ['resnet50'] #'resnet50', 'mobilenetv2']
+backbones = ['mobilenetv2'] #'resnet50', 'mobilenetv2']
 model_types = ['retinamask', 'pixelwise', 'watershed']
 
 for seed in dataset_split_seeds:
@@ -14,7 +14,7 @@ for seed in dataset_split_seeds:
         for backbone in backbones:
             for model_type in model_types:
                 filename = 'nuclear_{}_{}_{}_{}'.format(seed, dataset_fraction, backbone, model_type)
-                
+               
                 print('Processing {}'.format(filename))
                 
                 # Define notebook paths
