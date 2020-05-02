@@ -5,9 +5,9 @@ filename = 'general_nuclear.npz'
 date = '05012020'
 
 dataset_split_seeds = [2] # [0, 1, 2]
-dataset_fractions = [0.25] #[0.01, 0.1, 0.25, 0.5, 1]
-backbones = ['resnet50'] # ['resnet50' , 'mobilenetv2']
-model_types = ['pixelwise', 'retinamask',  'watershed']
+dataset_fractions = [0.01] #[0.01, 0.1, 0.25, 0.5, 1]
+backbones = ['mobilenetv2'] # ['resnet50' , 'mobilenetv2']
+model_types = ['pixelwise'] # ['pixelwise', 'retinamask',  'watershed']
 
 for seed in dataset_split_seeds:
     for dataset_fraction in dataset_fractions:
