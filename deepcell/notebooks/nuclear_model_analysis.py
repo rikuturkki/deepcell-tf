@@ -2,12 +2,12 @@ import os
 import papermill as pm
 
 filename = 'general_nuclear.npz'
-date = '05022020'
+date = '05032020'
 
-dataset_split_seeds = [2] # [0, 1, 2]
+dataset_split_seeds = [0, 1, 2]
 dataset_fractions = [1] #[0.01, 0.1, 0.25, 0.5, 1]
-backbones = ['resnet50'] #['resnet50', 'mobilenetv2']
-model_types = ['retinamask', 'pixelwise', 'watershed']
+backbones = ['resnet50', 'mobilenetv2']
+model_types = ['watershed'] #['retinamask', 'pixelwise', 'watershed']
 
 for seed in dataset_split_seeds:
     for dataset_fraction in dataset_fractions:
