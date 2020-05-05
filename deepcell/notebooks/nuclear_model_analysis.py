@@ -4,9 +4,9 @@ import papermill as pm
 filename = 'general_nuclear.npz'
 date = '05042020'
 
-dataset_split_seeds = [0] #[0, 1, 2]
-dataset_fractions = [0.5] #[0.01, 0.1, 0.25, 0.5, 1]
-backbones = ['resnet50'] #['resnet50', 'mobilenetv2']
+dataset_split_seeds = [0, 1, 2]
+dataset_fractions = [1] #[0.01, 0.1, 0.25, 0.5, 1]
+backbones = ['mobilenetv2'] #['resnet50', 'mobilenetv2']
 model_types = ['retinamask'] #['retinamask', 'pixelwise', 'watershed']
 
 for seed in dataset_split_seeds:
