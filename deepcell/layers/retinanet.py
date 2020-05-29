@@ -203,33 +203,20 @@ class ClipBoxes(Layer):
     def call(self, inputs, **kwargs):
         image, boxes = inputs
         shape = K.cast(K.shape(image), K.floatx())
-        if K.ndim(image) == 4:
-            if self.data_format == "channels_first":
-                height = shape[2]
-                width = shape[3]
-            else:
-                height = shape[1]
-                width = shape[2]
-        elif K.ndim(image) == 5:
-            if self.data_format == "channels_first":
-                height = shape[3]
-                width = shape[4]
-            else:
-                height = shape[2]
-                width = shape[3]
+        ndim = K.ndim(image)
+        if self.data_format == "channels_first":
+            height = shape[ndim - 2]
+            width = shape[ndim - 1]
+        else:
+            height = shape[ndim - 3]
+            width = shape[ndim - 2]
 
-        if K.ndim(image) == 4:
-            x1 = tf.clip_by_value(boxes[:, :, 0], 0, width)
-            y1 = tf.clip_by_value(boxes[:, :, 1], 0, height)
-            x2 = tf.clip_by_value(boxes[:, :, 2], 0, width)
-            y2 = tf.clip_by_value(boxes[:, :, 3], 0, height)
-            return K.stack([x1, y1, x2, y2], axis=2)
-        elif K.ndim(image) == 5:
-            x1 = tf.clip_by_value(boxes[:, :, :, 0], 0, width)
-            y1 = tf.clip_by_value(boxes[:, :, :, 1], 0, height)
-            x2 = tf.clip_by_value(boxes[:, :, :, 2], 0, width)
-            y2 = tf.clip_by_value(boxes[:, :, :, 3], 0, height)
-            return K.stack([x1, y1, x2, y2], axis=3)
+        x1, y1, x2, y2 = tf.unstack(boxes, axis=-1)
+        x1 = tf.clip_by_value(x1, 0, width - 1)
+        y1 = tf.clip_by_value(y1, 0, height - 1)
+        x2 = tf.clip_by_value(x2, 0, width - 1)
+        y2 = tf.clip_by_value(y2, 0, height - 1)
+        return K.stack([x1, y1, x2, y2], axis=ndim - 2)
 
     def compute_output_shape(self, input_shape):
         return tensor_shape.TensorShape(input_shape[1]).as_list()
@@ -241,29 +228,21 @@ class ClipBoxes(Layer):
 
 
 class ConcatenateBoxes(Layer):
+    """Keras layer to concatenate bouding boxes."""
     def call(self, inputs, **kwargs):
         boxes, other = inputs
-        if K.ndim(boxes) == 3:
-            boxes_shape = K.shape(boxes)
-            other_shape = K.shape(other)
-            other = K.reshape(other, (boxes_shape[0], boxes_shape[1], -1))
-            return K.concatenate([boxes, other], axis=2)
-        elif K.ndim(boxes) == 4:
-            boxes_shape = K.shape(boxes)
-            other_shape = K.shape(other)
-            other = K.reshape(other, (boxes_shape[0], boxes_shape[1], boxes_shape[2], -1))
-            return K.concatenate([boxes, other], axis=3)
+        boxes_shape = K.shape(boxes)
+        n = int(K.ndim(boxes) - 1)
+        other_shape = tuple([boxes_shape[i] for i in range(n)] + [-1])
+        other = K.reshape(other, other_shape)
+        return K.concatenate([boxes, other], axis=K.ndim(boxes) - 1)
 
     def compute_output_shape(self, input_shape):
         boxes_shape, other_shape = input_shape
-        if len(boxes_shape) == 3:
-            output_shape = tuple(list(boxes_shape[:2]) +
-                                 [K.prod([s for s in other_shape[2:]]) + 4])
-            return tensor_shape.TensorShape(output_shape)
-        elif len(boxes_shape) == 4:
-            output_shape = tuple(list(boxes_shape[:3]) +
-                                 [K.prod([s for s in other_shape[3:]]) + 4])
-            return tensor_shape.TensorShape(output_shape)
+        n = len(boxes_shape) - 1
+        output_shape = tuple(list(boxes_shape[:n]) +
+                             [K.prod([s for s in other_shape[n:]]) + 4])
+        return tensor_shape.TensorShape(output_shape)
 
 
 class _RoiAlign(Layer):

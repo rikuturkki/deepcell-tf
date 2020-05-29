@@ -181,7 +181,7 @@ def featurenet_3D_backbone(input_tensor=None, input_shape=None,
 def get_backbone(backbone, input_tensor=None, input_shape=None,
                  use_imagenet=False, return_dict=True,
                  frames_per_batch=1, **kwargs):
-    """Retrieve backbones - helper function for the construction of feature pyramid networks
+    """Retrieve backbones for the construction of feature pyramid networks.
 
     Args:
         backbone (str): Name of the backbone to be retrieved.
@@ -219,8 +219,15 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
     kwargs['models'] = tf.keras.models
     kwargs['utils'] = utils
 
-    featurenet_backbones = ['featurenet', 'featurenet3d', 'featurenet_3d']
-    vgg_backbones = ['vgg16', 'vgg19']
+    featurenet_backbones = {
+        'featurenet': featurenet_backbone,
+        'featurenet3d': featurenet_3D_backbone,
+        'featurenet_3d': featurenet_3D_backbone
+    }
+    vgg_backbones = {
+        'vgg16': applications.vgg16.VGG16,
+        'vgg19': applications.vgg19.VGG19,
+    }
     densenet_backbones = {
         'densenet121': applications.densenet.DenseNet121,
         'densenet169': applications.densenet.DenseNet169,
@@ -289,26 +296,19 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
             raise ValueError('A featurenet backbone that is pre-trained on '
                              'imagenet does not exist')
 
-        if '3d' in _backbone:
-            model, output_dict = featurenet_3D_backbone(input_tensor=img_input, **kwargs)
-        else:
-            model, output_dict = featurenet_backbone(input_tensor=img_input, **kwargs)
+        model_cls = featurenet_backbones[_backbone]
+        model, output_dict = model_cls(input_tensor=img_input, **kwargs)
 
         layer_outputs = [output_dict['C1'], output_dict['C2'], output_dict['C3'],
                          output_dict['C4'], output_dict['C5']]
 
     elif _backbone in vgg_backbones:
-        if _backbone == 'vgg16':
-            model = applications.vgg16.VGG16(input_tensor=img_input, **kwargs)
-        else:
-            model = applications.vgg19.VGG19(input_tensor=img_input, **kwargs)
+        model_cls = vgg_backbones[_backbone]
+        model = model_cls(input_tensor=img_input, **kwargs)
 
         # Set the weights of the model if requested
         if use_imagenet:
-            if _backbone == 'vgg16':
-                model_with_weights = applications.vgg16.VGG16(**kwargs_with_weights)
-            else:
-                model_with_weights = applications.vgg19.VGG19(**kwargs_with_weights)
+            model_with_weights = model_cls(**kwargs_with_weights)
             model_with_weights.save_weights('model_weights.h5')
             model.load_weights('model_weights.h5', by_name=True)
 
@@ -420,7 +420,7 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
         layer_outputs = [model.get_layer(name=ln).output for ln in layer_names]
 
     elif _backbone in nasnet_backbones:
-        model_cls = mobilenet_backbones[_backbone]
+        model_cls = nasnet_backbones[_backbone]
         model = model_cls(input_tensor=img_input, **kwargs)
         if _backbone.endswith('large'):
             block_ids = [5, 12, 18]
@@ -453,36 +453,15 @@ def get_backbone(backbone, input_tensor=None, input_shape=None,
 
     else:
         join = lambda x: [v for y in x for v in list(y.keys())]
-        backbones = join([featurenet_backbones + densenet_backbones +
-                          resnet_backbones + resnext_backbones +
-                          resnet_v2_backbones + vgg_backbones +
-                          nasnet_backbones + mobilenet_backbones +
+        backbones = join([featurenet_backbones, densenet_backbones,
+                          resnet_backbones, resnext_backbones,
+                          resnet_v2_backbones, vgg_backbones,
+                          nasnet_backbones, mobilenet_backbones,
                           efficientnet_backbones])
         raise ValueError('Invalid value for `backbone`. Must be one of: %s' %
                          ', '.join(backbones))
 
     if frames_per_batch > 1:
-        # Alternative method of coding this - time distributes the layer
-        # manually. Not sure which is faster
-
-        # Split = Lambda(lambda x: tf.split(x, frames_per_batch, axis=1))
-        # Squeeze = Lambda(lambda x: tf.squeeze(x, axis=1))
-        # Stack = Lambda(lambda x: K.stack(x, axis=1))
-
-        # split_inputs = Split(img_input)
-        # new_model = Model(model.input, layer_outputs)
-
-        # time_distributed_outputs = []
-        # for i in range(frames_per_batch):
-        #     split_input = Squeeze(split_inputs[i])
-        #     time_distributed_outputs.append(new_model(split_input))
-
-        # new_model_outputs = []
-        # for i, out in enumerate(new_model.outputs):
-        #     new_model_outputs.append(
-        #         Stack([out[i] for out in time_distributed_outputs]))
-        #
-        # layer_outputs = new_model_outputs
 
         time_distributed_outputs = []
         for i, out in enumerate(layer_outputs):

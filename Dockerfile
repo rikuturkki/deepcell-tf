@@ -1,7 +1,7 @@
 # Use tensorflow/tensorflow as the base image
 # Change the build arg to edit the tensorflow version.
 # Only supporting python3.
-ARG TF_VERSION=1.14.0
+ARG TF_VERSION=1.14.0-gpu
 
 FROM tensorflow/tensorflow:${TF_VERSION}-py3
 
@@ -37,6 +37,6 @@ RUN if [ -n "$(find /notebooks/ -prune)" ] ; then \
     fi
 
 # Copy over deepcell notebooks
-COPY scripts/ /notebooks/
+COPY notebooks/ /notebooks/
 
 CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--allow-root"]
