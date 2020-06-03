@@ -6,7 +6,7 @@ date = '06022020'
 
 dataset_split_seeds = [0, 1, 2]
 dataset_fractions = [1] #[0.01, 0.1, 0.25, 0.5, 1]
-backbones = ['mobilenetv2'] #['resnet50', 'mobilenetv2']
+backbones = ['resnet50'] #['resnet50', 'mobilenetv2']
 model_types = ['watershed'] #['retinamask', 'pixelwise', 'watershed']
 
 for seed in dataset_split_seeds:
