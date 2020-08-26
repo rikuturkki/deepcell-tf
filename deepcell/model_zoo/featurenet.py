@@ -49,7 +49,6 @@ from deepcell.layers import DilatedMaxPool2D, DilatedMaxPool3D
 from deepcell.layers import ImageNormalization2D, ImageNormalization3D
 from deepcell.layers import Location2D, Location3D
 from deepcell.layers import ReflectionPadding2D, ReflectionPadding3D
-from deepcell.layers import TensorProduct
 
 
 def bn_feature_net_2D(receptive_field=61,
@@ -203,13 +202,13 @@ def bn_feature_net_2D(receptive_field=61,
     x.append(Activation('relu')(x[-1]))
 
     if include_top:
-        x.append(TensorProduct(n_dense_filters, kernel_initializer=init,
-                               kernel_regularizer=l2(reg))(x[-1]))
+        x.append(Dense(n_dense_filters, kernel_initializer=init,
+                       kernel_regularizer=l2(reg))(x[-1]))
         x.append(BatchNormalization(axis=channel_axis)(x[-1]))
         x.append(Activation('relu')(x[-1]))
 
-        x.append(TensorProduct(n_features, kernel_initializer=init,
-                               kernel_regularizer=l2(reg))(x[-1]))
+        x.append(Dense(n_features, kernel_initializer=init,
+                       kernel_regularizer=l2(reg))(x[-1]))
 
         if not dilated:
             x.append(Flatten()(x[-1]))
@@ -489,13 +488,13 @@ def bn_feature_net_3D(receptive_field=61,
                                                  temporal_kernel_size=temporal_kernel_size)
     x.append(temporal_feature)
 
-    x.append(TensorProduct(n_dense_filters, kernel_initializer=init,
-                           kernel_regularizer=l2(reg))(x[-1]))
+    x.append(Dense(n_dense_filters, kernel_initializer=init,
+                   kernel_regularizer=l2(reg))(x[-1]))
     x.append(BatchNormalization(axis=channel_axis)(x[-1]))
     x.append(Activation('relu')(x[-1]))
 
-    x.append(TensorProduct(n_features, kernel_initializer=init,
-                           kernel_regularizer=l2(reg))(x[-1]))
+    x.append(Dense(n_features, kernel_initializer=init,
+                   kernel_regularizer=l2(reg))(x[-1]))
 
     if not dilated:
         x.append(Flatten()(x[-1]))

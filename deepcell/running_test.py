@@ -159,7 +159,7 @@ class RunningTests(test.TestCase, parameterized.TestCase):
         for padding in ['reflect', 'zero']:
             with self.cached_session():
                 inputs = keras.layers.Input(shape=input_shape)
-                outputs = layers.TensorProduct(features)(inputs)
+                outputs = keras.layers.Dense(features)(inputs)
                 model = keras.models.Model(inputs=inputs,
                                            outputs=[outputs, outputs])
 
@@ -181,7 +181,7 @@ class RunningTests(test.TestCase, parameterized.TestCase):
 
         with self.assertRaises(ValueError):
             inputs = keras.layers.Input(shape=(3, 4, 5))
-            outputs = layers.TensorProduct(features)(inputs)
+            outputs = keras.layers.Dense(features)(inputs)
             model = keras.models.Model(inputs=inputs, outputs=outputs)
 
             output = running.process_whole_image(
@@ -192,7 +192,7 @@ class RunningTests(test.TestCase, parameterized.TestCase):
 
         with self.assertRaises(ValueError):
             inputs = keras.layers.Input(shape=input_shape)
-            outputs = layers.TensorProduct(features)(inputs)
+            outputs = keras.layers.Dense(features)(inputs)
             model = keras.models.Model(inputs=inputs, outputs=outputs)
 
             output = running.process_whole_image(

@@ -32,7 +32,7 @@ from __future__ import print_function
 from tensorflow.python import keras
 from tensorflow.python.keras.utils.data_utils import get_file
 
-from deepcell.layers import ImageNormalization2D, TensorProduct
+from deepcell.layers import ImageNormalization2D
 from deepcell.utils.backbone_utils import get_backbone
 
 
@@ -50,7 +50,7 @@ def LabelDetectionModel(input_shape=(None, None, 1),
     etc.) so that this data can be forwared to the correct segmenation model.
 
     Based on a standard backbone with an intiial ImageNormalization2D and final
-    AveragePooling2D, TensorProduct, and Softmax layers.
+    AveragePooling2D, Dense, and Softmax layers.
 
     Args:
         input_shape (tuple): a 3-length tuple of the input data shape.
@@ -71,7 +71,7 @@ def LabelDetectionModel(input_shape=(None, None, 1),
         channel_axis = -1
 
     norm = ImageNormalization2D(norm_method='whole_image')(inputs)
-    fixed_inputs = TensorProduct(required_channels)(norm)
+    fixed_inputs = keras.layers.Dense(required_channels)(norm)
 
     # force the input shape
     fixed_input_shape = list(input_shape)
@@ -89,8 +89,8 @@ def LabelDetectionModel(input_shape=(None, None, 1),
         pooling=None)
 
     x = keras.layers.AveragePooling2D(4)(backbone_model.outputs[0])
-    x = TensorProduct(256)(x)
-    x = TensorProduct(3)(x)
+    x = keras.layers.Dense(256)(x)
+    x = keras.layers.Dense(3)(x)
     x = keras.layers.Flatten()(x)
     outputs = keras.layers.Activation('softmax')(x)
 

@@ -31,7 +31,7 @@ from __future__ import division
 
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
-from tensorflow.python.keras.layers import Input, Concatenate
+from tensorflow.python.keras.layers import Input, Concatenate, Dense
 from tensorflow.python.keras.layers import TimeDistributed, Conv2D
 from tensorflow.python.keras.layers import MaxPool2D, Lambda
 from tensorflow.python.keras.models import Model
@@ -40,7 +40,7 @@ from tensorflow.python.keras.initializers import normal
 from deepcell.layers import Cast, Shape, UpsampleLike
 from deepcell.layers import Upsample, RoiAlign, ConcatenateBoxes
 from deepcell.layers import ClipBoxes, RegressBoxes, FilterDetections
-from deepcell.layers import TensorProduct, ImageNormalization2D, Location2D
+from deepcell.layers import ImageNormalization2D, Location2D
 from deepcell.model_zoo.retinanet import retinanet, __build_anchors
 from deepcell.utils.retinanet_anchor_utils import AnchorParameters
 from deepcell.utils.backbone_utils import get_backbone
@@ -469,10 +469,10 @@ def RetinaMask(backbone,
     # force the channel size for backbone input to be `required_channels`
     if frames_per_batch > 1:
         norm = TimeDistributed(ImageNormalization2D(norm_method=norm_method))(concat)
-        fixed_inputs = TimeDistributed(TensorProduct(required_channels))(norm)
+        fixed_inputs = TimeDistributed(Dense(required_channels))(norm)
     else:
         norm = ImageNormalization2D(norm_method=norm_method)(concat)
-        fixed_inputs = TensorProduct(required_channels)(norm)
+        fixed_inputs = Dense(required_channels)(norm)
 
     # force the input shape
     axis = 0 if K.image_data_format() == 'channels_first' else -1

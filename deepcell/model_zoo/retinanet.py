@@ -34,13 +34,12 @@ import re
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.layers import Conv2D, Conv3D, TimeDistributed
-from tensorflow.python.keras.layers import Input, Concatenate
+from tensorflow.python.keras.layers import Input, Concatenate, Dense
 from tensorflow.python.keras.layers import Permute, Reshape
 from tensorflow.python.keras.layers import Activation, Lambda
 from tensorflow.python.keras.initializers import RandomNormal
 
 from deepcell.initializers import PriorProbability
-from deepcell.layers import TensorProduct
 from deepcell.layers import FilterDetections
 from deepcell.layers import ImageNormalization2D, Location2D
 from deepcell.layers import Anchors, RegressBoxes, ClipBoxes
@@ -591,10 +590,10 @@ def RetinaNet(backbone,
     # force the channel size for backbone input to be `required_channels`
     if frames_per_batch > 1:
         norm = TimeDistributed(ImageNormalization2D(norm_method=norm_method))(concat)
-        fixed_inputs = TimeDistributed(TensorProduct(required_channels))(norm)
+        fixed_inputs = TimeDistributed(Dense(required_channels))(norm)
     else:
         norm = ImageNormalization2D(norm_method=norm_method)(concat)
-        fixed_inputs = TensorProduct(required_channels)(norm)
+        fixed_inputs = Dense(required_channels)(norm)
 
     # force the input shape
     axis = 0 if K.image_data_format() == 'channels_first' else -1
